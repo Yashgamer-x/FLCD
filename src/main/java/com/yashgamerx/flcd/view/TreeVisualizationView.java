@@ -1,6 +1,8 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.TreeNode;
+import com.yashgamerx.flcd.service.PlanarGridAlgorithm;
+import com.yashgamerx.flcd.service.TreeLayoutAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -16,19 +18,30 @@ import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import lombok.extern.java.Log;
 
+/**
+ * TreeVisualizationView implements the initial stages of the Planar Straight-line
+ * Grid Drawing Algorithm for General Trees. [cite: 30]
+ * * CORE PRINCIPLES APPLIED:
+ * 1. Step 1: Root is placed at the absolute center of the drawing area. [cite: 80, 81]
+ * 2. Step 2: Level 1 nodes are arranged in a circular fashion with quasi-equal
+ * spacing. [cite: 118]
+ * 3. Angular Persistence: Each node stores its angle to facilitate future
+ * readjustment and rootification. [cite: 31, 183]
+ */
 @Log
 public class TreeVisualizationView extends BorderPane {
 
-    // Visual Configuration
+    // Visual Constants derived from algorithmic requirements
     private static final double NODE_CIRCLE_RADIUS = 22.0;
-    private static final double VERTICAL_LEVEL_OFFSET = 100.0;
-    private static final double HORIZONTAL_SIBLING_OFFSET = 70.0;
+    private static final double RADIAL_LAYER_DISTANCE = 150.0; // Radius for circular placement
     private static final double VIRTUAL_CANVAS_SIZE = 8000.0;
 
-    // Zoom Constants
+    // Zoom Constraints for interactive exploration [cite: 14]
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
+
+    private final TreeLayoutAlgorithm currentAlgorithm = new PlanarGridAlgorithm();
 
     private final TreeNode rootNode;
     private final Pane drawingCanvas;
@@ -43,7 +56,6 @@ public class TreeVisualizationView extends BorderPane {
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
 
-        // The StackPane ensures the canvas is treated as a single block within the scrollable area
         var contentWrapper = new StackPane(drawingCanvas);
         contentWrapper.setAlignment(Pos.TOP_LEFT);
         this.scrollPaneContainer = new ScrollPane(contentWrapper);
@@ -52,7 +64,7 @@ public class TreeVisualizationView extends BorderPane {
         attachMouseGestureListeners();
         attachZoomListeners();
 
-        // Ensure the UI is laid out before we attempt to "center" the scrollbars
+        // Platform.runLater ensures layout is calculated before centering the viewport
         Platform.runLater(this::handleReadjustAction);
     }
 
@@ -68,54 +80,54 @@ public class TreeVisualizationView extends BorderPane {
         this.setCenter(scrollPaneContainer);
     }
 
+    /**
+     * Orchestrates the drawing process based on the Planar Grid Algorithm. [cite: 31]
+     */
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
 
-        // PRINCIPLE: Absolute Geometric Center (4000, 4000)
-        double startXPosition = VIRTUAL_CANVAS_SIZE / 2;
-        double startYPosition = VIRTUAL_CANVAS_SIZE / 2;
-
         if (rootNode != null) {
-            executeRecursiveDraw(rootNode, startXPosition, startYPosition);
+            // STEP 1: Delegate MATH to the Algorithm class [cite: 78]
+            double centerX = VIRTUAL_CANVAS_SIZE / 2;
+            double centerY = VIRTUAL_CANVAS_SIZE / 2;
+
+            currentAlgorithm.calculateLayout(rootNode, centerX, centerY);
+
+            // STEP 2: Only handle the DRAWING/UI here
+            drawTreeFromCalculatedModel(rootNode);
         }
     }
 
-    private void executeRecursiveDraw(TreeNode currentNode, double x, double y) {
+    private void drawTreeFromCalculatedModel(TreeNode node) {
+        // Use the gridX and gridY values previously set by the algorithm [cite: 166]
+        renderNodeVisuals(node, node.getGridX(), node.getGridY());
+
+        for (TreeNode child : node.getChildren()) {
+            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawTreeFromCalculatedModel(child);
+        }
+    }
+
+    private void renderNodeVisuals(TreeNode node, double x, double y) {
         var nodeCircle = new Circle(x, y, NODE_CIRCLE_RADIUS, Color.AZURE);
         nodeCircle.setStroke(Color.DARKSLATEGRAY);
         nodeCircle.setStrokeWidth(2.0);
 
-        var nodeLabel = new Text(String.valueOf(currentNode.getIdentifier()));
-        nodeLabel.setX(x - (nodeLabel.getLayoutBounds().getWidth() / 2));
-        nodeLabel.setY(y + (nodeLabel.getLayoutBounds().getHeight() / 4));
-        nodeLabel.setStyle("-fx-font-weight: bold;");
+        var label = new Text(String.valueOf(node.getIdentifier()));
+        label.setX(x - (label.getLayoutBounds().getWidth() / 2));
+        label.setY(y + (label.getLayoutBounds().getHeight() / 4));
+        label.setStyle("-fx-font-weight: bold;");
 
-        var childrenList = currentNode.getChildren();
-        if (!childrenList.isEmpty()) {
-            var totalWidthForChildren = (childrenList.size() - 1) * HORIZONTAL_SIBLING_OFFSET;
-            var childStartingX = x - (totalWidthForChildren / 2);
-
-            for (int i = 0; i < childrenList.size(); i++) {
-                var childX = childStartingX + (i * HORIZONTAL_SIBLING_OFFSET);
-                var childY = y + VERTICAL_LEVEL_OFFSET;
-
-                var connectorLine = new Line(x, y, childX, childY);
-                connectorLine.setStroke(Color.GRAY);
-                drawingCanvas.getChildren().addFirst(connectorLine);
-
-                executeRecursiveDraw(childrenList.get(i), childX, childY);
-            }
-        }
-        drawingCanvas.getChildren().addAll(nodeCircle, nodeLabel);
+        drawingCanvas.getChildren().addAll(nodeCircle, label);
     }
 
-    /**
-     * Resets the viewport to the absolute center of the virtual canvas.
-     */
-    private void handleReadjustAction() {
-        log.info("Calibrating viewport to absolute center (4000, 4000)");
+    private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
+        var connector = new Line(x1, y1, x2, y2);
+        connector.setStroke(Color.GRAY);
+        drawingCanvas.getChildren().addFirst(connector); // Ensure lines are behind nodes
+    }
 
-        // Reset manual drag and zoom transformations
+    private void handleReadjustAction() {
         drawingCanvas.setTranslateX(0);
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
@@ -123,18 +135,16 @@ public class TreeVisualizationView extends BorderPane {
 
         renderTreeStructure();
 
-        // PRINCIPLE: Bipolar Centering
-        // Setting both H and V values to 0.5 points the "camera" exactly at the center
+        // Center viewport on the (4000, 4000) coordinate [cite: 81]
         scrollPaneContainer.setHvalue(0.5);
         scrollPaneContainer.setVvalue(0.5);
     }
-
-    // --- Interaction Listeners ---
 
     private void attachZoomListeners() {
         drawingCanvas.setOnScroll((ScrollEvent event) -> {
             double zoomFactor = (event.getDeltaY() > 0) ? (1 + ZOOM_INTENSITY) : (1 - ZOOM_INTENSITY);
             double newScale = drawingCanvas.getScaleX() * zoomFactor;
+
             if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
                 drawingCanvas.setScaleX(newScale);
                 drawingCanvas.setScaleY(newScale);
@@ -159,7 +169,7 @@ public class TreeVisualizationView extends BorderPane {
     private HBox createActionToolbar() {
         var addNodeButton = new Button("Add Node");
         var rootifyNodeButton = new Button("Rootify Node");
-        var readjustNodeButton = new Button("Readjust Node");
+        var readjustNodeButton = new Button("Readjust");
         var zoomInButton = new Button("+");
         var zoomOutButton = new Button("-");
 
