@@ -65,7 +65,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
             // Inward Planar Formulas [cite: 132, 133, 134]
             child.setGridX(parent.getGridX() - Math.cos(rad) * UNIT_X + (1 + leftAcc) * Math.cos(rad + halfPi) * UNIT_X);
-            child.setGridY(parent.getGridY() - Math.sin(rad) * UNIT_Y - (1 + leftAcc) * Math.sin(rad + halfPi) * UNIT_Y);
+            child.setGridY(parent.getGridY() - Math.sin(rad) * UNIT_Y + (1 + leftAcc) * Math.sin(rad + halfPi) * UNIT_Y);
             child.setCurrentAbsoluteAngle(angle);
 
             layoutInward(child, angle);
