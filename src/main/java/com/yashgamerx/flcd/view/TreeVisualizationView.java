@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.TreeNode;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -18,120 +19,87 @@ import lombok.extern.java.Log;
 @Log
 public class TreeVisualizationView extends BorderPane {
 
-    // Visual Configuration Constants
+    // Visual Configuration
     private static final double NODE_CIRCLE_RADIUS = 22.0;
     private static final double VERTICAL_LEVEL_OFFSET = 100.0;
     private static final double HORIZONTAL_SIBLING_OFFSET = 70.0;
     private static final double VIRTUAL_CANVAS_SIZE = 8000.0;
+
     // Zoom Constants
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
+
     private final TreeNode rootNode;
     private final Pane drawingCanvas;
+    private final ScrollPane scrollPaneContainer;
+
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
     public TreeVisualizationView(final TreeNode rootNode) {
         this.rootNode = rootNode;
         this.drawingCanvas = new Pane();
-
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
+
+        // The StackPane ensures the canvas is treated as a single block within the scrollable area
+        var contentWrapper = new StackPane(drawingCanvas);
+        contentWrapper.setAlignment(Pos.TOP_LEFT);
+        this.scrollPaneContainer = new ScrollPane(contentWrapper);
 
         initializeComponentLayout();
         attachMouseGestureListeners();
         attachZoomListeners();
-        renderTreeStructure();
+
+        // Ensure the UI is laid out before we attempt to "center" the scrollbars
+        Platform.runLater(this::handleReadjustAction);
     }
 
     private void initializeComponentLayout() {
         var actionToolbar = createActionToolbar();
 
-        // FIX: Wrap drawingCanvas in a StackPane to force alignment
-        var contentWrapper = new StackPane(drawingCanvas);
-        contentWrapper.setAlignment(Pos.TOP_LEFT); // Force canvas to the top
-
-        var scrollPaneContainer = new ScrollPane(contentWrapper);
         scrollPaneContainer.setPannable(false);
         scrollPaneContainer.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPaneContainer.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-
-        // Remove default ScrollPane border/padding which creates "empty space"
         scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
-
-        // Center horizontally on the virtual canvas, but start at the very top (vValue 0)
-        scrollPaneContainer.setHvalue(0.5);
-        scrollPaneContainer.setVvalue(0.0);
 
         this.setTop(actionToolbar);
         this.setCenter(scrollPaneContainer);
     }
 
-    private void attachZoomListeners() {
-        drawingCanvas.setOnScroll((ScrollEvent event) -> {
-            double zoomFactor = (event.getDeltaY() > 0) ? (1 + ZOOM_INTENSITY) : (1 - ZOOM_INTENSITY);
-            double currentScaleX = drawingCanvas.getScaleX();
-            double newScale = currentScaleX * zoomFactor;
-
-            if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
-                drawingCanvas.setScaleX(newScale);
-                drawingCanvas.setScaleY(newScale);
-            }
-            event.consume();
-        });
-    }
-
-    private void attachMouseGestureListeners() {
-        drawingCanvas.setOnMousePressed(mouseEvent -> {
-            mouseDragAnchorX = mouseEvent.getSceneX();
-            mouseDragAnchorY = mouseEvent.getSceneY();
-        });
-
-        drawingCanvas.setOnMouseDragged(mouseEvent -> {
-            var deltaX = mouseEvent.getSceneX() - mouseDragAnchorX;
-            var deltaY = mouseEvent.getSceneY() - mouseDragAnchorY;
-
-            drawingCanvas.setTranslateX(drawingCanvas.getTranslateX() + deltaX);
-            drawingCanvas.setTranslateY(drawingCanvas.getTranslateY() + deltaY);
-
-            mouseDragAnchorX = mouseEvent.getSceneX();
-            mouseDragAnchorY = mouseEvent.getSceneY();
-        });
-    }
-
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
 
-        // Start drawing at the top of the canvas
-        var startXPosition = VIRTUAL_CANVAS_SIZE / 2;
-        var startYPosition = 50.0; // Reduced from 150 to remove gap
+        // PRINCIPLE: Absolute Geometric Center (4000, 4000)
+        double startXPosition = VIRTUAL_CANVAS_SIZE / 2;
+        double startYPosition = VIRTUAL_CANVAS_SIZE / 2;
 
         if (rootNode != null) {
             executeRecursiveDraw(rootNode, startXPosition, startYPosition);
         }
     }
 
-    private void executeRecursiveDraw(TreeNode currentNode, double xCoordinate, double yCoordinate) {
-        var nodeCircle = new Circle(xCoordinate, yCoordinate, NODE_CIRCLE_RADIUS, Color.AZURE);
+    private void executeRecursiveDraw(TreeNode currentNode, double x, double y) {
+        var nodeCircle = new Circle(x, y, NODE_CIRCLE_RADIUS, Color.AZURE);
         nodeCircle.setStroke(Color.DARKSLATEGRAY);
         nodeCircle.setStrokeWidth(2.0);
 
         var nodeLabel = new Text(String.valueOf(currentNode.getIdentifier()));
-        nodeLabel.setX(xCoordinate - (nodeLabel.getLayoutBounds().getWidth() / 2));
-        nodeLabel.setY(yCoordinate + (nodeLabel.getLayoutBounds().getHeight() / 4));
+        nodeLabel.setX(x - (nodeLabel.getLayoutBounds().getWidth() / 2));
+        nodeLabel.setY(y + (nodeLabel.getLayoutBounds().getHeight() / 4));
         nodeLabel.setStyle("-fx-font-weight: bold;");
 
         var childrenList = currentNode.getChildren();
         if (!childrenList.isEmpty()) {
             var totalWidthForChildren = (childrenList.size() - 1) * HORIZONTAL_SIBLING_OFFSET;
-            var childStartingX = xCoordinate - (totalWidthForChildren / 2);
+            var childStartingX = x - (totalWidthForChildren / 2);
 
             for (int i = 0; i < childrenList.size(); i++) {
                 var childX = childStartingX + (i * HORIZONTAL_SIBLING_OFFSET);
-                var childY = yCoordinate + VERTICAL_LEVEL_OFFSET;
+                var childY = y + VERTICAL_LEVEL_OFFSET;
 
-                var connectorLine = new Line(xCoordinate, yCoordinate, childX, childY);
+                var connectorLine = new Line(x, y, childX, childY);
                 connectorLine.setStroke(Color.GRAY);
                 drawingCanvas.getChildren().addFirst(connectorLine);
 
@@ -141,6 +109,53 @@ public class TreeVisualizationView extends BorderPane {
         drawingCanvas.getChildren().addAll(nodeCircle, nodeLabel);
     }
 
+    /**
+     * Resets the viewport to the absolute center of the virtual canvas.
+     */
+    private void handleReadjustAction() {
+        log.info("Calibrating viewport to absolute center (4000, 4000)");
+
+        // Reset manual drag and zoom transformations
+        drawingCanvas.setTranslateX(0);
+        drawingCanvas.setTranslateY(0);
+        drawingCanvas.setScaleX(1.0);
+        drawingCanvas.setScaleY(1.0);
+
+        renderTreeStructure();
+
+        // PRINCIPLE: Bipolar Centering
+        // Setting both H and V values to 0.5 points the "camera" exactly at the center
+        scrollPaneContainer.setHvalue(0.5);
+        scrollPaneContainer.setVvalue(0.5);
+    }
+
+    // --- Interaction Listeners ---
+
+    private void attachZoomListeners() {
+        drawingCanvas.setOnScroll((ScrollEvent event) -> {
+            double zoomFactor = (event.getDeltaY() > 0) ? (1 + ZOOM_INTENSITY) : (1 - ZOOM_INTENSITY);
+            double newScale = drawingCanvas.getScaleX() * zoomFactor;
+            if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+                drawingCanvas.setScaleX(newScale);
+                drawingCanvas.setScaleY(newScale);
+            }
+            event.consume();
+        });
+    }
+
+    private void attachMouseGestureListeners() {
+        drawingCanvas.setOnMousePressed(e -> {
+            mouseDragAnchorX = e.getSceneX();
+            mouseDragAnchorY = e.getSceneY();
+        });
+        drawingCanvas.setOnMouseDragged(e -> {
+            drawingCanvas.setTranslateX(drawingCanvas.getTranslateX() + (e.getSceneX() - mouseDragAnchorX));
+            drawingCanvas.setTranslateY(drawingCanvas.getTranslateY() + (e.getSceneY() - mouseDragAnchorY));
+            mouseDragAnchorX = e.getSceneX();
+            mouseDragAnchorY = e.getSceneY();
+        });
+    }
+
     private HBox createActionToolbar() {
         var addNodeButton = new Button("Add Node");
         var rootifyNodeButton = new Button("Rootify Node");
@@ -148,15 +163,15 @@ public class TreeVisualizationView extends BorderPane {
         var zoomInButton = new Button("+");
         var zoomOutButton = new Button("-");
 
-        var toolbarContainer = new HBox(15, addNodeButton, rootifyNodeButton, readjustNodeButton, zoomOutButton, zoomInButton);
-        toolbarContainer.setAlignment(Pos.CENTER);
-        toolbarContainer.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #cccccc; -fx-border-width: 0 0 1 0;");
+        var toolbar = new HBox(15, addNodeButton, rootifyNodeButton, readjustNodeButton, zoomOutButton, zoomInButton);
+        toolbar.setAlignment(Pos.CENTER);
+        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #cccccc; -fx-border-width: 0 0 1 0;");
 
         readjustNodeButton.setOnAction(_ -> handleReadjustAction());
         zoomInButton.setOnAction(_ -> applyManualZoom(1.1));
         zoomOutButton.setOnAction(_ -> applyManualZoom(0.9));
 
-        return toolbarContainer;
+        return toolbar;
     }
 
     private void applyManualZoom(double factor) {
@@ -165,21 +180,5 @@ public class TreeVisualizationView extends BorderPane {
             drawingCanvas.setScaleX(newScale);
             drawingCanvas.setScaleY(newScale);
         }
-    }
-
-    private void handleReadjustAction() {
-        drawingCanvas.setTranslateX(0);
-        drawingCanvas.setTranslateY(0);
-        drawingCanvas.setScaleX(1.0);
-        drawingCanvas.setScaleY(1.0);
-        renderTreeStructure();
-    }
-
-    private void handleAddNodeAction() {
-        log.info("Add node requested...");
-    }
-
-    private void handleRootifyAction() {
-        log.info("Rootify requested...");
     }
 }
