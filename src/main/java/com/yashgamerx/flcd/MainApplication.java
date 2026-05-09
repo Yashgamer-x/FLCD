@@ -11,10 +11,11 @@ import java.io.IOException;
 public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        var algorithmSelector = new AlgorithmSelectorView();
-        Scene scene = new Scene(algorithmSelector, 320, 240);
-        stage.setTitle("Hello!");
-        stage.setScene(scene);
+        var algorithmSelectorView = new AlgorithmSelectorView();
+        var mainScene = new Scene(algorithmSelectorView, 400, 300);
+
+        stage.setTitle("Algorithm Selector Pro");
+        stage.setScene(mainScene);
         stage.show();
     }
 }
