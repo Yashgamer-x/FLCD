@@ -2,6 +2,7 @@ package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.service.FileParsingService;
 import com.yashgamerx.flcd.service.StandardTextFileParsingService;
+import com.yashgamerx.flcd.service.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
@@ -23,12 +24,13 @@ public class AlgorithmSelectorView extends BorderPane {
 
     private File currentlySelectedTextFile;
 
-    private final FileParsingService textFileParsingService = new StandardTextFileParsingService();
+    private final FileParsingService textFileParsingService = new TreeFileParsingService();
 
     public AlgorithmSelectorView() {
         loadFXML();
     }
 
+    /// Loads `algorithm-selector-view.fxml`
     private void loadFXML(){
         var fxmlLoader = new FXMLLoader(getClass().getResource("/com/yashgamerx/flcd/algorithm-selector-view.fxml"));
         fxmlLoader.setRoot(this);
@@ -49,6 +51,10 @@ public class AlgorithmSelectorView extends BorderPane {
         processAlgorithmButton.setOnAction(_->onProcessAlgorithmButtonClicked());
     }
 
+    /// When the [selectTextFileButton] is clicked, this method will be invoked.
+    ///
+    /// This method allows the user to select only `.txt` files.
+    /// Invokes [AlgorithmSelectorView#updateUserInterfaceWithSelectedFile] if a file is selected.
     private void onSelectFileButtonClicked() {
         var textFileChooser = new FileChooser();
         textFileChooser.setTitle("Open Source Text File");
@@ -65,6 +71,7 @@ public class AlgorithmSelectorView extends BorderPane {
         );
     }
 
+    /// Updates the user interface with the newly selected file.
     private void updateUserInterfaceWithSelectedFile(File newlySelectedFile) {
         this.currentlySelectedTextFile = newlySelectedFile;
 
@@ -76,6 +83,8 @@ public class AlgorithmSelectorView extends BorderPane {
     }
 
 
+    /// When the button is clicked, it ensures that the [AlgorithmSelectorView#currentlySelectedTextFile] is not null
+    /// and invokes [AlgorithmSelectorView#executeFileProcessingAlgorithm] if the file still exists.
     private void onProcessAlgorithmButtonClicked() {
         if (currentlySelectedTextFile != null) {
             log.info("Initiating submission logic for: " + currentlySelectedTextFile.getName());
@@ -83,6 +92,7 @@ public class AlgorithmSelectorView extends BorderPane {
         }
     }
 
+    /// Invokes the [FileParsingService] to process the selected file.
     private void executeFileProcessingAlgorithm() {
         var absolutePath = currentlySelectedTextFile.getAbsolutePath();
         log.info("Algorithm execution started on path: " + absolutePath);
