@@ -1,44 +1,76 @@
 package com.yashgamerx.flcd.service;
 
 import com.yashgamerx.flcd.model.TreeNode;
-import lombok.extern.java.Log;
 
-@Log
+import java.util.List;
+
 public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
-
-    // The distance between the root and level 1 [cite: 119, 120]
-    private static final double INITIAL_RADIUS = 200.0;
+    private static final double UNIT_X = 70.0;
+    private static final double UNIT_Y = 100.0;
 
     @Override
-    public void calculateLayout(TreeNode root, double originX, double originY) {
+    public void calculate(TreeNode root, double originX, double originY) {
         if (root == null) return;
+        // Pass 1: Aggregate space needs [cite: 105, 138]
+        measureSubtree(root, true);
 
-        // Step 1: Root is the center of the grid [cite: 80, 81]
+        // Pass 2: Set root and first level [cite: 80, 118]
         root.setGridX(originX);
         root.setGridY(originY);
-        root.setCurrentAbsoluteAngle(0);
+        layoutFirstLevel(root);
+    }
 
-        var children = root.getChildren();
+    private void measureSubtree(TreeNode node, boolean isVertical) {
+        node.getChildren().forEach(child -> measureSubtree(child, !isVertical));
+        if (node.getChildren().isEmpty()) {
+            node.setSubtreeWidth(1);
+            node.setSubtreeHeight(1);
+            return;
+        }
+        if (isVertical) {
+            node.setSubtreeHeight(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeHeight).sum());
+            node.setSubtreeWidth(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeWidth).max().orElse(1.0));
+            if (node.getChildren().size() == 1)
+                node.setSubtreeHeight(Math.sqrt(node.getSubtreeHeight())); // [cite: 112]
+        } else {
+            node.setSubtreeWidth(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeWidth).sum());
+            node.setSubtreeHeight(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeHeight).max().orElse(1.0));
+        }
+    }
+
+    private void layoutFirstLevel(TreeNode root) {
+        List<TreeNode> children = root.getChildren();
         if (children.isEmpty()) return;
-
-        // Step 2: Circular placement of Level 1 [cite: 118, 123]
-        double angleStep = 360.0 / children.size();
-
+        double angleStep = 360.0 / children.size(); // [cite: 123]
         for (int i = 0; i < children.size(); i++) {
             var child = children.get(i);
-            double assignedAngle = i * angleStep;
+            double theta = i * angleStep;
+            child.setCurrentAbsoluteAngle(theta); // [cite: 183]
 
-            // Store the angle in the node for future rootification/readjustment
-            child.setCurrentAbsoluteAngle(assignedAngle);
+            // Hypotenuse Rule
+            double radius = Math.sqrt(Math.pow(child.getSubtreeWidth() * UNIT_X, 2) + Math.pow(child.getSubtreeHeight() * UNIT_Y, 2));
+            child.setGridX(root.getGridX() + radius * Math.cos(Math.toRadians(theta)));
+            child.setGridY(root.getGridY() + radius * Math.sin(Math.toRadians(theta)));
 
-            // Convert to Cartesian for the initial grid placement
-            double radians = Math.toRadians(assignedAngle);
-            child.setGridX(originX + INITIAL_RADIUS * Math.cos(radians));
-            child.setGridY(originY + INITIAL_RADIUS * Math.sin(radians));
+            layoutInward(child, theta); // [cite: 126, 137]
+        }
+    }
 
-            log.info("Node " + child.getIdentifier() + " positioned at angle " + assignedAngle);
+    private void layoutInward(TreeNode parent, double angle) {
+        double leftAcc = 0, rightAcc = 0;
+        for (TreeNode child : parent.getChildren()) {
+            boolean isLeft = leftAcc <= rightAcc; // [cite: 128, 129]
+            double halfPi = isLeft ? (Math.PI / 2) : (-Math.PI / 2); // [cite: 130]
+            double rad = Math.toRadians(angle);
 
-            // We stop here for Step 2. Recursive calls for Step 3 will go here later.
+            // Inward Planar Formulas [cite: 132, 133, 134]
+            child.setGridX(parent.getGridX() - Math.cos(rad) * UNIT_X + (1 + leftAcc) * Math.cos(rad + halfPi) * UNIT_X);
+            child.setGridY(parent.getGridY() - Math.sin(rad) * UNIT_Y - (1 + leftAcc) * Math.sin(rad + halfPi) * UNIT_Y);
+            child.setCurrentAbsoluteAngle(angle);
+
+            layoutInward(child, angle);
+            if (isLeft) leftAcc += child.getSubtreeWidth();
+            else rightAcc += child.getSubtreeWidth();
         }
     }
 }

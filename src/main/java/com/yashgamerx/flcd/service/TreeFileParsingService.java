@@ -49,7 +49,7 @@ public class TreeFileParsingService implements FileParsingService {
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
                 var childNode = nodeMap.computeIfAbsent(childId, TreeNode::new);
-                parentNode.addChild(childNode);
+                parentNode.getChildren().add(childNode);
             }
         } catch (NumberFormatException e) {
             log.warning("Skipping malformed line (invalid numbers): " + line);

@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.service.FileParsingService;
+import com.yashgamerx.flcd.service.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -100,7 +101,7 @@ public class AlgorithmSelectorView extends BorderPane {
 
         parsingResult.ifPresentOrElse(root -> {
             // 2. Create the new View
-            var visualizationView = new TreeVisualizationView(root);
+            var visualizationView = new TreeVisualizationView(root, new PlanarGridAlgorithm());
 
             // 3. Swap the Root of the Scene
             // Since this class is currently the root of the Scene, we replace it.
