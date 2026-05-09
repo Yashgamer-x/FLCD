@@ -93,8 +93,21 @@ public class AlgorithmSelectorView extends BorderPane {
 
     /// Invokes the [FileParsingService] to process the selected file.
     private void executeFileProcessingAlgorithm() {
-        var absolutePath = currentlySelectedTextFile.getAbsolutePath();
-        log.info("Algorithm execution started on path: " + absolutePath);
-        textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+        log.info("Algorithm execution started.");
+
+        // 1. Get the parsed result
+        var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(root -> {
+            // 2. Create the new View
+            var visualizationView = new TreeVisualizationView(root);
+
+            // 3. Swap the Root of the Scene
+            // Since this class is currently the root of the Scene, we replace it.
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+
+            log.info("Transitioned to TreeVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }
