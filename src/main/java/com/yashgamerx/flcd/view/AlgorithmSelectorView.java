@@ -1,5 +1,7 @@
 package com.yashgamerx.flcd.view;
 
+import com.yashgamerx.flcd.service.FileParsingService;
+import com.yashgamerx.flcd.service.StandardTextFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
@@ -20,6 +22,8 @@ public class AlgorithmSelectorView extends BorderPane {
     @FXML private Button processAlgorithmButton;
 
     private File currentlySelectedTextFile;
+
+    private final FileParsingService textFileParsingService = new StandardTextFileParsingService();
 
     public AlgorithmSelectorView() {
         loadFXML();
@@ -82,5 +86,6 @@ public class AlgorithmSelectorView extends BorderPane {
     private void executeFileProcessingAlgorithm() {
         var absolutePath = currentlySelectedTextFile.getAbsolutePath();
         log.info("Algorithm execution started on path: " + absolutePath);
+        textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
     }
 }
