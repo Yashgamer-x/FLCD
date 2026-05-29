@@ -1,6 +1,7 @@
-package com.yashgamerx.flcd.service;
+package com.yashgamerx.flcd.service.file;
 
-import com.yashgamerx.flcd.model.TreeNode;
+import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.UnknownNode;
 import lombok.extern.java.Log;
 import java.io.File;
 import java.nio.file.Files;
@@ -12,10 +13,10 @@ import java.util.stream.Stream;
 public class TreeFileParsingService implements FileParsingService {
 
     @Override
-    public Optional<TreeNode> readAndParseIdentifiedTextFile(final File textFileToProcess) {
+    public Optional<AbstractNode> readAndParseIdentifiedTextFile(final File textFileToProcess) {
         // PRINCIPLE: Local State Isolation
         // We keep the map local so the service remains stateless and thread-safe.
-        var nodeLookupMap = new HashMap<Integer, TreeNode>();
+        var nodeLookupMap = new HashMap<Integer, AbstractNode>();
 
         try (Stream<String> lineStream = Files.lines(textFileToProcess.toPath())) {
             lineStream.filter(line -> !line.isBlank())
@@ -36,7 +37,7 @@ public class TreeFileParsingService implements FileParsingService {
         }
     }
 
-    private void parseLineIntoTree(String line, HashMap<Integer, TreeNode> nodeMap) {
+    private void parseLineIntoTree(String line, HashMap<Integer, AbstractNode> nodeMap) {
         var parts = line.trim().split("\\s+");
         if (parts.length < 1) return;
 
@@ -44,12 +45,12 @@ public class TreeFileParsingService implements FileParsingService {
             // PRINCIPLE: Identity Map Pattern
             // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = nodeMap.computeIfAbsent(parentId, TreeNode::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, UnknownNode::new);
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, TreeNode::new);
-                parentNode.getChildren().add(childNode);
+                var childNode = nodeMap.computeIfAbsent(childId, UnknownNode::new);
+                parentNode.getChildrenNodes().add(childNode);
             }
         } catch (NumberFormatException e) {
             log.warning("Skipping malformed line (invalid numbers): " + line);

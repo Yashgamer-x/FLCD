@@ -1,8 +1,9 @@
 package com.yashgamerx.flcd.view;
 
-import com.yashgamerx.flcd.service.FileParsingService;
+import com.yashgamerx.flcd.model.RootNode;
+import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.PlanarGridAlgorithm;
-import com.yashgamerx.flcd.service.TreeFileParsingService;
+import com.yashgamerx.flcd.service.file.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
@@ -96,19 +97,20 @@ public class AlgorithmSelectorView extends BorderPane {
     private void executeFileProcessingAlgorithm() {
         log.info("Algorithm execution started.");
 
-        // 1. Get the parsed result
+        // Get the parsed result
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(root -> {
-            // 2. Create the new View
-            var visualizationView = new TreeVisualizationView(root, new PlanarGridAlgorithm());
+            // Create the new View
+            if(root instanceof RootNode rootNode) {
+                var visualizationView = new TreeVisualizationView(rootNode, new PlanarGridAlgorithm());
 
-            // 3. Swap the Root of the Scene
-            // Since this class is currently the root of the Scene, we replace it.
-            var currentScene = this.getScene();
-            currentScene.setRoot(visualizationView);
-
-            log.info("Transitioned to TreeVisualizationView.");
+                // Swap the Root of the Scene
+                // Since this class is currently the root of the Scene, we replace it.
+                var currentScene = this.getScene();
+                currentScene.setRoot(visualizationView);
+                log.info("Transitioned to TreeVisualizationView.");
+            }
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }

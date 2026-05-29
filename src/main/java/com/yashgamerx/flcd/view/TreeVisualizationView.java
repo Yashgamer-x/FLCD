@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.view;
 
+import com.yashgamerx.flcd.model.RootNode;
 import com.yashgamerx.flcd.model.TreeNode;
 import com.yashgamerx.flcd.service.TreeLayoutAlgorithm;
 import javafx.application.Platform;
@@ -19,7 +20,7 @@ import lombok.extern.java.Log;
 @Log
 public class TreeVisualizationView extends BorderPane {
 
-    private final TreeNode rootNode;
+    private final RootNode rootNode;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
 
@@ -31,12 +32,12 @@ public class TreeVisualizationView extends BorderPane {
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
-    // SOLID: Dependency Inversion - Depend on Abstraction [cite: 63]
+    // SOLID: Dependency Inversion - Depend on Abstraction
     private final TreeLayoutAlgorithm layoutAlgorithm;
 
-    public TreeVisualizationView(final TreeNode rootNode, final TreeLayoutAlgorithm algorithm) {
+    public TreeVisualizationView(final RootNode rootNode, final TreeLayoutAlgorithm algorithm) {
         this.rootNode = rootNode;
-        this.layoutAlgorithm = algorithm; // Algorithm is injected [cite: 63]
+        this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
@@ -61,13 +62,13 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     /**
-     * Executes the rendering pass after the algorithm has computed the grid[cite: 31, 32].
+     * Executes the rendering pass after the algorithm has computed the grid
      */
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         if (rootNode != null) {
-            // PASS 1: The algorithm computes coordinates using divide and conquer [cite: 78, 79]
-            layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2); // [cite: 80]
+            // PASS 1: The algorithm computes coordinates using divide and conquer
+            layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
 
             // PASS 2: The view renders based on computed coordinates
             drawCalculatedTree(rootNode);
@@ -75,7 +76,7 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void drawCalculatedTree(TreeNode node) {
-        // Use the coordinates assigned by the layout engine [cite: 32]
+        // Use the coordinates assigned by the layout engine
         renderNodeVisuals(node, node.getGridX(), node.getGridY());
 
         for (TreeNode child : node.getChildren()) {
@@ -110,7 +111,7 @@ public class TreeVisualizationView extends BorderPane {
         drawingCanvas.setScaleY(1.0);
         renderTreeStructure();
 
-        // Centering is crucial for visual organization [cite: 81]
+        // Centering is crucial for visual organization
         scrollPaneContainer.setHvalue(0.5);
         scrollPaneContainer.setVvalue(0.5);
     }

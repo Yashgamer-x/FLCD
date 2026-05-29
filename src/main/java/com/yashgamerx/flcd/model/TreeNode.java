@@ -8,12 +8,12 @@ import java.util.List;
 @Getter
 @Setter
 public class TreeNode {
-    private final int identifier; // [cite: 86]
+    private final int identifier;
     private final List<TreeNode> children = new ArrayList<>();
 
     // Algorithmic State
     private NodeType nodeType;
-    private double currentAbsoluteAngle; // [cite: 183]
+    private double currentAbsoluteAngle;
     private double subtreeWidth;
     private double subtreeHeight;
     private double gridX;

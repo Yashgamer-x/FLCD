@@ -11,10 +11,8 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
     @Override
     public void calculate(TreeNode root, double originX, double originY) {
         if (root == null) return;
-        // Pass 1: Aggregate space needs [cite: 105, 138]
         measureSubtree(root, true);
 
-        // Pass 2: Set root and first level [cite: 80, 118]
         root.setGridX(originX);
         root.setGridY(originY);
         layoutFirstLevel(root);
@@ -31,7 +29,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
             node.setSubtreeHeight(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeHeight).sum());
             node.setSubtreeWidth(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeWidth).max().orElse(1.0));
             if (node.getChildren().size() == 1)
-                node.setSubtreeHeight(Math.sqrt(node.getSubtreeHeight())); // [cite: 112]
+                node.setSubtreeHeight(Math.sqrt(node.getSubtreeHeight()));
         } else {
             node.setSubtreeWidth(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeWidth).sum());
             node.setSubtreeHeight(1 + node.getChildren().stream().mapToDouble(TreeNode::getSubtreeHeight).max().orElse(1.0));
