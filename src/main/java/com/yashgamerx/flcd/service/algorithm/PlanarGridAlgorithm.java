@@ -1,4 +1,4 @@
-package com.yashgamerx.flcd.service;
+package com.yashgamerx.flcd.service.algorithm;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 

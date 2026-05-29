@@ -2,7 +2,7 @@ package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.RootNode;
-import com.yashgamerx.flcd.service.TreeLayoutAlgorithm;
+import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
