@@ -1,8 +1,8 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.RootNode;
-import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.PlanarGridAlgorithm;
+import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
