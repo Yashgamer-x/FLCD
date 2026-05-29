@@ -1,7 +1,7 @@
 package com.yashgamerx.flcd.view;
 
+import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.RootNode;
-import com.yashgamerx.flcd.model.TreeNode;
 import com.yashgamerx.flcd.service.TreeLayoutAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -75,17 +75,17 @@ public class TreeVisualizationView extends BorderPane {
         }
     }
 
-    private void drawCalculatedTree(TreeNode node) {
+    private void drawCalculatedTree(AbstractNode node) {
         // Use the coordinates assigned by the layout engine
         renderNodeVisuals(node, node.getGridX(), node.getGridY());
 
-        for (TreeNode child : node.getChildren()) {
+        for (var child : node.getChildren()) {
             drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
             drawCalculatedTree(child);
         }
     }
 
-    private void renderNodeVisuals(TreeNode node, double x, double y) {
+    private void renderNodeVisuals(AbstractNode node, double x, double y) {
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
         circle.setStrokeWidth(2.0);

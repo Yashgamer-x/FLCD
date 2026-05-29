@@ -15,7 +15,7 @@ public abstract class AbstractNode {
     private final int identifier;
     private String name; // Added name as per document (Case Study format)
     private AbstractNode parentNode;
-    private final List<AbstractNode> childrenNodes = new ArrayList<>();
+    private final List<AbstractNode> children = new ArrayList<>();
 
     // Algorithmic State as per FLCD document
     protected double subtreeWidth;
@@ -59,7 +59,7 @@ public abstract class AbstractNode {
 
     /// Utility method to add a child
     public void addChild(AbstractNode child) {
-        this.childrenNodes.add(child);
+        this.children.add(child);
         child.setParentNode(this);
     }
 
