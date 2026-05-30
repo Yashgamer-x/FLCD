@@ -14,8 +14,8 @@ public abstract class AbstractNode {
 
     private final int identifier;
     private String name; // Added name as per document (Case Study format)
-    private AbstractNode parentNode;
-    private final List<AbstractNode> children = new ArrayList<>();
+    protected List<AbstractNode> children = new ArrayList<>();
+    private AbstractNode parent;
 
     // Algorithmic State as per FLCD document
     protected double subtreeWidth;
@@ -27,10 +27,10 @@ public abstract class AbstractNode {
     protected double gridY; // Screen Y coordinate
 
     // Constructor
-    public AbstractNode(int identifier, String name, AbstractNode parentNode) {
+    public AbstractNode(int identifier, String name, AbstractNode parent) {
         this.identifier = identifier;
         this.name = name;
-        this.parentNode = parentNode;
+        this.parent = parent;
     }
 
     public AbstractNode(int identifier) {
@@ -60,12 +60,6 @@ public abstract class AbstractNode {
     /// Utility method to add a child
     public void addChild(AbstractNode child) {
         this.children.add(child);
-        child.setParentNode(this);
-    }
-
-    /// Utility method to calculate radiusToFitChildren (Section 5.2)
-    protected double radiusToFitChildren(double W, double H, double alpha) {
-        if (alpha == 0) return 0; // Avoid division by zero for degenerate cases
-        return W / Math.sin(alpha) + H;
+        child.setParent(this);
     }
 }

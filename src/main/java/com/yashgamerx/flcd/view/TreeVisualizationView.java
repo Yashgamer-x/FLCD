@@ -67,10 +67,10 @@ public class TreeVisualizationView extends BorderPane {
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         if (rootNode != null) {
-            // PASS 1: The algorithm computes coordinates using divide and conquer
+            // The algorithm computes coordinates using divide and conquer
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
 
-            // PASS 2: The view renders based on computed coordinates
+            // The view renders based on computed coordinates
             drawCalculatedTree(rootNode);
         }
     }
