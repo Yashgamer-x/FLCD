@@ -185,7 +185,7 @@ public class FirstChildNode extends AbstractNode {
         child.setGridX(childX);
         child.setGridY(childY);
 
-        // FIXED: Assign the true baseline angle to the child so its nested sub-elements
+        // Assign the true baseline angle to the child so its nested sub-elements
         // know which vector they are traveling along when they process their own compute passes!
         child.setLocalRadianAngle(baselineAngle);
 

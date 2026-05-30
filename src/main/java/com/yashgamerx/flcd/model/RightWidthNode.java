@@ -17,7 +17,7 @@ public class RightWidthNode extends AbstractNode {
 
         mutateChildrenToHeightNodes();
         preComputeChildren();
-        calculateHorizontalSubtreeDimensions();
+        calculateVerticalSubtreeDimensions();
     }
 
     private boolean isLeafNode() {
@@ -54,27 +54,28 @@ public class RightWidthNode extends AbstractNode {
         }
     }
 
-    /// Computes dimensions where children are arranged horizontally
-    private void calculateHorizontalSubtreeDimensions() {
-        double totalChildrenWidth = 0.0;
-        double maxChildHeight = 0.0;
+    /// Computes dimensions where children are stacked vertically
+    private void calculateVerticalSubtreeDimensions() {
+        // Calculate the maximum child height using a stream
+        double maxChildWidth = this.children.stream()
+                .mapToDouble(AbstractNode::getSubtreeWidth)
+                .max()
+                .orElse(0.0);
 
-        for (int i = 0; i < this.children.size(); i++) {
-            AbstractNode child = this.children.get(i);
+        // Calculate the combined raw width of all children using a stream
+        double rawCombinedHeight = this.children.stream()
+                .mapToDouble(AbstractNode::getSubtreeHeight)
+                .sum();
 
-            totalChildrenWidth += child.getSubtreeWidth();
-            maxChildHeight = Math.max(maxChildHeight, child.getSubtreeHeight());
+        // Apply the spacer adjustments using your exact formulas
+        int totalChildren = this.children.size();
+        double totalChildrenHeight = rawCombinedHeight + (HEIGHT_SPACER * (totalChildren - 1));
 
-            if (i < this.children.size() - 1) {
-                totalChildrenWidth += WIDTH_SPACER;
-            }
-        }
+        // Maximum Child Width + Width Spacing + Parent Width (10.0)
+        this.subtreeWidth = Math.max(10.0, maxChildWidth) + WIDTH_SPACER + 10.0;
 
-        // Subtree Width = node's own width (10.0) + space gap + sibling accumulated widths
-        this.subtreeWidth = 10.0 + WIDTH_SPACER + totalChildrenWidth;
-
-        // Subtree Height = maximum child depth or its own diameter (10.0), whichever is taller
-        this.subtreeHeight = Math.max(10.0, maxChildHeight);
+        // Total Children Height + Height Spacing + Parent Height (10.0)
+        this.subtreeHeight = totalChildrenHeight + HEIGHT_SPACER + 10.0;
     }
 
     @Override

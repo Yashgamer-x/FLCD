@@ -17,7 +17,7 @@ public class RightHeightNode extends AbstractNode {
 
         mutateChildrenToWidthNodes();
         preComputeChildren();
-        calculateVerticalSubtreeDimensions();
+        calculatehHorizontalSubtreeDimensions();
     }
 
     private boolean isLeafNode() {
@@ -55,7 +55,7 @@ public class RightHeightNode extends AbstractNode {
     }
 
     /// Computes dimensions where children are stacked Horizontally
-    private void calculateVerticalSubtreeDimensions() {
+    private void calculatehHorizontalSubtreeDimensions() {
         // Calculate the maximum child height using a stream
         double maxChildHeight = this.children.stream()
                 .mapToDouble(AbstractNode::getSubtreeHeight)
@@ -71,7 +71,7 @@ public class RightHeightNode extends AbstractNode {
         int totalChildren = this.children.size();
         double totalChildrenWidth = rawCombinedWidth + (WIDTH_SPACER * (totalChildren - 1));
 
-        // Maximum Child Width + Width Spacing + Parent Width (10.0)
+        // Total Children Width + Width Spacing + Parent Width (10.0)
         this.subtreeWidth = totalChildrenWidth + WIDTH_SPACER + 10.0;
 
         // Maximum Child Height + Height Spacing + Parent Height (10.0)
