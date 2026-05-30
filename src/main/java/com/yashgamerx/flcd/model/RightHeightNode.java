@@ -54,27 +54,28 @@ public class RightHeightNode extends AbstractNode {
         }
     }
 
-    /// Computes dimensions where children are stacked vertically
+    /// Computes dimensions where children are stacked Horizontally
     private void calculateVerticalSubtreeDimensions() {
-        double maxChildWidth = 0.0;
-        double totalChildrenHeight = 0.0;
+        // Calculate the maximum child height using a stream
+        double maxChildHeight = this.children.stream()
+                .mapToDouble(AbstractNode::getSubtreeHeight)
+                .max()
+                .orElse(0.0);
 
-        for (int i = 0; i < this.children.size(); i++) {
-            AbstractNode child = this.children.get(i);
+        // Calculate the combined raw width of all children using a stream
+        double rawCombinedWidth = this.children.stream()
+                .mapToDouble(AbstractNode::getSubtreeWidth)
+                .sum();
 
-            maxChildWidth = Math.max(maxChildWidth, child.getSubtreeWidth());
-            totalChildrenHeight += child.getSubtreeHeight();
+        // Apply the spacer adjustments using your exact formulas
+        int totalChildren = this.children.size();
+        double totalChildrenWidth = rawCombinedWidth + (WIDTH_SPACER * (totalChildren - 1));
 
-            if (i < this.children.size() - 1) {
-                totalChildrenHeight += HEIGHT_SPACER;
-            }
-        }
+        // Maximum Child Width + Width Spacing + Parent Width (10.0)
+        this.subtreeWidth = totalChildrenWidth + WIDTH_SPACER + 10.0;
 
-        // Subtree Width = maximum child boundary or its own diameter (10.0)
-        this.subtreeWidth = Math.max(10.0, maxChildWidth);
-
-        // Subtree Height = node's own height (10.0) + space gap + stacked children height
-        this.subtreeHeight = 10.0 + HEIGHT_SPACER + totalChildrenHeight;
+        // Maximum Child Height + Height Spacing + Parent Height (10.0)
+        this.subtreeHeight = Math.max(10.0, maxChildHeight) + HEIGHT_SPACER + 10.0;
     }
 
     @Override
