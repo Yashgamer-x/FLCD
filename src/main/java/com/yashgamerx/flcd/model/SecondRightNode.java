@@ -58,19 +58,20 @@ public class SecondRightNode extends AbstractNode {
     }
 
     private void calculateStackedSubtreeDimensions() {
-        double maxChildWidth = 0.0;
-        double totalChildrenHeight = 0.0;
+        // Calculate the maximum child width using a stream
+        double maxChildWidth = this.children.stream()
+                .mapToDouble(AbstractNode::getSubtreeWidth)
+                .max()
+                .orElse(0.0);
 
-        for (AbstractNode child : this.children) {
-            maxChildWidth = Math.max(maxChildWidth, child.getSubtreeWidth());
-            totalChildrenHeight += child.getSubtreeHeight();
-        }
+        // Calculate the combined raw height of all children using a stream
+        double rawChildrenHeight = this.children.stream()
+                .mapToDouble(AbstractNode::getSubtreeHeight)
+                .sum();
 
-        // totalChildrenHeight = totalChildrenHeight + (HEIGHT_SPACER* (n-1))
-        // where n is the number of children
-        // e.g. child---child---child---child
-        // 4 children, 3 spacers
-        totalChildrenHeight += (HEIGHT_SPACER * (this.children.size() - 1));
+        // Apply the spacer adjustments using your exact formulas
+        int totalChildren = this.children.size();
+        double totalChildrenHeight = rawChildrenHeight + (HEIGHT_SPACER * (totalChildren - 1));
 
         // Maximum Child Width + Width Spacing + Parent Width (10.0)
         this.subtreeWidth = Math.max(10.0, maxChildWidth) + WIDTH_SPACER + 10.0;
@@ -89,28 +90,22 @@ public class SecondRightNode extends AbstractNode {
         // Turn right by -90 degrees (-π/2 radians) relative to parent's angle vector orientation
         double childAngleTrajectory = myAngle - (Math.PI / 2.0);
 
-        // Clearance offset length: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
-        double forwardStepLength = 5.0 + HEIGHT_SPACER + 5.0;
+        // Clearance offset length: (Parent Radius: 5.0) + WIDTH_SPACER + (Child Radius: 5.0)
+        double forwardStepLength = 5.0 + WIDTH_SPACER + 5.0;
 
         // Establish structural anchor base coordinates right at the physical edge of this node
         // Inverting vertical vector directions (subtraction) to map to standard UI display systems
-        double anchorX = this.getGridX() + (forwardStepLength * Math.cos(myAngle));
-        double anchorY = this.getGridY() - (forwardStepLength * Math.sin(myAngle));
+        double anchorX = this.getGridX() - (forwardStepLength * Math.cos(myAngle));
+        double anchorY = this.getGridY() + (forwardStepLength * Math.sin(myAngle));
 
-        // Track running linear tracking accumulation down the layout vector rail path
-        double runningStackedHeightDistance = 0.0;
+        childrenComputationBasedOnAnchorAndTrajectory(anchorX, anchorY, childAngleTrajectory);
+    }
+
+    private void childrenComputationBasedOnAnchorAndTrajectory(double anchorX, double anchorY, double childAngleTrajectory) {
+        // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
+        double runningStackedHeightDistance = 5.0 + HEIGHT_SPACER + 5.0;
 
         for (var child : this.children) {
-            double halfHeight = child.getSubtreeHeight() / 2.0;
-
-            // Apply horizontal default gap between structural sibling blocks
-            if (runningStackedHeightDistance > 0.0) {
-                runningStackedHeightDistance += HEIGHT_SPACER;
-            }
-
-            // Advance to the exact mid-point coordinate of the current child block bounding frame
-            runningStackedHeightDistance += halfHeight;
-
             // Map polar placement vectors into Cartesian screen coordinate tracking states
             double childX = anchorX + (runningStackedHeightDistance * Math.cos(childAngleTrajectory));
             double childY = anchorY - (runningStackedHeightDistance * Math.sin(childAngleTrajectory));
@@ -124,8 +119,8 @@ public class SecondRightNode extends AbstractNode {
             // Execute recursive cascading calls down to children to expand layout structures
             child.compute();
 
-            // Track remaining spacing clearance so next loop doesn't cause collision overlaps
-            runningStackedHeightDistance += halfHeight;
+            // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
+            runningStackedHeightDistance += child.getSubtreeHeight() + HEIGHT_SPACER + 5.0;
         }
     }
 
