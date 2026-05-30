@@ -37,8 +37,8 @@ public class FirstChildNode extends AbstractNode {
     }
 
     private void initializeLeafDimensions() {
-        this.subtreeWidth = 1.0;
-        this.subtreeHeight = 1.0;
+        this.subtreeWidth = 10.0;
+        this.subtreeHeight = 10.0;
     }
 
     /// Invokes preCompute recursively on the newly mutated, safe children
@@ -102,17 +102,26 @@ public class FirstChildNode extends AbstractNode {
         double leftWidth = calculateSideWidth(left);
         double rightWidth = calculateSideWidth(right);
 
+        // To avoid collisions and maintain perfect symmetry, find the heavier side
+        // and make both sides occupy that same maximum width.
+        double maxSideWidth = Math.max(leftWidth, rightWidth);
+
         double maxLeftHeight = calculateMaxHeight(left);
         double maxRightHeight = calculateMaxHeight(right);
 
-        // Subtree width = Left group width + Right group width + 1.0 (this node) + spacing
-        double totalWidth = leftWidth + rightWidth + 1.0;
-        if (leftWidth > 0) totalWidth += WIDTH_SPACER;
-        if (rightWidth > 0) totalWidth += WIDTH_SPACER;
+        // Total width = (Max Wing Width * 2) + 1.0 (this node)
+        double totalWidth = (maxSideWidth * 2) + 1.0;
+
+        // Add spacing for the wings if any children exist on either side
+        if (leftWidth > 0 || rightWidth > 0) {
+            // We add WIDTH_SPACER * 2 because both the left wing and right wing
+            // need a spacer separating them from the central parent node.
+            totalWidth += (WIDTH_SPACER * 2);
+        }
 
         this.subtreeWidth = Math.max(1.0, totalWidth);
 
-        // Height is this node (1.0) + spacer + the tallest child from either side
+        // Height calculation remains the same: this node + vertical gap + tallest child
         this.subtreeHeight = 1.0 + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight);
     }
 
