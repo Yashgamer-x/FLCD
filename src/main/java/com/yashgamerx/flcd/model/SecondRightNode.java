@@ -8,8 +8,6 @@ public class SecondRightNode extends AbstractNode {
         super(identifier);
     }
 
-    /// Bottom-up pre-computation. Converts uncalculated children to RightHeightNode,
-    /// triggers their internal measurements, and calculates total stacked boundaries.
     @Override
     public void preCompute() {
         if (isLeafNode()) {
@@ -31,7 +29,6 @@ public class SecondRightNode extends AbstractNode {
         this.subtreeHeight = 10.0;
     }
 
-    /// Structurally transforms generic or unknown nodes to RightHeightNode before measurement.
     private void mutateChildrenToRightHeightNodes() {
         var processedChildren = new ArrayList<AbstractNode>();
 
@@ -42,14 +39,11 @@ public class SecondRightNode extends AbstractNode {
                 processedChildren.add(convertToRightHeightNode(child));
             }
         }
-
         this.children = processedChildren;
     }
 
     private RightHeightNode convertToRightHeightNode(AbstractNode rawNode) {
         var concreteNode = new RightHeightNode(rawNode.getIdentifier());
-
-        // Retain nested down-chain hierarchy structure
         for (var grandChild : rawNode.getChildren()) {
             concreteNode.addChild(grandChild);
         }
@@ -63,7 +57,6 @@ public class SecondRightNode extends AbstractNode {
         }
     }
 
-    /// Computes the layout dimensions assuming vertical/linear stacking of the branch children.
     private void calculateStackedSubtreeDimensions() {
         double maxChildWidth = 0.0;
         double totalChildrenHeight = 0.0;
@@ -74,34 +67,29 @@ public class SecondRightNode extends AbstractNode {
             maxChildWidth = Math.max(maxChildWidth, child.getSubtreeWidth());
             totalChildrenHeight += child.getSubtreeHeight();
 
-            if (isNotLastChild(i)) {
+            if (currentIndexHasNextSibling(i)) {
                 totalChildrenHeight += HEIGHT_SPACER;
             }
         }
 
-        // Subtree Width is determined by the widest child element branch or its own base unit
-        this.subtreeWidth = Math.max(1.0, maxChildWidth);
-
-        // Subtree Height is this node's height (1.0) + distance gap + the accumulated height of the chain
-        this.subtreeHeight = 1.0 + HEIGHT_SPACER + totalChildrenHeight;
+        // Changed 1.0 -> 10.0 to match the custom radius node boundary sizes!
+        this.subtreeWidth = Math.max(10.0, maxChildWidth);
+        this.subtreeHeight = 10.0 + HEIGHT_SPACER + totalChildrenHeight;
     }
 
-    private boolean isNotLastChild(int currentIndex) {
+    private boolean currentIndexHasNextSibling(int currentIndex) {
         return currentIndex < this.children.size() - 1;
     }
 
     @Override
     public void compute() {
-        // TODO
     }
 
     @Override
     public void readjust() {
-        // TODO
     }
 
     @Override
     public void rootify() {
-        // TODO
     }
 }

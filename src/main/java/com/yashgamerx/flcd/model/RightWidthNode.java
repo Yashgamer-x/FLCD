@@ -2,9 +2,9 @@ package com.yashgamerx.flcd.model;
 
 import java.util.ArrayList;
 
-public class RightHeightNode extends AbstractNode {
+public class RightWidthNode extends AbstractNode {
 
-    public RightHeightNode(int identifier) {
+    public RightWidthNode(int identifier) {
         super(identifier);
     }
 
@@ -15,9 +15,9 @@ public class RightHeightNode extends AbstractNode {
             return;
         }
 
-        mutateChildrenToWidthNodes();
+        mutateChildrenToHeightNodes();
         preComputeChildren();
-        calculateVerticalSubtreeDimensions();
+        calculateHorizontalSubtreeDimensions();
     }
 
     private boolean isLeafNode() {
@@ -29,15 +29,15 @@ public class RightHeightNode extends AbstractNode {
         this.subtreeHeight = 10.0;
     }
 
-    /// Toggles the alternation: Converts children to RightWidthNode
-    private void mutateChildrenToWidthNodes() {
+    /// Toggles the alternation: Converts children to RightHeightNode
+    private void mutateChildrenToHeightNodes() {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof RightWidthNode rightWidthNode) {
-                processedChildren.add(rightWidthNode);
+            if (child instanceof RightHeightNode rightHeightNode) {
+                processedChildren.add(rightHeightNode);
             } else {
-                var concreteNode = new RightWidthNode(child.getIdentifier());
+                var concreteNode = new RightHeightNode(child.getIdentifier());
                 for (var grandChild : child.getChildren()) {
                     concreteNode.addChild(grandChild);
                 }
@@ -54,27 +54,27 @@ public class RightHeightNode extends AbstractNode {
         }
     }
 
-    /// Computes dimensions where children are stacked vertically
-    private void calculateVerticalSubtreeDimensions() {
-        double maxChildWidth = 0.0;
-        double totalChildrenHeight = 0.0;
+    /// Computes dimensions where children are arranged horizontally
+    private void calculateHorizontalSubtreeDimensions() {
+        double totalChildrenWidth = 0.0;
+        double maxChildHeight = 0.0;
 
         for (int i = 0; i < this.children.size(); i++) {
             AbstractNode child = this.children.get(i);
 
-            maxChildWidth = Math.max(maxChildWidth, child.getSubtreeWidth());
-            totalChildrenHeight += child.getSubtreeHeight();
+            totalChildrenWidth += child.getSubtreeWidth();
+            maxChildHeight = Math.max(maxChildHeight, child.getSubtreeHeight());
 
             if (i < this.children.size() - 1) {
-                totalChildrenHeight += HEIGHT_SPACER;
+                totalChildrenWidth += WIDTH_SPACER;
             }
         }
 
-        // Subtree Width = maximum child boundary or its own diameter (10.0)
-        this.subtreeWidth = Math.max(10.0, maxChildWidth);
+        // Subtree Width = node's own width (10.0) + space gap + sibling accumulated widths
+        this.subtreeWidth = 10.0 + WIDTH_SPACER + totalChildrenWidth;
 
-        // Subtree Height = node's own height (10.0) + space gap + stacked children height
-        this.subtreeHeight = 10.0 + HEIGHT_SPACER + totalChildrenHeight;
+        // Subtree Height = maximum child depth or its own diameter (10.0), whichever is taller
+        this.subtreeHeight = Math.max(10.0, maxChildHeight);
     }
 
     @Override

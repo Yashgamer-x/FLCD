@@ -119,10 +119,10 @@ public class FirstChildNode extends AbstractNode {
             totalWidth += (WIDTH_SPACER * 2);
         }
 
-        this.subtreeWidth = Math.max(1.0, totalWidth);
+        this.subtreeWidth = Math.max(10.0, totalWidth);
 
         // Height calculation remains the same: this node + vertical gap + tallest child
-        this.subtreeHeight = 1.0 + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight);
+        this.subtreeHeight = 10.0 + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight);
     }
 
     /// Calculates the total sideWidth based on subTree's width
