@@ -120,7 +120,7 @@ public class SecondRightNode extends AbstractNode {
             child.compute();
 
             // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
-            runningStackedHeightDistance += child.getSubtreeHeight() + HEIGHT_SPACER + 5.0;
+            runningStackedHeightDistance += child.getSubtreeHeight() + HEIGHT_SPACER;
         }
     }
 
