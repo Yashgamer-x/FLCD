@@ -132,9 +132,68 @@ public class FirstChildNode extends AbstractNode {
                 .orElse(0.0);
     }
 
+    /// Computes absolute screen coordinates and projects left/right children lines perpendicularly.
     @Override
     public void compute() {
-        // Ready for implementation using perpendicular angular branching passes!
+        if (isLeafNode()) {
+            return;
+        }
+
+        double parentAngle = this.getLocalRadianAngle(); // Trajectory angle inherited from RootNode [cite: 80, 138]
+
+        // Perpendicular wing baseline vectors [cite: 86, 88]
+        double rightAngle = parentAngle - (Math.PI / 2.0); // -90 degrees relative
+        double leftAngle = parentAngle + (Math.PI / 2.0);  // +90 degrees relative
+
+        // Clearance offset length pushing children downstream from parent perimeter:
+        // (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
+        double forwardStepLength = 5.0 + HEIGHT_SPACER + 5.0;
+
+        // Establish the baseline anchor point directly in front of the parent node
+        // Correcting for screen coordinate Y-inversion globally (subtraction for positive Y step)
+        double anchorX = this.getGridX() - (forwardStepLength * Math.cos(parentAngle));
+        double anchorY = this.getGridY() + (forwardStepLength * Math.sin(parentAngle));
+
+        // Track sequential slide displacements along the wings
+        double accumulatedRightDistance = 0.0;
+        double accumulatedLeftDistance = 0.0;
+
+        for (var child : this.children) {
+            if (child instanceof SecondRightNode) {
+                accumulatedRightDistance = projectChildAlongVector(child, anchorX, anchorY, rightAngle, accumulatedRightDistance);
+            } else if (child instanceof SecondLeftNode) {
+                accumulatedLeftDistance = projectChildAlongVector(child, anchorX, anchorY, leftAngle, accumulatedLeftDistance);
+            }
+        }
+    }
+
+    /// Positions a child sequentially along a wing baseline and cascades the true angle down-chain.
+    private double projectChildAlongVector(AbstractNode child, double anchorX, double anchorY, double baselineAngle, double currentDistance) {
+        double halfWidth = child.getSubtreeWidth();
+
+        // Move to the central plotting coordinate of the current node's physical boundary box
+        if (currentDistance > 0.0) {
+            currentDistance += WIDTH_SPACER;
+        }
+        currentDistance += halfWidth;
+
+        // Polar layout projection mapped to Cartesian grid space
+        // Corrected Y calculation to handle screen inversion seamlessly
+        double childX = anchorX + (currentDistance * Math.cos(baselineAngle));
+        double childY = anchorY - (currentDistance * Math.sin(baselineAngle));
+
+        child.setGridX(childX);
+        child.setGridY(childY);
+
+        // FIXED: Assign the true baseline angle to the child so its nested sub-elements
+        // know which vector they are traveling along when they process their own compute passes!
+        child.setLocalRadianAngle(baselineAngle);
+
+        // Process nested layout branches recursively
+        child.compute();
+
+        // Return current tail boundary for the next sibling layout spacing step
+        return currentDistance + halfWidth;
     }
 
     @Override

@@ -91,7 +91,7 @@ public class RootNode extends AbstractNode {
         double safeScalarOffset = child.getNodeOffset();
 
         double childX = this.getGridX() + (safeScalarOffset * Math.cos(targetAngle));
-        double childY = this.getGridY() + (safeScalarOffset * Math.sin(targetAngle));
+        double childY = this.getGridY() - (safeScalarOffset * Math.sin(targetAngle));
 
         child.setGridX(childX);
         child.setGridY(childY);
