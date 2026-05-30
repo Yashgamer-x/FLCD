@@ -17,18 +17,12 @@ public class FirstChildNode extends AbstractNode {
             return;
         }
 
-        // 1. First Pass: Partition and mutate types while they are still raw
         var leftSide = new ArrayList<AbstractNode>();
         var rightSide = new ArrayList<AbstractNode>();
         partitionAndMutateChildrenGreedily(leftSide, rightSide);
 
-        // 2. Commit the mutated nodes to the main children list
         updateChildrenList(leftSide, rightSide);
-
-        // 3. Second Pass: Now that they are typed nodes, it is safe to measure them bottom-up
         preComputeChildren();
-
-        // 4. Calculate final parent dimensions based on the calculated sizes
         calculateBalancedSubtreeDimensions(leftSide, rightSide);
     }
 
@@ -50,7 +44,6 @@ public class FirstChildNode extends AbstractNode {
 
     /// Partitions raw children greedily by estimating weight via total nested children count
     private void partitionAndMutateChildrenGreedily(List<AbstractNode> leftSide, List<AbstractNode> rightSide) {
-        // Sort original children descending by their nested child count as a proxy for weight
         List<AbstractNode> sortedChildren = new ArrayList<>(this.children);
         sortedChildren.sort(Comparator.comparingInt((AbstractNode node) -> node.getChildren().size()).reversed());
 
@@ -102,20 +95,14 @@ public class FirstChildNode extends AbstractNode {
         double leftWidth = calculateSideWidth(left);
         double rightWidth = calculateSideWidth(right);
 
-        // To avoid collisions and maintain perfect symmetry, find the heavier side
-        // and make both sides occupy that same maximum width.
         double maxSideWidth = Math.max(leftWidth, rightWidth);
-
         double maxLeftHeight = calculateMaxHeight(left);
         double maxRightHeight = calculateMaxHeight(right);
 
-        // Total width = (Max Wing Width * 2) + 1.0 (this node)
-        double totalWidth = (maxSideWidth * 2) + 1.0;
+        // FIXED: Changed 1.0 to 10.0 to match the true baseline diameter size of the parent node
+        double totalWidth = (maxSideWidth * 2) + 10.0;
 
-        // Add spacing for the wings if any children exist on either side
         if (leftWidth > 0 || rightWidth > 0) {
-            // We add WIDTH_SPACER * 2 because both the left wing and right wing
-            // need a spacer separating them from the central parent node.
             totalWidth += (WIDTH_SPACER * 2);
         }
 
@@ -147,16 +134,14 @@ public class FirstChildNode extends AbstractNode {
 
     @Override
     public void compute() {
-        // TODO
+        // Ready for implementation using perpendicular angular branching passes!
     }
 
     @Override
     public void readjust() {
-        // TODO
     }
 
     @Override
     public void rootify() {
-        // TODO
     }
 }

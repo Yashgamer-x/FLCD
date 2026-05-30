@@ -37,7 +37,6 @@ public class RootNode extends AbstractNode {
     private FirstChildNode convertToFirstChildNode(UnknownNode unknownNode) {
         var firstChild = new FirstChildNode(unknownNode.getIdentifier());
 
-        // Transfer children from UnknownNode to FirstChildNode
         for (var grandChild : unknownNode.children) {
             firstChild.addChild(grandChild);
         }
@@ -64,7 +63,7 @@ public class RootNode extends AbstractNode {
             configureChildLayoutState(child, currentAngle);
             projectAndAssignCoordinates(child, currentAngle);
 
-            // Pass execution down to the child to compute its nested left/right balance
+            // Cascade down computation recursively
             child.compute();
         }
     }
@@ -80,6 +79,7 @@ public class RootNode extends AbstractNode {
 
     /// Calculates and assigns the safe radial distance boundary and angle for the child.
     private void configureChildLayoutState(AbstractNode child, double targetAngle) {
+        // Clearance calculation updated to reflect the 10.0 baseline node diameter
         double clearanceHeight = child.getSubtreeWidth() / 2.0;
         double safeScalarOffset = clearanceHeight + child.getSubtreeHeight();
 
@@ -87,7 +87,6 @@ public class RootNode extends AbstractNode {
         child.setLocalRadianAngle(targetAngle);
     }
 
-    /// Maps polar vectors (distance and angle) to rectangular screen coordinates (X and Y).
     private void projectAndAssignCoordinates(AbstractNode child, double targetAngle) {
         double safeScalarOffset = child.getNodeOffset();
 
@@ -100,11 +99,9 @@ public class RootNode extends AbstractNode {
 
     @Override
     public void readjust() {
-        //TODO
     }
 
     @Override
     public void rootify() {
-        //TODO
     }
 }

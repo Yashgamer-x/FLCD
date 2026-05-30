@@ -2,9 +2,9 @@ package com.yashgamerx.flcd.model;
 
 import java.util.ArrayList;
 
-public class SecondLeftNode extends AbstractNode {
+public class LeftHeightNode extends AbstractNode {
 
-    public SecondLeftNode(int identifier) {
+    public LeftHeightNode(int identifier) {
         super(identifier);
     }
 
@@ -15,9 +15,9 @@ public class SecondLeftNode extends AbstractNode {
             return;
         }
 
-        mutateChildrenToLeftHeightNodes();
+        mutateChildrenToWidthNodes();
         preComputeChildren();
-        calculateStackedSubtreeDimensions();
+        calculateVerticalSubtreeDimensions();
     }
 
     private boolean isLeafNode() {
@@ -29,26 +29,23 @@ public class SecondLeftNode extends AbstractNode {
         this.subtreeHeight = 10.0;
     }
 
-    private void mutateChildrenToLeftHeightNodes() {
+    /// Toggles the alternation: Converts children to LeftWidthNode
+    private void mutateChildrenToWidthNodes() {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof LeftHeightNode leftHeightNode) {
-                processedChildren.add(leftHeightNode);
+            if (child instanceof LeftWidthNode leftWidthNode) {
+                processedChildren.add(leftWidthNode);
             } else {
-                processedChildren.add(convertToLeftHeightNode(child));
+                var concreteNode = new LeftWidthNode(child.getIdentifier());
+                for (var grandChild : child.getChildren()) {
+                    concreteNode.addChild(grandChild);
+                }
+                concreteNode.setParent(this);
+                processedChildren.add(concreteNode);
             }
         }
         this.children = processedChildren;
-    }
-
-    private LeftHeightNode convertToLeftHeightNode(AbstractNode rawNode) {
-        var concreteNode = new LeftHeightNode(rawNode.getIdentifier());
-        for (var grandChild : rawNode.getChildren()) {
-            concreteNode.addChild(grandChild);
-        }
-        concreteNode.setParent(this);
-        return concreteNode;
     }
 
     private void preComputeChildren() {
@@ -57,7 +54,8 @@ public class SecondLeftNode extends AbstractNode {
         }
     }
 
-    private void calculateStackedSubtreeDimensions() {
+    /// Computes dimensions where children are stacked vertically
+    private void calculateVerticalSubtreeDimensions() {
         double maxChildWidth = 0.0;
         double totalChildrenHeight = 0.0;
 
@@ -67,18 +65,13 @@ public class SecondLeftNode extends AbstractNode {
             maxChildWidth = Math.max(maxChildWidth, child.getSubtreeWidth());
             totalChildrenHeight += child.getSubtreeHeight();
 
-            if (currentIndexHasNextSibling(i)) {
+            if (i < this.children.size() - 1) {
                 totalChildrenHeight += HEIGHT_SPACER;
             }
         }
 
-        // Uses a baseline frame diameter of 10.0
         this.subtreeWidth = Math.max(10.0, maxChildWidth);
         this.subtreeHeight = 10.0 + HEIGHT_SPACER + totalChildrenHeight;
-    }
-
-    private boolean currentIndexHasNextSibling(int currentIndex) {
-        return currentIndex < this.children.size() - 1;
     }
 
     @Override
