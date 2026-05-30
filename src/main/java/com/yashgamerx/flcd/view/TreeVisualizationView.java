@@ -5,6 +5,7 @@ import com.yashgamerx.flcd.model.RootNode;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
@@ -15,6 +16,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import lombok.extern.java.Log;
 
 @Log
@@ -24,7 +26,8 @@ public class TreeVisualizationView extends BorderPane {
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
 
-    private static final double NODE_RADIUS = 22.0;
+    /// Matches the diameter of 1.0 established in the preCompute phase.
+    private static final double NODE_RADIUS = 5;
 
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
@@ -32,7 +35,7 @@ public class TreeVisualizationView extends BorderPane {
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
-    // SOLID: Dependency Inversion - Depend on Abstraction
+
     private final TreeLayoutAlgorithm layoutAlgorithm;
 
     public TreeVisualizationView(final RootNode rootNode, final TreeLayoutAlgorithm algorithm) {
@@ -61,46 +64,55 @@ public class TreeVisualizationView extends BorderPane {
         this.setCenter(scrollPaneContainer);
     }
 
-    /**
-     * Executes the rendering pass after the algorithm has computed the grid
-     */
+    /// Executes the rendering pass after the algorithm has computed the grid
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         if (rootNode != null) {
-            // The algorithm computes coordinates using divide and conquer
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
-
-            // The view renders based on computed coordinates
             drawCalculatedTree(rootNode);
         }
     }
 
     private void drawCalculatedTree(AbstractNode node) {
-        // Use the coordinates assigned by the layout engine
-        renderNodeVisuals(node, node.getGridX(), node.getGridY());
-
+        // Render edges first so they sit visually behind the circles
         for (var child : node.getChildren()) {
             drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
             drawCalculatedTree(child);
         }
+
+        // Render node visuals on top
+        renderNodeVisuals(node, node.getGridX(), node.getGridY());
     }
 
     private void renderNodeVisuals(AbstractNode node, double x, double y) {
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
-        circle.setStrokeWidth(2.0);
+        circle.setStrokeWidth(1);
 
-        var label = new Text(String.valueOf(node.getIdentifier()));
-        label.setX(x - (label.getLayoutBounds().getWidth() / 2));
-        label.setY(y + (label.getLayoutBounds().getHeight() / 4));
-        label.setStyle("-fx-font-weight: bold;");
+        var text = new Text(String.valueOf(node.getIdentifier()));
+        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
 
-        drawingCanvas.getChildren().addAll(circle, label);
+        // Set the anchor point of the text right in its center
+        text.setTextOrigin(VPos.CENTER);
+        text.setTextAlignment(TextAlignment.CENTER);
+
+        // Position the center anchor exactly at the circle's (x, y)
+        text.setX(x);
+        text.setY(y);
+
+        // If needed, minor manual adjustment for perfect centering
+        // because JavaFX font metrics can sometimes render slightly high:
+        // text.setY(y + 0.05);
+
+        drawingCanvas.getChildren().addAll(circle, text);
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
         var line = new Line(x1, y1, x2, y2);
         line.setStroke(Color.GRAY);
+        line.setStrokeWidth(1); // Scale line thickness down to match coordinates
+
+        // Adds edges to back of layout stack
         drawingCanvas.getChildren().addFirst(line);
     }
 
@@ -111,7 +123,6 @@ public class TreeVisualizationView extends BorderPane {
         drawingCanvas.setScaleY(1.0);
         renderTreeStructure();
 
-        // Centering is crucial for visual organization
         scrollPaneContainer.setHvalue(0.5);
         scrollPaneContainer.setVvalue(0.5);
     }

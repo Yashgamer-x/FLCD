@@ -17,58 +17,87 @@ public class FirstChildNode extends AbstractNode {
             return;
         }
 
-        // 1. Measure everyone bottom-up first
-        preComputeChildren();
-
-        // 2. Partition children into Left and Right balances greedily
+        // 1. First Pass: Partition and mutate types while they are still raw
         var leftSide = new ArrayList<AbstractNode>();
         var rightSide = new ArrayList<AbstractNode>();
-        partitionChildrenGreedily(leftSide, rightSide);
+        partitionAndMutateChildrenGreedily(leftSide, rightSide);
 
-        // 3. Calculate dimensions based on the balanced sides
+        // 2. Commit the mutated nodes to the main children list
+        updateChildrenList(leftSide, rightSide);
+
+        // 3. Second Pass: Now that they are typed nodes, it is safe to measure them bottom-up
+        preComputeChildren();
+
+        // 4. Calculate final parent dimensions based on the calculated sizes
         calculateBalancedSubtreeDimensions(leftSide, rightSide);
     }
 
-    ///  When the children is null or the list is empty, it is considered to be a leaf node
     private boolean isLeafNode() {
         return this.children == null || this.children.isEmpty();
     }
 
-    /// Default initialization to 1.0
     private void initializeLeafDimensions() {
         this.subtreeWidth = 1.0;
         this.subtreeHeight = 1.0;
     }
 
-    /// Invokes [AbstractNode#preCompute()] for children nodes
+    /// Invokes preCompute recursively on the newly mutated, safe children
     private void preComputeChildren() {
         for (var child : this.children) {
             child.preCompute();
         }
     }
 
-    /// Partitions children into left and right lists based on descending subtreeWidth
-    private void partitionChildrenGreedily(List<AbstractNode> leftSide, List<AbstractNode> rightSide) {
-        // Sort children descending by their precomputed width
+    /// Partitions raw children greedily by estimating weight via total nested children count
+    private void partitionAndMutateChildrenGreedily(List<AbstractNode> leftSide, List<AbstractNode> rightSide) {
+        // Sort original children descending by their nested child count as a proxy for weight
         List<AbstractNode> sortedChildren = new ArrayList<>(this.children);
-        sortedChildren.sort(Comparator.comparingDouble(AbstractNode::getSubtreeWidth).reversed());
+        sortedChildren.sort(Comparator.comparingInt((AbstractNode node) -> node.getChildren().size()).reversed());
 
-        double leftAccumulatedWidth = 0.0;
-        double rightAccumulatedWidth = 0.0;
+        int leftAccumulatedCount = 0;
+        int rightAccumulatedCount = 0;
 
         for (var child : sortedChildren) {
-            // Greedy choice: add to the side that is currently lighter
-            if (leftAccumulatedWidth <= rightAccumulatedWidth) {
-                leftSide.add(child);
-                leftAccumulatedWidth += child.getSubtreeWidth() + WIDTH_SPACER;
+            if (leftAccumulatedCount <= rightAccumulatedCount) {
+                AbstractNode leftNode = convertToLeft(child);
+                leftSide.add(leftNode);
+                leftAccumulatedCount += leftNode.getChildren().size() + 1;
             } else {
-                rightSide.add(child);
-                rightAccumulatedWidth += child.getSubtreeWidth() + WIDTH_SPACER;
+                AbstractNode rightNode = convertToRight(child);
+                rightSide.add(rightNode);
+                rightAccumulatedCount += rightNode.getChildren().size() + 1;
             }
         }
     }
 
-    /// Computes layout boundaries assuming the parent sits between the left and right groups
+    private SecondLeftNode convertToLeft(AbstractNode node) {
+        SecondLeftNode leftNode = new SecondLeftNode(node.getIdentifier());
+        transferNodeStructure(node, leftNode);
+        return leftNode;
+    }
+
+    private SecondRightNode convertToRight(AbstractNode node) {
+        SecondRightNode rightNode = new SecondRightNode(node.getIdentifier());
+        transferNodeStructure(node, rightNode);
+        return rightNode;
+    }
+
+    /// Moves the children and links references without touching dimension variables
+    private void transferNodeStructure(AbstractNode source, AbstractNode target) {
+        // Transfer children down the line so they aren't lost
+        for (var grandChild : source.getChildren()) {
+            target.addChild(grandChild);
+        }
+        target.setParent(this);
+    }
+
+    private void updateChildrenList(List<AbstractNode> left, List<AbstractNode> right) {
+        var merged = new ArrayList<AbstractNode>();
+        merged.addAll(left);
+        merged.addAll(right);
+        this.children = merged;
+    }
+
     private void calculateBalancedSubtreeDimensions(List<AbstractNode> left, List<AbstractNode> right) {
         double leftWidth = calculateSideWidth(left);
         double rightWidth = calculateSideWidth(right);
@@ -119,6 +148,6 @@ public class FirstChildNode extends AbstractNode {
 
     @Override
     public void rootify() {
-        //TODO
+        // TODO
     }
 }
