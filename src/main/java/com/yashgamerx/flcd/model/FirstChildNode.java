@@ -32,17 +32,13 @@ public class FirstChildNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof HeightNode heightNode) {
-                processedChildren.add(heightNode);
-            } else {
-                processedChildren.add(convertToSecondNode(child));
-            }
+            processedChildren.add(convertToSecondNode(child));
         }
         this.children = processedChildren;
     }
 
-    private SecondChildNode convertToSecondNode(AbstractNode rawNode) {
-        var concreteNode = new SecondChildNode(rawNode.getIdentifier());
+    private SecondNode convertToSecondNode(AbstractNode rawNode) {
+        var concreteNode = new SecondNode(rawNode.getIdentifier());
         transferNodeStructure(rawNode, concreteNode);
         return concreteNode;
     }

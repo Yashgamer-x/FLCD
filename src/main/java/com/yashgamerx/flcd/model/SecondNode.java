@@ -2,9 +2,9 @@ package com.yashgamerx.flcd.model;
 
 import java.util.ArrayList;
 
-public class SecondChildNode extends AbstractNode {
+public class SecondNode extends AbstractNode {
 
-    public SecondChildNode(int identifier) {
+    public SecondNode(int identifier) {
         super(identifier);
     }
 
@@ -33,17 +33,18 @@ public class SecondChildNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof HeightNode heightNode) {
-                processedChildren.add(heightNode);
-            } else {
-                processedChildren.add(convertToHeightNode(child));
-            }
+            processedChildren.add(convertToHeightNode(child));
         }
+
         this.children = processedChildren;
     }
 
     /// Converts the node to HeightNode
     private HeightNode convertToHeightNode(AbstractNode rawNode) {
+        // If the rawNode is an instance of HeightNode then return the heightNode directly.
+        if (rawNode instanceof HeightNode heightNode) return heightNode;
+
+        // ----- ELSE -----
         var concreteNode = new HeightNode(rawNode.getIdentifier());
         for (var grandChild : rawNode.getChildren()) {
             concreteNode.addChild(grandChild);
