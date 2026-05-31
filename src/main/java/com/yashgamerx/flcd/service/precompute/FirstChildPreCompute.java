@@ -45,13 +45,16 @@ public class FirstChildPreCompute implements Precomputable {
         //TODO: Implement
     }
 
+    /// Calculates and returns the area of the node
     private double calculateArea(AbstractNode node) {
         return node.getSubtreeHeight() * node.getSubtreeWidth();
     }
 
+    /// Sorts the children in descending order based on their area.
+    /// Injects the Computable based on the balance
     private void calculateBalancedSubTreeDimensions(AbstractNode firstChild) {
         var areaComparator = Comparator.comparingDouble((AbstractNode node) -> (node.getSubtreeWidth()) * (node.getSubtreeHeight()));
-        firstChild.getChildren().sort(areaComparator);
+        firstChild.getChildren().sort(areaComparator.reversed());
 
         double leftAccumulatedArea = 0;
         double rightAccumulatedArea = 0;
