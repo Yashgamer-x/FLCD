@@ -9,7 +9,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
     public void calculate(AbstractNode root, double originX, double originY) {
         if (root == null) return;
 
-        addDependencies(root);
+        injectRootPrecompute(root);
 
         root.precompute();
         root.setGridX(originX);
@@ -18,8 +18,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
         root.compute();
     }
 
-    private void addDependencies(AbstractNode root) {
-        //TODO: Add RootPreComputation and Computation dependency to the root
+    private void injectRootPrecompute(AbstractNode root) {
         root.setPrecomputable(new RootPreCompute());
     }
 
