@@ -1,8 +1,8 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
-import static com.yashgamerx.flcd.model.AbstractNode.WIDTH_SPACER;
+
+import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class SecondChildPreCompute implements Precomputable {
     @Override
@@ -25,8 +25,8 @@ public class SecondChildPreCompute implements Precomputable {
 
     /// Initializes leaf node dimensions
     private void initializeLeafDimensions(AbstractNode node) {
-        node.setSubtreeWidth(10.0);
-        node.setSubtreeHeight(10.0);
+        node.setSubtreeWidth(NODE_DIAMETER);
+        node.setSubtreeHeight(NODE_DIAMETER);
     }
 
     /// Injects {@link HeightChildPreCompute} dependency and Precomputes the child
@@ -57,10 +57,10 @@ public class SecondChildPreCompute implements Precomputable {
         double totalChildrenHeight = rawChildrenHeight + (HEIGHT_SPACER * (totalChildren - 1));
 
         // Maximum Child Width + Width Spacing + Parent Width (10.0)
-        var subtreeWidth = Math.max(10.0, maxChildWidth) + WIDTH_SPACER + 10.0;
+        var subtreeWidth = Math.max(NODE_DIAMETER, maxChildWidth) + WIDTH_SPACER + NODE_DIAMETER;
 
         // Children Height + Height Spacing + Parent Height (10.0)
-        var subtreeHeight = totalChildrenHeight + HEIGHT_SPACER + 10.0;
+        var subtreeHeight = totalChildrenHeight + HEIGHT_SPACER + NODE_DIAMETER;
 
         // Sets the dimensions
         secondChild.setSubtreeWidth(subtreeWidth);

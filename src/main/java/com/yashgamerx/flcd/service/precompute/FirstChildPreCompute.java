@@ -7,6 +7,7 @@ import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
 import java.util.Comparator;
 
 import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 
 public class FirstChildPreCompute implements Precomputable {
     @Override
@@ -29,8 +30,8 @@ public class FirstChildPreCompute implements Precomputable {
 
     /// Initializes leaf node dimensions
     private void initializeLeafDimensions(AbstractNode node) {
-        node.setSubtreeWidth(10.0);
-        node.setSubtreeHeight(10.0);
+        node.setSubtreeWidth(NODE_DIAMETER);
+        node.setSubtreeHeight(NODE_DIAMETER);
     }
 
     /// Injects SecondChildPreCompute dependency and Precomputes the child
@@ -92,12 +93,12 @@ public class FirstChildPreCompute implements Precomputable {
         double maxSideWidth = Math.max(leftWidth, rightWidth);
 
         // Max Width * 2 + (Node Diameter: 10.0)
-        double totalWidth = (maxSideWidth * 2) + 10.0;
+        double totalWidth = (maxSideWidth * 2) + NODE_DIAMETER;
 
 
-        firstChild.setSubtreeWidth(Math.max(10.0, totalWidth));
+        firstChild.setSubtreeWidth(Math.max(NODE_DIAMETER, totalWidth));
 
         // Height calculation remains the same: this node + vertical gap + tallest child
-        firstChild.setSubtreeHeight(10.0 + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
+        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
     }
 }
