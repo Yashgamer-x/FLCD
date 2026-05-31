@@ -1,6 +1,8 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.compute.LeftSecondChildCompute;
+import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
 
 import java.util.Comparator;
 
@@ -43,11 +45,11 @@ public class FirstChildPreCompute implements Precomputable {
     }
 
     private void injectLeftSecondChildComputable(AbstractNode secondChildNode) {
-        //TODO: Implement
+        secondChildNode.setComputable(new LeftSecondChildCompute());
     }
 
     private void injectRightSecondChildComputable(AbstractNode secondChildNode) {
-        //TODO: Implement
+        secondChildNode.setComputable(new RightSecondChildCompute());
     }
 
     /// Calculates and returns the area of the node
