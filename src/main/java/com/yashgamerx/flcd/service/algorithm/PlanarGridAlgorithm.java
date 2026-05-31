@@ -7,10 +7,18 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
     @Override
     public void calculate(AbstractNode root, double originX, double originY) {
         if (root == null) return;
-        root.preCompute();
 
+        addDependencies(root);
+
+        root.preCompute();
         root.setGridX(originX);
         root.setGridY(originY);
+
         root.compute();
     }
+
+    private void addDependencies(AbstractNode root) {
+        //TODO:
+    }
+
 }

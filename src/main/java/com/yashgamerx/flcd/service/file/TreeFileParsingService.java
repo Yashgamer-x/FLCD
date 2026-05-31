@@ -1,9 +1,9 @@
 package com.yashgamerx.flcd.service.file;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.model.RootNode;
-import com.yashgamerx.flcd.model.UnknownNode;
+import com.yashgamerx.flcd.model.Node;
 import lombok.extern.java.Log;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.util.HashMap;
@@ -46,13 +46,11 @@ public class TreeFileParsingService implements FileParsingService {
             // PRINCIPLE: Identity Map Pattern
             // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = (parentId == 1)?
-                    nodeMap.computeIfAbsent(parentId, RootNode::new):
-                    nodeMap.computeIfAbsent(parentId, UnknownNode::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, Node::new);
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, UnknownNode::new);
+                var childNode = nodeMap.computeIfAbsent(childId, Node::new);
                 parentNode.getChildren().add(childNode);
             }
         } catch (NumberFormatException e) {
