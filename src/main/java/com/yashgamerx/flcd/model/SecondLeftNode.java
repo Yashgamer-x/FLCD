@@ -108,6 +108,8 @@ public class SecondLeftNode extends AbstractNode {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
         double runningStackedHeightDistance = 5.0 + HEIGHT_SPACER + 5.0;
 
+        mutateChildrenToLeftHeightNodes();
+
         for (var child : this.children) {
             // Map polar placement vectors into Cartesian screen coordinate tracking states
             double childX = anchorX + (runningStackedHeightDistance * Math.cos(childAngleTrajectory));

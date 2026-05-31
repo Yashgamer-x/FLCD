@@ -110,24 +110,24 @@ public class LeftWidthNode extends AbstractNode {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
         double runningStackedHeightDistance = 5.0 + HEIGHT_SPACER + 5.0;
 
+        mutateChildrenToHeightNodes();
+
         for (var child : this.children) {
             // Map polar placement vectors into Cartesian screen coordinate tracking states
             double childX = anchorX + (runningStackedHeightDistance * Math.cos(childAngleTrajectory));
             double childY = anchorY - (runningStackedHeightDistance * Math.sin(childAngleTrajectory));
 
-            var leftHeightChild = convertToLeftHeightNode(child);
-
-            leftHeightChild.setGridX(childX);
-            leftHeightChild.setGridY(childY);
+            child.setGridX(childX);
+            child.setGridY(childY);
 
             // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-            leftHeightChild.setLocalRadianAngle(childAngleTrajectory);
+            child.setLocalRadianAngle(childAngleTrajectory);
 
             // Execute recursive cascading calls down to children to expand layout structures
-            leftHeightChild.compute();
+            child.compute();
 
             // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
-            runningStackedHeightDistance += leftHeightChild.getSubtreeHeight() + HEIGHT_SPACER;
+            runningStackedHeightDistance += child.getSubtreeHeight() + HEIGHT_SPACER;
         }
     }
 

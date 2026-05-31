@@ -34,18 +34,24 @@ public class RightWidthNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof RightHeightNode rightHeightNode) {
-                processedChildren.add(rightHeightNode);
-            } else {
-                var concreteNode = new RightHeightNode(child.getIdentifier());
-                for (var grandChild : child.getChildren()) {
-                    concreteNode.addChild(grandChild);
-                }
-                concreteNode.setParent(this);
-                processedChildren.add(concreteNode);
-            }
+            processedChildren.add(convertToRightHeightNode(child));
         }
         this.children = processedChildren;
+    }
+
+    private RightHeightNode convertToRightHeightNode(AbstractNode rawNode) {
+        if (rawNode instanceof RightHeightNode rightHeightNode) return rightHeightNode;
+
+        var concreteNode = new RightHeightNode(rawNode.getIdentifier());
+        for (var grandChild : rawNode.getChildren()) {
+            concreteNode.addChild(grandChild);
+        }
+        concreteNode.setParent(this);
+
+        concreteNode.subtreeWidth = rawNode.subtreeWidth;
+        concreteNode.subtreeHeight = rawNode.subtreeHeight;
+
+        return concreteNode;
     }
 
     private void preComputeChildren() {
@@ -102,6 +108,8 @@ public class RightWidthNode extends AbstractNode {
     private void childrenComputationBasedOnAnchorAndTrajectory(double anchorX, double anchorY, double childAngleTrajectory) {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
         double runningStackedHeightDistance = 5.0 + HEIGHT_SPACER + 5.0;
+
+        mutateChildrenToHeightNodes();
 
         for (var child : this.children) {
             // Map polar placement vectors into Cartesian screen coordinate tracking states

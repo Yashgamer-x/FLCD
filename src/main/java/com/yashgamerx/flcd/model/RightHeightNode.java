@@ -34,18 +34,24 @@ public class RightHeightNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof RightWidthNode rightWidthNode) {
-                processedChildren.add(rightWidthNode);
-            } else {
-                var concreteNode = new RightWidthNode(child.getIdentifier());
-                for (var grandChild : child.getChildren()) {
-                    concreteNode.addChild(grandChild);
-                }
-                concreteNode.setParent(this);
-                processedChildren.add(concreteNode);
-            }
+            processedChildren.add(convertToRightWidthNode(child));
         }
         this.children = processedChildren;
+    }
+
+    private RightWidthNode convertToRightWidthNode(AbstractNode rawNode) {
+        if (rawNode instanceof RightWidthNode rightWidthNode) return rightWidthNode;
+
+        var concreteNode = new RightWidthNode(rawNode.getIdentifier());
+        for (var grandChild : rawNode.getChildren()) {
+            concreteNode.addChild(grandChild);
+        }
+        concreteNode.setParent(this);
+
+        concreteNode.subtreeWidth = rawNode.subtreeWidth;
+        concreteNode.subtreeHeight = rawNode.subtreeHeight;
+
+        return concreteNode;
     }
 
     private void preComputeChildren() {
@@ -103,6 +109,8 @@ public class RightHeightNode extends AbstractNode {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
         double runningStackedWidthDistance = 5.0 + WIDTH_SPACER + 5.0;
 
+        mutateChildrenToWidthNodes();
+
         for (var child : this.children) {
             // Map polar placement vectors into Cartesian screen coordinate tracking states
             double childX = anchorX + (runningStackedWidthDistance * Math.cos(childAngleTrajectory));
@@ -117,7 +125,7 @@ public class RightHeightNode extends AbstractNode {
             // Execute recursive cascading calls down to children to expand layout structures
             child.compute();
 
-            // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
+            // runningStackedHeightDistance  = runningStackedHeightDistance + rightWidthNode.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
             runningStackedWidthDistance += child.getSubtreeWidth() + WIDTH_SPACER;
         }
     }
