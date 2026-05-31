@@ -2,8 +2,7 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 
-import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
-import static com.yashgamerx.flcd.model.AbstractNode.WIDTH_SPACER;
+import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class RightSecondChildCompute implements Computable {
     @Override
@@ -16,7 +15,7 @@ public class RightSecondChildCompute implements Computable {
         double childAngleTrajectory = myAngle - (Math.PI / 2.0);
 
         // Clearance offset length: (Parent Radius: 5.0) + WIDTH_SPACER + (Child Radius: 5.0)
-        double forwardStepLength = 5.0 + WIDTH_SPACER + 5.0;
+        double forwardStepLength = NODE_RADIUS + WIDTH_SPACER + NODE_RADIUS;
 
         // Establish structural anchor base coordinates right at the physical edge of this node
         // Inverting vertical vector directions (subtraction) to map to standard UI display systems
@@ -36,7 +35,7 @@ public class RightSecondChildCompute implements Computable {
 
     private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode secondChild, double anchorX, double anchorY, double childAngleTrajectory) {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
-        double runningStackedHeightDistance = 5.0 + HEIGHT_SPACER + 5.0;
+        double runningStackedHeightDistance = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
         for (var heightChild : secondChild.getChildren()) {
             // Map polar placement vectors into Cartesian screen coordinate tracking states
