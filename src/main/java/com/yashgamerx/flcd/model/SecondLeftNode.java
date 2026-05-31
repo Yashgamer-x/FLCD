@@ -33,21 +33,24 @@ public class SecondLeftNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof LeftHeightNode leftHeightNode) {
-                processedChildren.add(leftHeightNode);
-            } else {
-                processedChildren.add(convertToLeftHeightNode(child));
-            }
+            processedChildren.add(convertToLeftHeightNode(child));
         }
         this.children = processedChildren;
     }
 
+    /// Converts the node entirely to LeftHeightNode type including
     private LeftHeightNode convertToLeftHeightNode(AbstractNode rawNode) {
+        if (rawNode instanceof LeftHeightNode leftHeightNode) return leftHeightNode;
+
         var concreteNode = new LeftHeightNode(rawNode.getIdentifier());
         for (var grandChild : rawNode.getChildren()) {
             concreteNode.addChild(grandChild);
         }
         concreteNode.setParent(this);
+
+        concreteNode.subtreeWidth = rawNode.subtreeWidth;
+        concreteNode.subtreeHeight = rawNode.subtreeHeight;
+
         return concreteNode;
     }
 
@@ -110,17 +113,20 @@ public class SecondLeftNode extends AbstractNode {
             double childX = anchorX + (runningStackedHeightDistance * Math.cos(childAngleTrajectory));
             double childY = anchorY - (runningStackedHeightDistance * Math.sin(childAngleTrajectory));
 
-            child.setGridX(childX);
-            child.setGridY(childY);
+            var concreteChild = convertToLeftHeightNode(child);
+
+            concreteChild.setGridX(childX);
+            concreteChild.setGridY(childY);
 
             // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-            child.setLocalRadianAngle(childAngleTrajectory);
+            concreteChild.setLocalRadianAngle(childAngleTrajectory);
 
             // Execute recursive cascading calls down to children to expand layout structures
-            child.compute();
+
+            concreteChild.compute();
 
             // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
-            runningStackedHeightDistance += child.getSubtreeHeight() + HEIGHT_SPACER;
+            runningStackedHeightDistance += concreteChild.getSubtreeHeight() + HEIGHT_SPACER;
         }
     }
 

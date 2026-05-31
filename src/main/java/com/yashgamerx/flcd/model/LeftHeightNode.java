@@ -34,18 +34,24 @@ public class LeftHeightNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof LeftWidthNode leftWidthNode) {
-                processedChildren.add(leftWidthNode);
-            } else {
-                var concreteNode = new LeftWidthNode(child.getIdentifier());
-                for (var grandChild : child.getChildren()) {
-                    concreteNode.addChild(grandChild);
-                }
-                concreteNode.setParent(this);
-                processedChildren.add(concreteNode);
-            }
+            processedChildren.add(convertToLeftWidthNode(child));
         }
         this.children = processedChildren;
+    }
+
+    private LeftWidthNode convertToLeftWidthNode(AbstractNode rawNode) {
+        if (rawNode instanceof LeftWidthNode leftWidthNode) return leftWidthNode;
+
+        var concreteNode = new LeftWidthNode(rawNode.getIdentifier());
+        for (var grandChild : rawNode.getChildren()) {
+            concreteNode.addChild(grandChild);
+        }
+        concreteNode.setParent(this);
+
+        concreteNode.subtreeWidth = rawNode.subtreeWidth;
+        concreteNode.subtreeHeight = rawNode.subtreeHeight;
+
+        return concreteNode;
     }
 
     private void preComputeChildren() {
@@ -108,17 +114,19 @@ public class LeftHeightNode extends AbstractNode {
             double childX = anchorX + (runningStackedWidthDistance * Math.cos(childAngleTrajectory));
             double childY = anchorY - (runningStackedWidthDistance * Math.sin(childAngleTrajectory));
 
-            child.setGridX(childX);
-            child.setGridY(childY);
+            var leftWidthChild = convertToLeftWidthNode(child);
+
+            leftWidthChild.setGridX(childX);
+            leftWidthChild.setGridY(childY);
 
             // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-            child.setLocalRadianAngle(childAngleTrajectory);
+            leftWidthChild.setLocalRadianAngle(childAngleTrajectory);
 
             // Execute recursive cascading calls down to children to expand layout structures
-            child.compute();
+            leftWidthChild.compute();
 
             // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
-            runningStackedWidthDistance += child.getSubtreeWidth() + WIDTH_SPACER;
+            runningStackedWidthDistance += leftWidthChild.getSubtreeWidth() + WIDTH_SPACER;
         }
     }
 

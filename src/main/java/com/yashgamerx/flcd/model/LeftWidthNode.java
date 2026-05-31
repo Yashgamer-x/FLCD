@@ -34,18 +34,25 @@ public class LeftWidthNode extends AbstractNode {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
-            if (child instanceof LeftHeightNode leftHeightNode) {
-                processedChildren.add(leftHeightNode);
-            } else {
-                var concreteNode = new LeftHeightNode(child.getIdentifier());
-                for (var grandChild : child.getChildren()) {
-                    concreteNode.addChild(grandChild);
-                }
-                concreteNode.setParent(this);
-                processedChildren.add(concreteNode);
-            }
+            processedChildren.add(convertToLeftHeightNode(child));
         }
         this.children = processedChildren;
+    }
+
+    /// Converts the node entirely to LeftHeightNode type including
+    private LeftHeightNode convertToLeftHeightNode(AbstractNode rawNode) {
+        if (rawNode instanceof LeftHeightNode leftHeightNode) return leftHeightNode;
+
+        var concreteNode = new LeftHeightNode(rawNode.getIdentifier());
+        for (var grandChild : rawNode.getChildren()) {
+            concreteNode.addChild(grandChild);
+        }
+        concreteNode.setParent(this);
+
+        concreteNode.subtreeWidth = rawNode.subtreeWidth;
+        concreteNode.subtreeHeight = rawNode.subtreeHeight;
+
+        return concreteNode;
     }
 
     private void preComputeChildren() {
@@ -108,17 +115,19 @@ public class LeftWidthNode extends AbstractNode {
             double childX = anchorX + (runningStackedHeightDistance * Math.cos(childAngleTrajectory));
             double childY = anchorY - (runningStackedHeightDistance * Math.sin(childAngleTrajectory));
 
-            child.setGridX(childX);
-            child.setGridY(childY);
+            var leftHeightChild = convertToLeftHeightNode(child);
+
+            leftHeightChild.setGridX(childX);
+            leftHeightChild.setGridY(childY);
 
             // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-            child.setLocalRadianAngle(childAngleTrajectory);
+            leftHeightChild.setLocalRadianAngle(childAngleTrajectory);
 
             // Execute recursive cascading calls down to children to expand layout structures
-            child.compute();
+            leftHeightChild.compute();
 
             // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
-            runningStackedHeightDistance += child.getSubtreeHeight() + HEIGHT_SPACER;
+            runningStackedHeightDistance += leftHeightChild.getSubtreeHeight() + HEIGHT_SPACER;
         }
     }
 

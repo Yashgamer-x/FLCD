@@ -22,12 +22,14 @@ public class FirstChildNode extends AbstractNode {
 
         var leftSide = new ArrayList<AbstractNode>();
         var rightSide = new ArrayList<AbstractNode>();
-        partitionAndMutateChildrenGreedily(leftSide, rightSide);
 
+        partitionAndMutateChildrenGreedily(leftSide, rightSide);
         updateChildrenList(leftSide, rightSide);
+
         calculateBalancedSubtreeDimensions(leftSide, rightSide);
     }
 
+    /// Mutates the Children to {@link SecondNode}
     private void mutateChildrenToSecondNodes() {
         var processedChildren = new ArrayList<AbstractNode>();
 
@@ -37,6 +39,7 @@ public class FirstChildNode extends AbstractNode {
         this.children = processedChildren;
     }
 
+    /// Converts the node to SecondNode
     private SecondNode convertToSecondNode(AbstractNode rawNode) {
         var concreteNode = new SecondNode(rawNode.getIdentifier());
         transferNodeStructure(rawNode, concreteNode);
@@ -94,7 +97,7 @@ public class FirstChildNode extends AbstractNode {
         return rightNode;
     }
 
-    /// Moves the children and links references without touching dimension variables
+    /// Moves the children and links references with dimension variables
     private void transferNodeStructure(AbstractNode source, AbstractNode target) {
         // Transfer children down the line so they aren't lost
         for (var grandChild : source.getChildren()) {
@@ -114,19 +117,15 @@ public class FirstChildNode extends AbstractNode {
     }
 
     private void calculateBalancedSubtreeDimensions(List<AbstractNode> left, List<AbstractNode> right) {
-        double leftWidth = calculateSideWidth(left);
-        double rightWidth = calculateSideWidth(right);
+        double leftWidth = calculateWidth(left);
+        double rightWidth = calculateWidth(right);
 
         double maxSideWidth = Math.max(leftWidth, rightWidth);
         double maxLeftHeight = calculateMaxHeight(left);
         double maxRightHeight = calculateMaxHeight(right);
 
-        // FIXED: Changed 1.0 to 10.0 to match the true baseline diameter size of the parent node
+        // Max Width * 2 + (Node Diameter: 10.0)
         double totalWidth = (maxSideWidth * 2) + 10.0;
-
-        if (leftWidth > 0 || rightWidth > 0) {
-            totalWidth += (WIDTH_SPACER * 2);
-        }
 
         this.subtreeWidth = Math.max(10.0, totalWidth);
 
@@ -134,16 +133,12 @@ public class FirstChildNode extends AbstractNode {
         this.subtreeHeight = 10.0 + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight);
     }
 
-    /// Calculates the total sideWidth based on subTree's width
-    private double calculateSideWidth(List<AbstractNode> sideNodes) {
-        double width = 0.0;
-        for (int i = 0; i < sideNodes.size(); i++) {
-            width += sideNodes.get(i).getSubtreeWidth();
-            if (i < sideNodes.size() - 1) {
-                width += WIDTH_SPACER;
-            }
-        }
-        return width;
+    /// Calculates the Width based on the following formula:
+    /// (Sum of children Widths + WIDTH_SPACER * n) , where n is the number of children
+    private double calculateWidth(List<AbstractNode> sideNodes) {
+        return sideNodes.stream()
+                .mapToDouble(AbstractNode::getSubtreeWidth)
+                .sum() + (WIDTH_SPACER * sideNodes.size());
     }
 
     /// Finds the maximum height based on subTree's height
@@ -191,13 +186,9 @@ public class FirstChildNode extends AbstractNode {
 
     /// Positions a child sequentially along a wing baseline and cascades the true angle down-chain.
     private double projectChildAlongVector(AbstractNode child, double anchorX, double anchorY, double baselineAngle, double currentDistance) {
-        double halfWidth = child.getSubtreeWidth();
 
-        // Move to the central plotting coordinate of the current node's physical boundary box
-        if (currentDistance > 0.0) {
-            currentDistance += WIDTH_SPACER;
-        }
-        currentDistance += halfWidth;
+        // Entire subtree - (Radius of Circle: 5.0) to get the exact point of
+        double width = WIDTH_SPACER + child.getSubtreeWidth() - 5.0;
 
         // Polar layout projection mapped to Cartesian grid space
         // Corrected Y calculation to handle screen inversion seamlessly
@@ -215,7 +206,7 @@ public class FirstChildNode extends AbstractNode {
         child.compute();
 
         // Return current tail boundary for the next sibling layout spacing step
-        return currentDistance + halfWidth;
+        return currentDistance + width;
     }
 
     @Override
