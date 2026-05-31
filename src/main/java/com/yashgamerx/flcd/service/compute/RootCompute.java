@@ -2,6 +2,8 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 
+import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
+
 public class RootCompute implements Computable {
 
     @Override
@@ -40,8 +42,8 @@ public class RootCompute implements Computable {
         // clearance height = width / (tan(45) * 2.0)
         // 2.0 is to divide the entirely equally width in half since the 45 angle is between the center to the end of 1 side.
         // and first child has two sides. Left and right side for its children.
-        double clearanceHeight = child.getSubtreeWidth() / 2.0;
-        double safeScalarOffset = clearanceHeight + child.getSubtreeHeight();
+        double clearanceHeight = child.getSubtreeWidth() * 2;
+        double safeScalarOffset = clearanceHeight + child.getSubtreeHeight() + HEIGHT_SPACER;
 
         child.setNodeOffset(safeScalarOffset);
         child.setLocalRadianAngle(targetAngle);

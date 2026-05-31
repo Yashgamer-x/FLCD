@@ -98,7 +98,7 @@ public class FirstChildPreCompute implements Precomputable {
 
         firstChild.setSubtreeWidth(Math.max(NODE_DIAMETER, totalWidth));
 
-        // Height calculation remains the same: this node + vertical gap + tallest child
-        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
+        // Height calculation remains the same: this node + vertical gap + tallest child + SPACER (between Root and First Child)
+        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight) + HEIGHT_SPACER);
     }
 }
