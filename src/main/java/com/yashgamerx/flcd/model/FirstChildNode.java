@@ -62,33 +62,35 @@ public class FirstChildNode extends AbstractNode {
     /// Partitions raw children greedily by estimating weight via total nested children count
     private void partitionAndMutateChildrenGreedily(List<AbstractNode> leftSide, List<AbstractNode> rightSide) {
         List<AbstractNode> sortedChildren = new ArrayList<>(this.children);
-        sortedChildren.sort(Comparator.comparingInt((AbstractNode node) -> node.getChildren().size()).reversed());
+        sortedChildren.sort(Comparator.comparingDouble((AbstractNode node) -> (node.subtreeHeight) * (node.subtreeWidth)));
 
-        int leftAccumulatedCount = 0;
-        int rightAccumulatedCount = 0;
+        double leftAccumulatedArea = 0;
+        double rightAccumulatedArea = 0;
 
         for (var child : sortedChildren) {
-            if (leftAccumulatedCount <= rightAccumulatedCount) {
-                AbstractNode leftNode = convertToLeft(child);
+            if (leftAccumulatedArea <= rightAccumulatedArea) {
+                var leftNode = convertToLeft(child);
                 leftSide.add(leftNode);
-                leftAccumulatedCount += leftNode.getChildren().size() + 1;
+                leftAccumulatedArea += (leftNode.subtreeHeight) * (leftNode.subtreeWidth);
             } else {
-                AbstractNode rightNode = convertToRight(child);
+                var rightNode = convertToRight(child);
                 rightSide.add(rightNode);
-                rightAccumulatedCount += rightNode.getChildren().size() + 1;
+                rightAccumulatedArea += (rightNode.subtreeHeight) * (rightNode.subtreeWidth);
             }
         }
     }
 
     private SecondLeftNode convertToLeft(AbstractNode node) {
-        SecondLeftNode leftNode = new SecondLeftNode(node.getIdentifier());
+        var leftNode = new SecondLeftNode(node.getIdentifier());
         transferNodeStructure(node, leftNode);
+
         return leftNode;
     }
 
     private SecondRightNode convertToRight(AbstractNode node) {
-        SecondRightNode rightNode = new SecondRightNode(node.getIdentifier());
+        var rightNode = new SecondRightNode(node.getIdentifier());
         transferNodeStructure(node, rightNode);
+
         return rightNode;
     }
 
@@ -99,6 +101,9 @@ public class FirstChildNode extends AbstractNode {
             target.addChild(grandChild);
         }
         target.setParent(this);
+
+        target.subtreeHeight = source.subtreeHeight;
+        target.subtreeWidth = source.subtreeWidth;
     }
 
     private void updateChildrenList(List<AbstractNode> left, List<AbstractNode> right) {
