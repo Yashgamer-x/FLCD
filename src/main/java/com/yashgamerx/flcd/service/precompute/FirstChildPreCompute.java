@@ -6,8 +6,7 @@ import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
 
 import java.util.Comparator;
 
-import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
-import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
+import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class FirstChildPreCompute implements Precomputable {
     @Override
@@ -76,17 +75,17 @@ public class FirstChildPreCompute implements Precomputable {
         double maxLeftHeight = 0;
         double maxRightHeight = 0;
 
-        for (var child : firstChild.getChildren()) {
+        for (var secondChild : firstChild.getChildren()) {
             if (leftAccumulatedArea <= rightAccumulatedArea) {
-                injectLeftSecondChildComputable(child);
-                leftAccumulatedArea += calculateArea(child);
-                leftWidth += child.getSubtreeWidth();
-                maxLeftHeight = Math.max(maxLeftHeight, child.getSubtreeHeight());
+                injectLeftSecondChildComputable(secondChild);
+                leftAccumulatedArea += calculateArea(secondChild);
+                leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                maxLeftHeight = Math.max(maxLeftHeight, secondChild.getSubtreeHeight());
             } else {
-                injectRightSecondChildComputable(child);
-                rightAccumulatedArea += calculateArea(child);
-                rightWidth += child.getSubtreeWidth();
-                maxRightHeight = Math.max(maxRightHeight, child.getSubtreeHeight());
+                injectRightSecondChildComputable(secondChild);
+                rightAccumulatedArea += calculateArea(secondChild);
+                rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                maxRightHeight = Math.max(maxRightHeight, secondChild.getSubtreeHeight());
             }
         }
 
@@ -95,10 +94,9 @@ public class FirstChildPreCompute implements Precomputable {
         // Max Width * 2 + (Node Diameter: 10.0)
         double totalWidth = (maxSideWidth * 2) + NODE_DIAMETER;
 
-
         firstChild.setSubtreeWidth(Math.max(NODE_DIAMETER, totalWidth));
 
         // Height calculation remains the same: this node + vertical gap + tallest child + SPACER (between Root and First Child)
-        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight) + HEIGHT_SPACER);
+        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
     }
 }
