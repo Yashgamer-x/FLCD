@@ -13,8 +13,7 @@ public class SecondChildPreCompute implements Precomputable {
         }
 
         // Inject and Precompute
-        secondChild.getChildren().forEach(this::injectHeightChildPrecomputation);
-        secondChild.getChildren().forEach(AbstractNode::precompute);
+        secondChild.getChildren().forEach(this::injectAndPrecomputeChildren);
 
         calculateStackedSubtreeDimensions(secondChild);
     }
@@ -30,9 +29,15 @@ public class SecondChildPreCompute implements Precomputable {
         node.setSubtreeHeight(10.0);
     }
 
-    /// Injects SecondChildPreCompute dependency to the node
-    private void injectHeightChildPrecomputation(AbstractNode secondChildNode) {
-        secondChildNode.setPrecomputable(new HeightChildPreCompute());
+    /// Injects {@link HeightChildPreCompute} dependency and Precomputes the child
+    private void injectAndPrecomputeChildren(AbstractNode heightChild) {
+        injectHeightChildPrecomputation(heightChild);
+        heightChild.precompute();
+    }
+
+    /// Injects {@link HeightChildPreCompute} dependency to the node
+    private void injectHeightChildPrecomputation(AbstractNode heightChild) {
+        heightChild.setPrecomputable(new HeightChildPreCompute());
     }
 
     private void calculateStackedSubtreeDimensions(AbstractNode secondChild) {

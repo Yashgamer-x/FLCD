@@ -5,11 +5,12 @@ import com.yashgamerx.flcd.model.AbstractNode;
 public class RootPreCompute implements Precomputable {
     @Override
     public void precompute(AbstractNode root) {
-        // Inject First Child Precomputation dependency for all children of root
-        root.getChildren().forEach(this::injectFirstChildPrecomputation);
+        root.getChildren().forEach(this::injectAndPrecompute);
+    }
 
-        // Invokes precompute recursively on all children
-        root.getChildren().forEach(AbstractNode::precompute);
+    private void injectAndPrecompute(AbstractNode firstChild) {
+        injectFirstChildPrecomputation(firstChild);
+        firstChild.precompute();
     }
 
     private void injectFirstChildPrecomputation(AbstractNode node) {

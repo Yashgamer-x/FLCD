@@ -30,9 +30,9 @@ public class WidthChildPreCompute implements Precomputable {
     }
 
     /// Injects the dependency and then precomputes that child.
-    private void injectAndPrecomputeChildren(AbstractNode node) {
-        injectHeightChildPrecomputation(node);
-        node.precompute();
+    private void injectAndPrecomputeChildren(AbstractNode heightChild) {
+        injectHeightChildPrecomputation(heightChild);
+        heightChild.precompute();
     }
 
     /// Injects [HeightChildPreCompute] dependency to the heightChild

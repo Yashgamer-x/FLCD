@@ -12,11 +12,8 @@ public class FirstChildPreCompute implements Precomputable {
             return;
         }
 
-        // Injects SecondChildPreCompute dependency for all children of node
-        firstChild.getChildren().forEach(this::injectSecondChildPrecomputation);
-
-        // Invokes precompute recursively on all children
-        firstChild.getChildren().forEach(AbstractNode::precompute);
+        // Injects SecondChildPreCompute dependency and Precomputes all the children
+        firstChild.getChildren().forEach(this::injectAndPrecompute);
 
         calculateBalancedSubTreeDimensions(firstChild);
     }
@@ -30,6 +27,12 @@ public class FirstChildPreCompute implements Precomputable {
     private void initializeLeafDimensions(AbstractNode node) {
         node.setSubtreeWidth(10.0);
         node.setSubtreeHeight(10.0);
+    }
+
+    /// Injects SecondChildPreCompute dependency and Precomputes the child
+    private void injectAndPrecompute(AbstractNode secondChildNode) {
+        injectSecondChildPrecomputation(secondChildNode);
+        secondChildNode.precompute();
     }
 
     /// Injects SecondChildPreCompute dependency to the node
