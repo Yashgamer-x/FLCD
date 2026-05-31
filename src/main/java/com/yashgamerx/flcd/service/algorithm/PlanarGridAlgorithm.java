@@ -11,7 +11,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
         addDependencies(root);
 
-        root.preCompute();
+        root.precompute();
         root.setGridX(originX);
         root.setGridY(originY);
 

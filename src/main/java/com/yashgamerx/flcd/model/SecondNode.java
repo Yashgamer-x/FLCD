@@ -9,7 +9,7 @@ public class SecondNode extends AbstractNode {
     }
 
     @Override
-    public void preCompute() {
+    public void precompute() {
         if (isLeafNode()) {
             initializeLeafDimensions();
             return;
@@ -55,7 +55,7 @@ public class SecondNode extends AbstractNode {
 
     private void preComputeChildren() {
         for (var child : this.children) {
-            child.preCompute();
+            child.precompute();
         }
     }
 

@@ -9,7 +9,7 @@ public class RootPreCompute implements Precomputable {
         root.getChildren().forEach(this::injectFirstChildPrecomputation);
 
         // Invokes precompute recursively on all children
-        root.getChildren().forEach(AbstractNode::preCompute);
+        root.getChildren().forEach(AbstractNode::precompute);
     }
 
     private void injectFirstChildPrecomputation(AbstractNode node) {

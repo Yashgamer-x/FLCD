@@ -44,7 +44,7 @@ public abstract class AbstractNode {
     }
 
     // Abstract methods for FLCD phases
-    public abstract void preCompute();
+    public abstract void precompute();
     public abstract void compute();
     public abstract void readjust();
     public abstract void rootify();

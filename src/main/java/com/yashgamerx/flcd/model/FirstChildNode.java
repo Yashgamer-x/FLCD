@@ -11,7 +11,7 @@ public class FirstChildNode extends AbstractNode {
     }
 
     @Override
-    public void preCompute() {
+    public void precompute() {
         if (isLeafNode()) {
             initializeLeafDimensions();
             return;
@@ -58,7 +58,7 @@ public class FirstChildNode extends AbstractNode {
     /// Invokes preCompute recursively on the newly mutated, safe children
     private void preComputeChildren() {
         for (var child : this.children) {
-            child.preCompute();
+            child.precompute();
         }
     }
 

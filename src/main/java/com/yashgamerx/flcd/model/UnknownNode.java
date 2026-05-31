@@ -8,7 +8,7 @@ public class UnknownNode extends AbstractNode{
 
     /// This implementation must be empty as UnknownNode cannot be precomputed
     @Override
-    public void preCompute() {
+    public void precompute() {
         throw new UnsupportedOperationException("Node conversion not yet implemented.");
     }
 

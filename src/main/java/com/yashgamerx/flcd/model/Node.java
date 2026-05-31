@@ -7,7 +7,7 @@ public class Node extends AbstractNode {
     }
 
     @Override
-    public void preCompute() {
+    public void precompute() {
         precomputable.precompute(this);
     }
 

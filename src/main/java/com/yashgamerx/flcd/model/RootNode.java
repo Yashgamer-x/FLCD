@@ -12,7 +12,7 @@ public class RootNode extends AbstractNode {
     /// Converts any {@link UnknownNode} children to {@link FirstChildNode}
     /// and transfers their children before precomputing them.
     @Override
-    public void preCompute() {
+    public void precompute() {
         var processedChildren = new ArrayList<AbstractNode>();
 
         for (var child : this.children) {
@@ -29,7 +29,7 @@ public class RootNode extends AbstractNode {
             child = convertToFirstChildNode(unknownNode);
         }
 
-        child.preCompute();
+        child.precompute();
         return child;
     }
 
