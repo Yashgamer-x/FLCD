@@ -1,7 +1,6 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-
 import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
 import static com.yashgamerx.flcd.model.AbstractNode.WIDTH_SPACER;
 
@@ -33,7 +32,7 @@ public class SecondChildPreCompute implements Precomputable {
 
     /// Injects SecondChildPreCompute dependency to the node
     private void injectHeightChildPrecomputation(AbstractNode secondChildNode) {
-        secondChildNode.setPrecomputable(new SecondChildPreCompute());
+        secondChildNode.setPrecomputable(new HeightChildPreCompute());
     }
 
     private void calculateStackedSubtreeDimensions(AbstractNode secondChild) {
