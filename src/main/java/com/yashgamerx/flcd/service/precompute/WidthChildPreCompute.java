@@ -20,7 +20,7 @@ public class WidthChildPreCompute implements Precomputable {
 
     /// Checks if the node has no children
     private boolean isLeafNode(AbstractNode node) {
-        return node == null || node.getChildren().isEmpty();
+        return node.getChildren() == null || node.getChildren().isEmpty();
     }
 
     /// Initializes leaf node dimensions

@@ -1,7 +1,6 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.model.RootNode;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -22,7 +21,7 @@ import lombok.extern.java.Log;
 @Log
 public class TreeVisualizationView extends BorderPane {
 
-    private final RootNode rootNode;
+    private final AbstractNode rootNode;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
 
@@ -38,7 +37,7 @@ public class TreeVisualizationView extends BorderPane {
 
     private final TreeLayoutAlgorithm layoutAlgorithm;
 
-    public TreeVisualizationView(final RootNode rootNode, final TreeLayoutAlgorithm algorithm) {
+    public TreeVisualizationView(final AbstractNode rootNode, final TreeLayoutAlgorithm algorithm) {
         this.rootNode = rootNode;
         this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();

@@ -1,6 +1,5 @@
 package com.yashgamerx.flcd.view;
 
-import com.yashgamerx.flcd.model.RootNode;
 import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
@@ -102,15 +101,13 @@ public class AlgorithmSelectorView extends BorderPane {
 
         parsingResult.ifPresentOrElse(root -> {
             // Create the new View
-            if(root instanceof RootNode rootNode) {
-                var visualizationView = new TreeVisualizationView(rootNode, new PlanarGridAlgorithm());
+            var visualizationView = new TreeVisualizationView(root, new PlanarGridAlgorithm());
 
-                // Swap the Root of the Scene
-                // Since this class is currently the root of the Scene, we replace it.
-                var currentScene = this.getScene();
-                currentScene.setRoot(visualizationView);
-                log.info("Transitioned to TreeVisualizationView.");
-            }
+            // Swap the Root of the Scene
+            // Since this class is currently the root of the Scene, we replace it.
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to TreeVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }

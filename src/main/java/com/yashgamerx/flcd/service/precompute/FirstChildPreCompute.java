@@ -4,6 +4,8 @@ import com.yashgamerx.flcd.model.AbstractNode;
 
 import java.util.Comparator;
 
+import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
+
 public class FirstChildPreCompute implements Precomputable {
     @Override
     public void precompute(AbstractNode firstChild) {
@@ -20,7 +22,7 @@ public class FirstChildPreCompute implements Precomputable {
 
     /// Checks if the node has no children
     private boolean isLeafNode(AbstractNode node) {
-        return node == null || node.getChildren().isEmpty();
+        return node.getChildren() == null || node.getChildren().isEmpty();
     }
 
     /// Initializes leaf node dimensions
@@ -59,17 +61,41 @@ public class FirstChildPreCompute implements Precomputable {
         var areaComparator = Comparator.comparingDouble((AbstractNode node) -> (node.getSubtreeWidth()) * (node.getSubtreeHeight()));
         firstChild.getChildren().sort(areaComparator.reversed());
 
+        // Area
         double leftAccumulatedArea = 0;
         double rightAccumulatedArea = 0;
+
+        // Width
+        double rightWidth = 0;
+        double leftWidth = 0;
+
+        // Height
+        double maxLeftHeight = 0;
+        double maxRightHeight = 0;
 
         for (var child : firstChild.getChildren()) {
             if (leftAccumulatedArea <= rightAccumulatedArea) {
                 injectLeftSecondChildComputable(child);
                 leftAccumulatedArea += calculateArea(child);
+                leftWidth += child.getSubtreeWidth();
+                maxLeftHeight = Math.max(maxLeftHeight, child.getSubtreeHeight());
             } else {
                 injectRightSecondChildComputable(child);
                 rightAccumulatedArea += calculateArea(child);
+                rightWidth += child.getSubtreeWidth();
+                maxRightHeight = Math.max(maxRightHeight, child.getSubtreeHeight());
             }
         }
+
+        double maxSideWidth = Math.max(leftWidth, rightWidth);
+
+        // Max Width * 2 + (Node Diameter: 10.0)
+        double totalWidth = (maxSideWidth * 2) + 10.0;
+
+
+        firstChild.setSubtreeWidth(Math.max(10.0, totalWidth));
+
+        // Height calculation remains the same: this node + vertical gap + tallest child
+        firstChild.setSubtreeHeight(10.0 + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
     }
 }
