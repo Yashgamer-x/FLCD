@@ -2,8 +2,7 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 
-import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
-import static com.yashgamerx.flcd.model.AbstractNode.WIDTH_SPACER;
+import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class FirstChildCompute implements Computable {
     @Override
@@ -18,7 +17,7 @@ public class FirstChildCompute implements Computable {
 
         // Clearance offset length pushing children downstream from parent perimeter:
         // (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
-        double forwardStepLength = 5.0 + HEIGHT_SPACER + 5.0;
+        double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
         // Establish the baseline anchor point directly in front of the parent node
         // Correcting for screen coordinate Y-inversion globally (subtraction for positive Y step)
@@ -43,12 +42,13 @@ public class FirstChildCompute implements Computable {
     }
 
     /// Positions a child sequentially along a wing baseline and cascades the true angle down-chain.
-    private double projectChildAlongVector(AbstractNode child, double anchorX, double anchorY, double baselineAngle, double currentDistance) {
+    private double projectChildAlongVector(AbstractNode child, double anchorX, double anchorY,
+                                           double baselineAngle, double currentDistance) {
 
         // Entire subtree - (Radius of Circle: 5.0) to get the exact point of
         double newDistance = currentDistance + WIDTH_SPACER + child.getSubtreeWidth();
 
-        double centerPoint = newDistance - 5.0;
+        double centerPoint = newDistance - NODE_RADIUS;
 
         // Polar layout projection mapped to Cartesian grid space
         // Corrected Y calculation to handle screen inversion seamlessly
