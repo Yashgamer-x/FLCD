@@ -5,6 +5,6 @@ import com.yashgamerx.flcd.model.AbstractNode;
 public class RootPreCompute implements Precomputable {
     @Override
     public void precompute(AbstractNode node) {
-
+        node.getChildren().forEach(AbstractNode::preCompute);
     }
 }

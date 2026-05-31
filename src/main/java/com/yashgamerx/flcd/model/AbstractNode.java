@@ -1,5 +1,7 @@
 package com.yashgamerx.flcd.model;
 
+import com.yashgamerx.flcd.service.compute.Computable;
+import com.yashgamerx.flcd.service.precompute.Precomputable;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.ArrayList;
@@ -25,6 +27,10 @@ public abstract class AbstractNode {
     protected double globalRadianAngle; // Per-child angular step for subtree
     protected double gridX; // Screen X coordinate
     protected double gridY; // Screen Y coordinate
+
+    // Services
+    protected Precomputable precomputable;
+    protected Computable computable;
 
     // Constructor
     public AbstractNode(int identifier, String name, AbstractNode parent) {
