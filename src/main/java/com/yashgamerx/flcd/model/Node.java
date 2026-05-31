@@ -20,12 +20,12 @@ public class Node extends AbstractNode {
 
     @Override
     public void preCompute() {
-        precomputable.precompute();
+        precomputable.precompute(this);
     }
 
     @Override
     public void compute() {
-        computable.compute();
+        computable.compute(this);
     }
 
     @Override
