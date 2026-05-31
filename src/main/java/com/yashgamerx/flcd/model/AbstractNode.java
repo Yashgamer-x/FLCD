@@ -11,8 +11,8 @@ import java.util.List;
 @Setter
 public abstract class AbstractNode {
     // Constants for spacing
-    protected static final double WIDTH_SPACER = 5.0;
-    protected static final double HEIGHT_SPACER = 5.0;
+    public static final double WIDTH_SPACER = 5.0;
+    public static final double HEIGHT_SPACER = 5.0;
 
     private final int identifier;
     private String name; // Added name as per document (Case Study format)
