@@ -43,19 +43,6 @@ public abstract class AbstractNode {
     public abstract void readjust();
     public abstract void rootify();
 
-    /// Helper method for type conversion.
-    ///
-    /// ---
-    /// This method will be implemented in GeneralTree or a utility class, but the concept is that a node can be
-    /// converted to a different type while preserving its identity.
-    /// ---
-    ///  For now, we'll just have a placeholder.
-    protected <T extends AbstractNode> T convertTo(Class<T> targetType) {
-        // This will involve creating a new instance of targetType, copying relevant data,
-        // and updating the parent's children list and the global map.
-        // The actual implementation will be in GeneralTree or a dedicated factory.
-        throw new UnsupportedOperationException("Node conversion not yet implemented.");
-    }
 
     /// Utility method to add a child
     public void addChild(AbstractNode child) {
