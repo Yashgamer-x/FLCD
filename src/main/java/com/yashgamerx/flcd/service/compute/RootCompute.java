@@ -34,17 +34,19 @@ public class RootCompute implements Computable {
     }
 
     /// Calculates and assigns the safe radial distance boundary and angle for the child.
-    private void configureChildLayoutState(AbstractNode child, double targetAngle) {
+    private void configureChildLayoutState(AbstractNode firstChild, double targetAngle) {
+        int totalChildren = firstChild.getParent().getChildren().size();
+        double angularStep = calculateAngularStep(totalChildren);
         // Clearance calculation updated to reflect the 10.0 baseline node diameter
         // tan(45) = width / clearance height
         // clearance height = width / (tan(45) * 2.0)
         // 2.0 is to divide the entirely equally width in half since the 45 angle is between the center to the end of 1 side.
         // and first child has two sides. Left and right side for its children.
-        double clearanceHeight = child.getSubtreeWidth();
-        double safeScalarOffset = clearanceHeight + child.getSubtreeHeight();
+        double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.sin(angularStep / 2.0));
+        double safeScalarOffset = clearanceHeight + firstChild.getSubtreeHeight();
 
-        child.setNodeOffset(safeScalarOffset);
-        child.setLocalRadianAngle(targetAngle);
+        firstChild.setNodeOffset(safeScalarOffset);
+        firstChild.setLocalRadianAngle(targetAngle);
     }
 
     ///

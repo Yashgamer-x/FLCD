@@ -51,7 +51,7 @@ public class TreeFileParsingService implements FileParsingService {
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
                 var childNode = nodeMap.computeIfAbsent(childId, Node::new);
-                parentNode.getChildren().add(childNode);
+                parentNode.addChild(childNode);
             }
         } catch (NumberFormatException e) {
             log.warning("Skipping malformed line (invalid numbers): " + line);

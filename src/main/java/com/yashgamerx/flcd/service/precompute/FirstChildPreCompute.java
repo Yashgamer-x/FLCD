@@ -93,7 +93,6 @@ public class FirstChildPreCompute implements Precomputable {
 
         // Max Width * 2 + (Node Diameter: 10.0)
         double totalWidth = (maxSideWidth * 2) + NODE_DIAMETER;
-
         firstChild.setSubtreeWidth(Math.max(NODE_DIAMETER, totalWidth));
 
         // Height calculation remains the same: this node + vertical gap + tallest child + SPACER (between Root and First Child)
