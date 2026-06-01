@@ -2,6 +2,8 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
+
 public class RootCompute implements Computable {
 
     @Override
@@ -42,7 +44,7 @@ public class RootCompute implements Computable {
         // clearance height = width / (tan(45) * 2.0)
         // 2.0 is to divide the entirely equally width in half since the 45 angle is between the center to the end of 1 side.
         // and first child has two sides. Left and right side for its children.
-        double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.sin(angularStep / 2.0));
+        double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
         double safeScalarOffset = clearanceHeight + firstChild.getSubtreeHeight();
 
         firstChild.setNodeOffset(safeScalarOffset);
@@ -52,9 +54,10 @@ public class RootCompute implements Computable {
     ///
     private void projectAndAssignCoordinates(AbstractNode rootNode, AbstractNode firstChild, double targetAngle) {
         double safeScalarOffset = firstChild.getNodeOffset();
+        double nodeCenter = safeScalarOffset - NODE_RADIUS;
 
-        double childX = rootNode.getGridX() + (safeScalarOffset * Math.cos(targetAngle));
-        double childY = rootNode.getGridY() - (safeScalarOffset * Math.sin(targetAngle));
+        double childX = rootNode.getGridX() + (nodeCenter * Math.cos(targetAngle));
+        double childY = rootNode.getGridY() - (nodeCenter * Math.sin(targetAngle));
 
         firstChild.setGridX(childX);
         firstChild.setGridY(childY);
