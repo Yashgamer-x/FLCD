@@ -1,7 +1,7 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.service.angular.Angle360Calculator;
+import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
@@ -9,7 +9,7 @@ import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 @Log
 public class RootifiedCompute implements Computable {
 
-    private final AngularCalculator angularCalculator = new Angle360Calculator();
+    private final AngularCalculator angularCalculator = new Angle180Calculator();
 
     @Override
     public void compute(AbstractNode rootNode) {
