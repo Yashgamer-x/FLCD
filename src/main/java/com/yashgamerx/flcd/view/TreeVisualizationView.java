@@ -2,7 +2,7 @@ package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
-import com.yashgamerx.flcd.service.compute.FirstChildRootifiedCompute;
+import com.yashgamerx.flcd.service.compute.RootifiedCompute;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -202,7 +202,7 @@ public class TreeVisualizationView extends BorderPane {
 
     private void rootifyNode(AbstractNode node) {
         node.setPrecomputable(new RootifiedPreCompute());
-        node.setComputable(new FirstChildRootifiedCompute());
+        node.setComputable(new RootifiedCompute());
     }
 
     // Helper method to display an error if they type non-numeric text
