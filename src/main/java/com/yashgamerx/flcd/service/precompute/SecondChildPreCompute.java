@@ -1,10 +1,18 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
+import com.yashgamerx.flcd.service.precompute.inject.HeightChildPreComputeInjector;
+import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class SecondChildPreCompute implements Precomputable {
+
+    private final PrecomputeInjectable injectable = new HeightChildPreComputeInjector();
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+
     @Override
     public void precompute(AbstractNode secondChild) {
         if (isLeafNode(secondChild)) {
@@ -20,7 +28,7 @@ public class SecondChildPreCompute implements Precomputable {
 
     /// Checks if the node has no children
     private boolean isLeafNode(AbstractNode node) {
-        return node.getChildren() == null || node.getChildren().isEmpty();
+        return emptyListChecker.isEmpty(node.getChildren());
     }
 
     /// Initializes leaf node dimensions
@@ -31,13 +39,8 @@ public class SecondChildPreCompute implements Precomputable {
 
     /// Injects {@link HeightChildPreCompute} dependency and Precomputes the child
     private void injectAndPrecomputeChildren(AbstractNode heightChild) {
-        injectHeightChildPrecomputation(heightChild);
+        injectable.inject(heightChild);
         heightChild.precompute();
-    }
-
-    /// Injects {@link HeightChildPreCompute} dependency to the node
-    private void injectHeightChildPrecomputation(AbstractNode heightChild) {
-        heightChild.setPrecomputable(new HeightChildPreCompute());
     }
 
     private void calculateStackedSubtreeDimensions(AbstractNode secondChild) {

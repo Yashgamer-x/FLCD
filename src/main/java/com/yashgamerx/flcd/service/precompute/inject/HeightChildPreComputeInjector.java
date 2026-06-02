@@ -4,6 +4,7 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.precompute.HeightChildPreCompute;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 
+/// Injects [HeightChildPreCompute] dependency to the node
 public class HeightChildPreComputeInjector implements PrecomputeInjectable {
     @Override
     public void inject(AbstractNode abstractNode) {
