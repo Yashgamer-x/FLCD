@@ -1,11 +1,15 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.angular.Angle360Calculator;
+import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
 @Log
 public class RootCompute implements Computable {
+
+    private final AngularCalculator angularCalculator = new Angle360Calculator();
 
     @Override
     public void compute(AbstractNode rootNode) {
@@ -13,13 +17,13 @@ public class RootCompute implements Computable {
 
         var children = rootNode.getChildren();
         var totalChildren = children.size();
-        var angularStep = calculateAngularStep(totalChildren);
+        var angularStep = angularCalculator.calculate(totalChildren);
 
         for (int i = 0; i < totalChildren; i++) {
             var firstChild = children.get(i);
             double currentAngle = i * angularStep;
 
-            configureChildLayoutState(firstChild, currentAngle);
+            configureChildLayoutState(firstChild, currentAngle, angularStep);
             projectAndAssignCoordinates(rootNode, firstChild, currentAngle);
 
             injectFirstChildComputable(firstChild);
@@ -31,15 +35,8 @@ public class RootCompute implements Computable {
         return rootNode.getChildren() == null || rootNode.getChildren().isEmpty();
     }
 
-    /// Slices the 360-degree space (2 * PI radians) evenly based on child count.
-    private double calculateAngularStep(int totalChildren) {
-        return (2.0 * Math.PI) / totalChildren;
-    }
-
     /// Calculates and assigns the safe radial distance boundary and angle for the child.
-    private void configureChildLayoutState(AbstractNode firstChild, double targetAngle) {
-        int totalChildren = firstChild.getParent().getChildren().size();
-        double angularStep = calculateAngularStep(totalChildren);
+    private void configureChildLayoutState(AbstractNode firstChild, double targetAngle, double angularStep) {
         // Clearance calculation updated to reflect the 10.0 baseline node diameter
         // tan(45) = width / clearance height
         // clearance height = width / (tan(45) * 2.0)
