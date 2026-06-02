@@ -5,18 +5,21 @@ import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
 import com.yashgamerx.flcd.service.compute.inject.FirstChildComputeInjector;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
 @Log
 public class RootifiedCompute implements Computable {
 
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
     private final AngularCalculator angularCalculator = new Angle180Calculator();
     private final ComputeInjectable computeInjector = new FirstChildComputeInjector();
 
     @Override
     public void compute(AbstractNode rootNode) {
-        if (isChildrenListEmpty(rootNode)) return;
+        if (emptyListChecker.isEmpty(rootNode.getChildren())) return;
 
         var children = rootNode.getChildren();
         var totalChildren = children.size();
@@ -34,10 +37,6 @@ public class RootifiedCompute implements Computable {
             computeInjector.inject(firstChild);
             firstChild.compute();
         }
-    }
-
-    private boolean isChildrenListEmpty(AbstractNode rootNode) {
-        return rootNode.getChildren() == null || rootNode.getChildren().isEmpty();
     }
 
     /// Calculates and assigns the safe radial distance boundary and angle for the child.
