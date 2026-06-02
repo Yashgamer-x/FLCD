@@ -1,8 +1,16 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.angular.Angle360Calculator;
+import com.yashgamerx.flcd.service.angular.AngularCalculator;
+import com.yashgamerx.flcd.service.precompute.inject.FirstChildPreComputeInjector;
+import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 
 public class RootPreCompute implements Precomputable {
+
+    private final PrecomputeInjectable preComputeInjector = new FirstChildPreComputeInjector();
+    private final AngularCalculator angularCalculator = new Angle360Calculator();
+
     @Override
     public void precompute(AbstractNode root) {
         root.getChildren().forEach(this::injectAndPrecompute);
@@ -12,27 +20,14 @@ public class RootPreCompute implements Precomputable {
 
     /// Injects FirstChildPreCompute dependency and Precomputes the child
     private void injectAndPrecompute(AbstractNode firstChild) {
-        injectFirstChildPrecomputation(firstChild);
+        preComputeInjector.inject(firstChild);
         firstChild.precompute();
-    }
-
-    /// Injects FirstChildPreCompute dependency to the node
-    private void injectFirstChildPrecomputation(AbstractNode firstChild) {
-        var preComputable = firstChild.getPrecomputable();
-        if ((!(preComputable instanceof FirstChildPreCompute || preComputable instanceof RootifiedPreCompute))) {
-            firstChild.setPrecomputable(new FirstChildPreCompute());
-        }
-    }
-
-    /// Slices the 360-degree space (2 * PI radians) evenly based on child count.
-    private double calculateAngularStep(int totalChildren) {
-        return (2.0 * Math.PI) / totalChildren;
     }
 
     /// Calculates the offset of the firstChild from the root node.
     private double calculateScalarOffset(AbstractNode firstChild) {
         int totalChildren = firstChild.getParent().getChildren().size();
-        double angularStep = calculateAngularStep(totalChildren);
+        double angularStep = angularCalculator.calculate(totalChildren);
         // Clearance calculation updated to reflect the 10.0 baseline node diameter
         // clearance height = width / (tan(theta/2) * 2.0)
         // theta/2 is required so that, if the first children are placed at differences of angle 60 degrees;

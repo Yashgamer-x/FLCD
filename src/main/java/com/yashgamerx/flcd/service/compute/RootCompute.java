@@ -15,7 +15,7 @@ public class RootCompute implements Computable {
 
     private final AngularCalculator angularCalculator = new Angle360Calculator();
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
-    private final PrecomputeInjectable injector = new FirstChildPreComputeInjector();
+    private final PrecomputeInjectable preComputeInjector = new FirstChildPreComputeInjector();
 
     @Override
     public void compute(AbstractNode rootNode) {
@@ -32,7 +32,7 @@ public class RootCompute implements Computable {
             configureChildLayoutState(firstChild, currentAngle, angularStep);
             projectAndAssignCoordinates(rootNode, firstChild, currentAngle);
 
-            injector.inject(firstChild);
+            preComputeInjector.inject(firstChild);
             firstChild.compute();
         }
     }
