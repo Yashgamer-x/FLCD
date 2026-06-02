@@ -1,13 +1,21 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
+import com.yashgamerx.flcd.service.compute.inject.LeftHeightChildComputeInjector;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class LeftSecondChildCompute implements Computable {
+
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+    private final ComputeInjectable computeInjector = new LeftHeightChildComputeInjector();
+
     @Override
     public void compute(AbstractNode secondChild) {
-        if (isLeafNode(secondChild)) return;
+        if (emptyListChecker.isEmpty(secondChild.getChildren())) return;
 
         double myAngle = secondChild.getLocalRadianAngle(); // Direction pointing into this node
 
@@ -25,14 +33,6 @@ public class LeftSecondChildCompute implements Computable {
         childrenComputationBasedOnAnchorAndTrajectory(secondChild, anchorX, anchorY, childAngleTrajectory);
     }
 
-    private boolean isLeafNode(AbstractNode secondChild) {
-        return secondChild.getChildren() == null || secondChild.getChildren().isEmpty();
-    }
-
-    private void injectLeftHeightChildCompute(AbstractNode heightChild) {
-        heightChild.setComputable(new LeftHeightChildCompute());
-    }
-
     private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode secondChild, double anchorX, double anchorY, double childAngleTrajectory) {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
         double runningStackedHeightDistance = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
@@ -48,7 +48,7 @@ public class LeftSecondChildCompute implements Computable {
             // Forward the calculated absolute orientation down-chain so descendants can follow the vector
             heightChild.setLocalRadianAngle(childAngleTrajectory);
 
-            injectLeftHeightChildCompute(heightChild);
+            computeInjector.inject(heightChild);
 
             // Execute recursive cascading calls down to children to expand layout structures
             heightChild.compute();
