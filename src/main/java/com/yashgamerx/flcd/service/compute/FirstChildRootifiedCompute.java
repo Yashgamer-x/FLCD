@@ -11,7 +11,7 @@ import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
 @Log
-public class RootifiedCompute implements Computable {
+public class FirstChildRootifiedCompute implements Computable {
 
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
     private final AngularCalculator angularCalculator = new Angle180Calculator();
