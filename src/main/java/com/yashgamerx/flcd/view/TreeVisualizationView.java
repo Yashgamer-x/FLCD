@@ -5,16 +5,12 @@ import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextInputDialog;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.Cursor;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
@@ -23,6 +19,7 @@ import javafx.scene.text.TextAlignment;
 import lombok.extern.java.Log;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Log
 public class TreeVisualizationView extends BorderPane {
@@ -42,6 +39,9 @@ public class TreeVisualizationView extends BorderPane {
     private static final double MAX_SCALE = 5.0;
 
     private final TreeLayoutAlgorithm layoutAlgorithm;
+
+    /// Tracks the currently visible node info panel so it can be removed when needed.
+    private VBox currentInfoPanel = null;
 
     public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
         this.abstractNodeMap = abstractNodeMap;
@@ -72,6 +72,7 @@ public class TreeVisualizationView extends BorderPane {
     /// Executes the rendering pass after the algorithm has computed the grid
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
+        currentInfoPanel = null; // Panel references are cleared with the canvas
         var rootNode = abstractNodeMap.get(1);
         if (rootNode != null) {
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
@@ -94,6 +95,7 @@ public class TreeVisualizationView extends BorderPane {
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
         circle.setStrokeWidth(1);
+        circle.setCursor(Cursor.HAND);
 
         var text = new Text(String.valueOf(node.getIdentifier()));
         text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
@@ -106,9 +108,12 @@ public class TreeVisualizationView extends BorderPane {
         text.setX(x);
         text.setY(y);
 
-        // If needed, minor manual adjustment for perfect centering
-        // because JavaFX font metrics can sometimes render slightly high:
-        // text.setY(y + 0.05);
+        // Show the info panel when a node circle is clicked.
+        // e.consume() prevents the canvas drag handler from also firing.
+        circle.setOnMouseClicked(e -> {
+            showNodeInfoPanel(node, x, y);
+            e.consume();
+        });
 
         drawingCanvas.getChildren().addAll(circle, text);
     }
@@ -116,13 +121,16 @@ public class TreeVisualizationView extends BorderPane {
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
         var line = new Line(x1, y1, x2, y2);
         line.setStroke(Color.GRAY);
-        line.setStrokeWidth(1); // Scale line thickness down to match coordinates
+        line.setStrokeWidth(1);
 
         // Adds edges to back of layout stack
         drawingCanvas.getChildren().addFirst(line);
     }
 
     private void handleReadjustAction() {
+        // Dismiss any open info panel before resetting the view
+        dismissInfoPanel();
+
         drawingCanvas.setTranslateX(0);
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
@@ -132,6 +140,134 @@ public class TreeVisualizationView extends BorderPane {
         scrollPaneContainer.setHvalue(0.5);
         scrollPaneContainer.setVvalue(0.5);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Node info panel
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Builds and positions a floating info panel on the canvas anchored to the
+    /// clicked node. Any previously shown panel is removed first.
+    private void showNodeInfoPanel(AbstractNode node, double nodeX, double nodeY) {
+        dismissInfoPanel();
+
+        // ── Header row (title + close button) ────────────────────────────────
+        var titleLabel = new Label("Node #" + node.getIdentifier());
+        titleLabel.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+
+        var closeBtn = new Button("✕");
+        closeBtn.setStyle(
+                "-fx-background-color: transparent; -fx-border-color: transparent; "
+                        + "-fx-text-fill: #888; -fx-font-size: 9px; -fx-cursor: hand; "
+                        + "-fx-padding: 0 2 0 2; -fx-min-width: 14; -fx-min-height: 14;");
+
+        var header = new HBox(4, titleLabel, closeBtn);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(0, 0, 6, 0));
+        header.setStyle("-fx-border-color: transparent transparent #ddd transparent; -fx-border-width: 1;");
+
+        // ── Data grid ────────────────────────────────────────────────────────
+        var grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(3);
+        grid.setPadding(new Insets(6, 0, 0, 0));
+
+        int row = 0;
+
+        // Identity
+        addInfoRow(grid, row++, "Name",
+                (node.getName() == null || node.getName().isBlank()) ? "—" : node.getName());
+        addInfoRow(grid, row++, "Parent",
+                node.getParent() != null ? "#" + node.getParent().getIdentifier() : "none (root)");
+
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        // Screen coordinates
+        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getGridX()));
+        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getGridY()));
+
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        // Subtree dimensions
+        addInfoRow(grid, row++, "Subtree W", String.format("%.2f", node.getSubtreeWidth()));
+        addInfoRow(grid, row++, "Subtree H", String.format("%.2f", node.getSubtreeHeight()));
+
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        // Algorithmic state
+        addInfoRow(grid, row++, "Offset", String.format("%.4f", node.getNodeOffset()));
+        addInfoRow(grid, row++, "Local angle", String.format("%.4f rad", node.getLocalRadianAngle()));
+        addInfoRow(grid, row++, "Global angle", String.format("%.4f rad", node.getGlobalRadianAngle()));
+
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        // Children
+        String childrenStr = node.getChildren().isEmpty()
+                ? "none"
+                : node.getChildren().stream()
+                .map(c -> "#" + c.getIdentifier())
+                .collect(Collectors.joining(", "));
+        addInfoRow(grid, row++, "Children (" + node.getChildren().size() + ")", childrenStr);
+
+        // ── Assemble ─────────────────────────────────────────────────────────
+        var panel = new VBox(4, header, grid);
+        panel.setStyle(
+                "-fx-background-color: white; "
+                        + "-fx-border-color: #bbb; "
+                        + "-fx-border-width: 0.8; "
+                        + "-fx-border-radius: 5; "
+                        + "-fx-background-radius: 5; "
+                        + "-fx-padding: 8;");
+        panel.setPrefWidth(185);
+
+        // Anchor the panel just to the right of the node circle
+        panel.setLayoutX(nodeX + NODE_RADIUS + 4);
+        panel.setLayoutY(nodeY - NODE_RADIUS);
+
+        // Clicks inside the panel must not bubble up to the canvas drag handler
+        panel.setOnMouseClicked(javafx.event.Event::consume);
+        panel.setOnMousePressed(javafx.event.Event::consume);
+
+        closeBtn.setOnAction(_ -> dismissInfoPanel());
+
+        currentInfoPanel = panel;
+        drawingCanvas.getChildren().add(panel);
+    }
+
+    /// Removes the info panel from the canvas if one is currently shown.
+    private void dismissInfoPanel() {
+        if (currentInfoPanel != null) {
+            drawingCanvas.getChildren().remove(currentInfoPanel);
+            currentInfoPanel = null;
+        }
+    }
+
+    /// Adds a label/value pair to the info grid at the given row index.
+    private void addInfoRow(GridPane grid, int row, String label, String value) {
+        var lbl = new Label(label);
+        lbl.setStyle("-fx-text-fill: #666; -fx-font-size: 9px;");
+
+        var val = new Label(value);
+        val.setStyle("-fx-font-size: 9px; -fx-font-family: monospace; -fx-text-fill: #1a1a1a;");
+        val.setWrapText(true);
+        val.setMaxWidth(105);
+
+        grid.add(lbl, 0, row);
+        grid.add(val, 1, row);
+    }
+
+    /// Creates a full-width separator for the info grid.
+    private Separator makeSeparator() {
+        var sep = new Separator();
+        sep.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setColumnSpan(sep, 2);
+        sep.setPadding(new Insets(2, 0, 2, 0));
+        return sep;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Interaction listeners
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void attachZoomListeners() {
         drawingCanvas.setOnScroll(e -> {
@@ -156,7 +292,14 @@ public class TreeVisualizationView extends BorderPane {
             mouseDragAnchorX = e.getSceneX();
             mouseDragAnchorY = e.getSceneY();
         });
+
+        // Clicking on blank canvas space dismisses the info panel
+        drawingCanvas.setOnMouseClicked(e -> dismissInfoPanel());
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Toolbar
+    // ─────────────────────────────────────────────────────────────────────────
 
     private HBox createActionToolbar() {
         var btnAdd = new Button("Add Node");
@@ -170,17 +313,21 @@ public class TreeVisualizationView extends BorderPane {
         return toolbar;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rootify action
+    // ─────────────────────────────────────────────────────────────────────────
+
     private void handleRootifyAction() {
-        // 1. Create the input dialog
+        // Create the input dialog
         var dialog = new TextInputDialog();
         dialog.setTitle("Rootify Node");
         dialog.setHeaderText("Enter Node ID");
         dialog.setContentText("Please enter an integer ID:");
 
-        // 2. Show the dialog and wait for the user's input
+        // Show the dialog and wait for the user's input
         var result = dialog.showAndWait();
 
-        // 3. Process the result if the user clicked "OK"
+        // Process the result if the user clicked "OK"
         result.ifPresent(input -> {
             try {
                 // Trim whitespace and parse to an integer
@@ -205,7 +352,7 @@ public class TreeVisualizationView extends BorderPane {
         node.setComputable(new RootifiedCompute());
     }
 
-    // Helper method to display an error if they type non-numeric text
+    /// Helper method to display an error if they type non-numeric text
     private void showErrorAlert(String header, String content) {
         var alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
