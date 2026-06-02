@@ -35,9 +35,10 @@ public class FirstChildCompute implements Computable {
         double accumulatedLeftDistance = 0.0;
 
         for (var child : firstChild.getChildren()) {
-            if (child.getComputable() instanceof RightSecondChildCompute) {
+            var computable = child.getComputable();
+            if (computable instanceof RightSecondChildCompute) {
                 accumulatedRightDistance = projectChildAlongVector(child, anchorX, anchorY, rightAngle, accumulatedRightDistance);
-            } else if (child.getComputable() instanceof LeftSecondChildCompute) {
+            } else if (computable instanceof LeftSecondChildCompute) {
                 accumulatedLeftDistance = projectChildAlongVector(child, anchorX, anchorY, leftAngle, accumulatedLeftDistance);
             }
         }

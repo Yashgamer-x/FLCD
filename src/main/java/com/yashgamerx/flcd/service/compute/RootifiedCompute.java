@@ -21,6 +21,8 @@ public class RootifiedCompute implements Computable {
     public void compute(AbstractNode rootNode) {
         if (emptyListChecker.isEmpty(rootNode.getChildren())) return;
 
+        log.info("Rootified Computation");
+
         var children = rootNode.getChildren();
         var totalChildren = children.size();
         var angularStep = angularCalculator.calculate(totalChildren);
