@@ -1,13 +1,19 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class FirstChildCompute implements Computable {
+
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+
     @Override
     public void compute(AbstractNode firstChild) {
-        if (isLeafNode(firstChild)) return;
+        // If is leaf node then do nothing
+        if (emptyListChecker.isEmpty(firstChild.getChildren())) return;
 
         double parentAngle = firstChild.getLocalRadianAngle();
 
@@ -37,9 +43,6 @@ public class FirstChildCompute implements Computable {
         }
     }
 
-    private boolean isLeafNode(AbstractNode firstChild) {
-        return firstChild.getChildren() == null || firstChild.getChildren().isEmpty();
-    }
 
     /// Positions a child sequentially along a wing baseline and cascades the true angle down-chain.
     private double projectChildAlongVector(AbstractNode child, double anchorX, double anchorY,
