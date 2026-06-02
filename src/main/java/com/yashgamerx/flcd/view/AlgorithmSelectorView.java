@@ -99,9 +99,9 @@ public class AlgorithmSelectorView extends BorderPane {
         // Get the parsed result
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
-        parsingResult.ifPresentOrElse(root -> {
+        parsingResult.ifPresentOrElse(map -> {
             // Create the new View
-            var visualizationView = new TreeVisualizationView(root, new PlanarGridAlgorithm());
+            var visualizationView = new TreeVisualizationView(map, new PlanarGridAlgorithm());
 
             // Swap the Root of the Scene
             // Since this class is currently the root of the Scene, we replace it.

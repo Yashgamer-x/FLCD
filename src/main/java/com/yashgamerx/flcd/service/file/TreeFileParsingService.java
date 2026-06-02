@@ -7,6 +7,7 @@ import lombok.extern.java.Log;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -14,7 +15,7 @@ import java.util.stream.Stream;
 public class TreeFileParsingService implements FileParsingService {
 
     @Override
-    public Optional<AbstractNode> readAndParseIdentifiedTextFile(final File textFileToProcess) {
+    public Optional<Map<Integer, AbstractNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
         // PRINCIPLE: Local State Isolation
         // We keep the map local so the service remains stateless and thread-safe.
         var nodeLookupMap = new HashMap<Integer, AbstractNode>();
@@ -30,7 +31,7 @@ public class TreeFileParsingService implements FileParsingService {
                 log.warning("Parsing completed, but Root (ID 1) was not found in the dataset.");
             }
 
-            return Optional.ofNullable(rootNode);
+            return Optional.of(nodeLookupMap);
 
         } catch (Exception exception) {
             log.severe("Parsing failed critically: " + exception.getMessage());

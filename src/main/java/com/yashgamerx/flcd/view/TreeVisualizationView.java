@@ -20,10 +20,12 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import lombok.extern.java.Log;
 
+import java.util.Map;
+
 @Log
 public class TreeVisualizationView extends BorderPane {
 
-    private final AbstractNode rootNode;
+    private final Map<Integer, AbstractNode> abstractNodeMap;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
 
@@ -39,8 +41,8 @@ public class TreeVisualizationView extends BorderPane {
 
     private final TreeLayoutAlgorithm layoutAlgorithm;
 
-    public TreeVisualizationView(final AbstractNode rootNode, final TreeLayoutAlgorithm algorithm) {
-        this.rootNode = rootNode;
+    public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
+        this.abstractNodeMap = abstractNodeMap;
         this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
@@ -68,6 +70,7 @@ public class TreeVisualizationView extends BorderPane {
     /// Executes the rendering pass after the algorithm has computed the grid
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
+        var rootNode = abstractNodeMap.get(1);
         if (rootNode != null) {
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
             drawCalculatedTree(rootNode);
