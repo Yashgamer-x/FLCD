@@ -5,8 +5,10 @@ import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -154,11 +156,47 @@ public class TreeVisualizationView extends BorderPane {
     private HBox createActionToolbar() {
         var btnAdd = new Button("Add Node");
         var btnRoot = new Button("Rootify");
+        btnRoot.setOnAction(_ -> handleRootifyAction());
         var btnReset = new Button("Readjust");
         var toolbar = new HBox(15, btnAdd, btnRoot, btnReset);
         toolbar.setAlignment(Pos.CENTER);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         btnReset.setOnAction(_ -> handleReadjustAction());
         return toolbar;
+    }
+
+    private void handleRootifyAction() {
+        // 1. Create the input dialog
+        var dialog = new TextInputDialog();
+        dialog.setTitle("Rootify Node");
+        dialog.setHeaderText("Enter Node ID");
+        dialog.setContentText("Please enter an integer ID:");
+
+        // 2. Show the dialog and wait for the user's input
+        var result = dialog.showAndWait();
+
+        // 3. Process the result if the user clicked "OK"
+        result.ifPresent(input -> {
+            try {
+                // Trim whitespace and parse to an integer
+                int nodeId = Integer.parseInt(input.trim());
+
+                // TODO: Process the integer value your way here
+                System.out.println("Successfully captured ID: " + nodeId);
+
+            } catch (NumberFormatException e) {
+                // Handle the case where the input wasn't a valid integer
+                showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
+            }
+        });
+    }
+
+    // Helper method to display an error if they type non-numeric text
+    private void showErrorAlert(String header, String content) {
+        var alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }
