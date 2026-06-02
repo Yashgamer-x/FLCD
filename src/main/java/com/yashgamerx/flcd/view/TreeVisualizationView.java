@@ -2,6 +2,8 @@ package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
+import com.yashgamerx.flcd.service.compute.RootifiedCompute;
+import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -184,14 +186,24 @@ public class TreeVisualizationView extends BorderPane {
                 // Trim whitespace and parse to an integer
                 int nodeId = Integer.parseInt(input.trim());
 
-                // TODO: Process the integer value your way here
-                System.out.println("Successfully captured ID: " + nodeId);
+                // Check if the ID exists in the map
+                var node = abstractNodeMap.get(nodeId);
+
+                // If the ID doesn't exist, show an error message'
+                // Else, rootify the node and precomputes itself along with its siblings by calling parent#precompute()
+                rootifyNode(node);
+                node.getParent().precompute();
 
             } catch (NumberFormatException e) {
                 // Handle the case where the input wasn't a valid integer
                 showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
             }
         });
+    }
+
+    private void rootifyNode(AbstractNode node) {
+        node.setPrecomputable(new RootifiedPreCompute());
+        node.setComputable(new RootifiedCompute());
     }
 
     // Helper method to display an error if they type non-numeric text
