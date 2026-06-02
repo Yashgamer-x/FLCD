@@ -10,11 +10,13 @@ public class RootPreCompute implements Precomputable {
         calculateSubtree(root);
     }
 
+    /// Injects FirstChildPreCompute dependency and Precomputes the child
     private void injectAndPrecompute(AbstractNode firstChild) {
         injectFirstChildPrecomputation(firstChild);
         firstChild.precompute();
     }
 
+    /// Injects FirstChildPreCompute dependency to the node
     private void injectFirstChildPrecomputation(AbstractNode node) {
         node.setPrecomputable(new FirstChildPreCompute());
     }
@@ -24,18 +26,21 @@ public class RootPreCompute implements Precomputable {
         return (2.0 * Math.PI) / totalChildren;
     }
 
+    /// Calculates the offset of the firstChild from the root node.
     private double calculateScalarOffset(AbstractNode firstChild) {
         int totalChildren = firstChild.getParent().getChildren().size();
         double angularStep = calculateAngularStep(totalChildren);
         // Clearance calculation updated to reflect the 10.0 baseline node diameter
-        // tan(45) = width / clearance height
-        // clearance height = width / (tan(45) * 2.0)
-        // 2.0 is to divide the entirely equally width in half since the 45 angle is between the center to the end of 1 side.
-        // and first child has two sides. Left and right side for its children.
+        // clearance height = width / (tan(theta/2) * 2.0)
+        // theta/2 is required so that, if the first children are placed at differences of angle 60 degrees;
+        // then the angle from root to the edge of the area required by first child will be 30 degree.
+        // And the child in total is allocated 60 degrees.
+        // 30 degrees to the extreme right side and 30 degrees to the extreme left side.
         double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
         return clearanceHeight + firstChild.getSubtreeHeight();
     }
 
+    /// Calculates the Subtree area requirement based on the requirements firstChildren.
     private void calculateSubtree(AbstractNode root) {
         var firstChildren = root.getChildren();
         double maxOffset = 0;
