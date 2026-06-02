@@ -6,6 +6,8 @@ import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.precompute.inject.FirstChildPreComputeInjector;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
+
 public class RootPreCompute implements Precomputable {
 
     private final PrecomputeInjectable preComputeInjector = new FirstChildPreComputeInjector();
@@ -51,7 +53,9 @@ public class RootPreCompute implements Precomputable {
         // Since the children are placed in a circle,
         // whatever their offset is will be the height and width of the entire root tree;
         // all the nodes need to fit in this giant offset circle.
-        root.setSubtreeWidth(maxOffset);
-        root.setSubtreeHeight(maxOffset);
+
+        // Offset of the entire subtree + diameter of the node
+        root.setSubtreeWidth(maxOffset + maxOffset + NODE_DIAMETER);
+        root.setSubtreeHeight(maxOffset + maxOffset + NODE_DIAMETER);
     }
 }

@@ -6,6 +6,8 @@ import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.precompute.inject.FirstChildPreComputeInjector;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
+
 public class RootifiedPreCompute implements Precomputable {
 
     private final AngularCalculator angularCalculator = new Angle180Calculator();
@@ -47,10 +49,10 @@ public class RootifiedPreCompute implements Precomputable {
             maxOffset = Math.max(maxOffset, safeScalarOffset);
         }
 
-        // Since the children are placed in a circle,
-        // whatever their offset is will be the height and width of the entire root tree;
-        // all the nodes need to fit in this giant offset of semi-circle.
-        node.setSubtreeWidth(maxOffset);
-        node.setSubtreeHeight(maxOffset);
+        // Offset of the entire subtree + diameter of the node
+        // We are assuming that the worst case child will be on the edges and requires that much space.
+        // Rootified node has right and left side making it maxoffset * 2.
+        node.setSubtreeWidth(maxOffset + maxOffset + NODE_DIAMETER);
+        node.setSubtreeHeight(maxOffset + NODE_DIAMETER);
     }
 }
