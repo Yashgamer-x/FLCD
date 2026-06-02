@@ -3,6 +3,8 @@ package com.yashgamerx.flcd.service.precompute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.LeftSecondChildCompute;
 import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
@@ -15,6 +17,7 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 public class FirstChildPreCompute implements Precomputable {
 
     private final PrecomputeInjectable injectable = new SecondChildPreComputeInjector();
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
 
     @Override
     public void precompute(AbstractNode firstChild) {
@@ -31,7 +34,7 @@ public class FirstChildPreCompute implements Precomputable {
 
     /// Checks if the node has no children
     private boolean isLeafNode(AbstractNode node) {
-        return node.getChildren() == null || node.getChildren().isEmpty();
+        return emptyListChecker.isEmpty(node.getChildren());
     }
 
     /// Initializes leaf node dimensions
