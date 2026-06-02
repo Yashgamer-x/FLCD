@@ -24,7 +24,8 @@ public class FirstChildPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode firstChild) {
-        if (isLeafNode(firstChild)) {
+        // Checks if the node has no children
+        if (emptyListChecker.isEmpty(firstChild.getChildren())) {
             initializeLeafDimensions(firstChild);
             return;
         }
@@ -33,11 +34,6 @@ public class FirstChildPreCompute implements Precomputable {
         firstChild.getChildren().forEach(this::injectAndPrecompute);
 
         calculateBalancedSubTreeDimensions(firstChild);
-    }
-
-    /// Checks if the node has no children
-    private boolean isLeafNode(AbstractNode node) {
-        return emptyListChecker.isEmpty(node.getChildren());
     }
 
     /// Initializes leaf node dimensions
