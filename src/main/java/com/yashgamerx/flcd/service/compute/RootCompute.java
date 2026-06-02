@@ -3,10 +3,10 @@ package com.yashgamerx.flcd.service.compute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.angular.Angle360Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
+import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
+import com.yashgamerx.flcd.service.compute.inject.FirstChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
-import com.yashgamerx.flcd.service.precompute.inject.FirstChildPreComputeInjector;
-import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
@@ -15,7 +15,7 @@ public class RootCompute implements Computable {
 
     private final AngularCalculator angularCalculator = new Angle360Calculator();
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
-    private final PrecomputeInjectable preComputeInjector = new FirstChildPreComputeInjector();
+    private final ComputeInjectable computeInjector = new FirstChildComputeInjector();
 
     @Override
     public void compute(AbstractNode rootNode) {
@@ -32,7 +32,7 @@ public class RootCompute implements Computable {
             configureChildLayoutState(firstChild, currentAngle, angularStep);
             projectAndAssignCoordinates(rootNode, firstChild, currentAngle);
 
-            preComputeInjector.inject(firstChild);
+            computeInjector.inject(firstChild);
             firstChild.compute();
         }
     }

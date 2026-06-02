@@ -3,6 +3,8 @@ package com.yashgamerx.flcd.service.compute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
+import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
+import com.yashgamerx.flcd.service.compute.inject.FirstChildComputeInjector;
 import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
@@ -10,6 +12,7 @@ import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 public class RootifiedCompute implements Computable {
 
     private final AngularCalculator angularCalculator = new Angle180Calculator();
+    private final ComputeInjectable computeInjector = new FirstChildComputeInjector();
 
     @Override
     public void compute(AbstractNode rootNode) {
@@ -28,14 +31,9 @@ public class RootifiedCompute implements Computable {
             configureChildLayoutState(firstChild, currentAngle, angularStep);
             projectAndAssignCoordinates(rootNode, firstChild, currentAngle);
 
-            injectFirstChildComputable(firstChild);
+            computeInjector.inject(firstChild);
             firstChild.compute();
         }
-    }
-
-    /// Injects [FirstChildCompute] to the AbstractNode
-    private void injectFirstChildComputable(AbstractNode firstChild) {
-        firstChild.setComputable(new FirstChildCompute());
     }
 
     private boolean isChildrenListEmpty(AbstractNode rootNode) {
