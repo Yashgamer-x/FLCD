@@ -1,8 +1,9 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.service.compute.LeftSecondChildCompute;
-import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
+import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
+import com.yashgamerx.flcd.service.compute.inject.LeftSecondChildComputeInjector;
+import com.yashgamerx.flcd.service.compute.inject.RightSecondChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
@@ -17,6 +18,8 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 public class FirstChildPreCompute implements Precomputable {
 
     private final PrecomputeInjectable injectable = new SecondChildPreComputeInjector();
+    private final ComputeInjectable rightComputeInjector = new RightSecondChildComputeInjector();
+    private final ComputeInjectable leftComputeInjector = new LeftSecondChildComputeInjector();
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
 
     @Override
@@ -49,14 +52,6 @@ public class FirstChildPreCompute implements Precomputable {
         secondChildNode.precompute();
     }
 
-    private void injectLeftSecondChildComputable(AbstractNode secondChildNode) {
-        secondChildNode.setComputable(new LeftSecondChildCompute());
-    }
-
-    private void injectRightSecondChildComputable(AbstractNode secondChildNode) {
-        secondChildNode.setComputable(new RightSecondChildCompute());
-    }
-
     /// Calculates and returns the area of the node
     private double calculateArea(AbstractNode node) {
         return node.getSubtreeHeight() * node.getSubtreeWidth();
@@ -82,12 +77,12 @@ public class FirstChildPreCompute implements Precomputable {
 
         for (var secondChild : firstChild.getChildren()) {
             if (leftAccumulatedArea <= rightAccumulatedArea) {
-                injectLeftSecondChildComputable(secondChild);
+                leftComputeInjector.inject(secondChild);
                 leftAccumulatedArea += calculateArea(secondChild);
                 leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
                 maxLeftHeight = Math.max(maxLeftHeight, secondChild.getSubtreeHeight());
             } else {
-                injectRightSecondChildComputable(secondChild);
+                rightComputeInjector.inject(secondChild);
                 rightAccumulatedArea += calculateArea(secondChild);
                 rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
                 maxRightHeight = Math.max(maxRightHeight, secondChild.getSubtreeHeight());
