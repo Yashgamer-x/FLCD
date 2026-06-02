@@ -3,13 +3,13 @@ package com.yashgamerx.flcd.service.precompute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
-import com.yashgamerx.flcd.service.precompute.inject.FirstChildPrecomputeInjector;
+import com.yashgamerx.flcd.service.precompute.inject.FirstChildPreComputeInjector;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 
 public class RootifiedPreCompute implements Precomputable {
 
     private final AngularCalculator angularCalculator = new Angle180Calculator();
-    private final PrecomputeInjectable injector = new FirstChildPrecomputeInjector();
+    private final PrecomputeInjectable injector = new FirstChildPreComputeInjector();
 
     @Override
     public void precompute(AbstractNode node) {

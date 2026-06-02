@@ -3,6 +3,8 @@ package com.yashgamerx.flcd.service.precompute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.LeftSecondChildCompute;
 import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
+import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
+import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
 
 import java.util.Comparator;
@@ -11,6 +13,9 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 @Log
 public class FirstChildPreCompute implements Precomputable {
+
+    private final PrecomputeInjectable injectable = new SecondChildPreComputeInjector();
+
     @Override
     public void precompute(AbstractNode firstChild) {
         if (isLeafNode(firstChild)) {
@@ -37,16 +42,8 @@ public class FirstChildPreCompute implements Precomputable {
 
     /// Injects SecondChildPreCompute dependency and Precomputes the child
     private void injectAndPrecompute(AbstractNode secondChildNode) {
-        injectSecondChildPrecomputation(secondChildNode);
+        injectable.inject(secondChildNode);
         secondChildNode.precompute();
-    }
-
-    /// Injects SecondChildPreCompute dependency to the node
-    private void injectSecondChildPrecomputation(AbstractNode secondChildNode) {
-        var preComputable = secondChildNode.getPrecomputable();
-        if ((!(preComputable instanceof SecondChildPreCompute || preComputable instanceof RootifiedPreCompute))) {
-            secondChildNode.setPrecomputable(new SecondChildPreCompute());
-        }
     }
 
     private void injectLeftSecondChildComputable(AbstractNode secondChildNode) {
