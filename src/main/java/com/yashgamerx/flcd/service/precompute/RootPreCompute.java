@@ -17,8 +17,11 @@ public class RootPreCompute implements Precomputable {
     }
 
     /// Injects FirstChildPreCompute dependency to the node
-    private void injectFirstChildPrecomputation(AbstractNode node) {
-        node.setPrecomputable(new FirstChildPreCompute());
+    private void injectFirstChildPrecomputation(AbstractNode firstChild) {
+        var preComputable = firstChild.getPrecomputable();
+        if ((!(preComputable instanceof FirstChildPreCompute || preComputable instanceof RootifiedPreCompute))) {
+            firstChild.setPrecomputable(new FirstChildPreCompute());
+        }
     }
 
     /// Slices the 360-degree space (2 * PI radians) evenly based on child count.

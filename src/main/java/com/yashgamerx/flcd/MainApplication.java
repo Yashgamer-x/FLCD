@@ -11,7 +11,7 @@ public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         var algorithmSelectorView = new AlgorithmSelectorView();
-        var mainScene = new Scene(algorithmSelectorView, 400, 300);
+        var mainScene = new Scene(algorithmSelectorView, 1000, 800);
 
         stage.setTitle("Algorithm Selector Pro");
         stage.setScene(mainScene);

@@ -1,9 +1,10 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
-
+import lombok.extern.java.Log;
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
+@Log
 public class RootCompute implements Computable {
 
     @Override
@@ -65,6 +66,9 @@ public class RootCompute implements Computable {
 
     /// Injects [FirstChildCompute] to the AbstractNode
     private void injectFirstChildComputable(AbstractNode firstChild) {
-        firstChild.setComputable(new FirstChildCompute());
+        var computable = firstChild.getComputable();
+        if ((!(computable instanceof FirstChildCompute || computable instanceof RootifiedCompute))) {
+            firstChild.setComputable(new FirstChildCompute());
+        }
     }
 }

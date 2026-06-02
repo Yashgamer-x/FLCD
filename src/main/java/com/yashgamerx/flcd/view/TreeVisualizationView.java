@@ -192,9 +192,7 @@ public class TreeVisualizationView extends BorderPane {
                 // If the ID doesn't exist, show an error message'
                 // Else, rootify the node and precomputes itself along with its siblings by calling parent#precompute()
                 rootifyNode(node);
-                node.getParent().precompute();
-
-                System.out.println("Rootified node with ID:" + nodeId);
+                renderTreeStructure();
             } catch (NumberFormatException e) {
                 // Handle the case where the input wasn't a valid integer
                 showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
