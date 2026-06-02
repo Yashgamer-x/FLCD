@@ -3,11 +3,13 @@ package com.yashgamerx.flcd.service.precompute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.LeftSecondChildCompute;
 import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
+import lombok.extern.java.Log;
 
 import java.util.Comparator;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
+@Log
 public class FirstChildPreCompute implements Precomputable {
     @Override
     public void precompute(AbstractNode firstChild) {
@@ -41,7 +43,10 @@ public class FirstChildPreCompute implements Precomputable {
 
     /// Injects SecondChildPreCompute dependency to the node
     private void injectSecondChildPrecomputation(AbstractNode secondChildNode) {
-        secondChildNode.setPrecomputable(new SecondChildPreCompute());
+        var preComputable = secondChildNode.getPrecomputable();
+        if ((!(preComputable instanceof SecondChildPreCompute || preComputable instanceof RootifiedPreCompute))) {
+            secondChildNode.setPrecomputable(new SecondChildPreCompute());
+        }
     }
 
     private void injectLeftSecondChildComputable(AbstractNode secondChildNode) {

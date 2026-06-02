@@ -39,8 +39,8 @@ public class RootifiedPreCompute implements Precomputable {
     }
 
     /// Calculates the Subtree area requirement based on the requirements firstChildren.
-    private void calculateSubtree(AbstractNode root) {
-        var firstChildren = root.getChildren();
+    private void calculateSubtree(AbstractNode node) {
+        var firstChildren = node.getChildren();
         double maxOffset = 0;
 
         for (var firstChild : firstChildren) {
@@ -50,8 +50,8 @@ public class RootifiedPreCompute implements Precomputable {
 
         // Since the children are placed in a circle,
         // whatever their offset is will be the height and width of the entire root tree;
-        // all the nodes need to fit in this giant offset circle.
-        root.setSubtreeWidth(maxOffset);
-        root.setSubtreeHeight(maxOffset);
+        // all the nodes need to fit in this giant offset of semi-circle.
+        node.setSubtreeWidth(maxOffset);
+        node.setSubtreeHeight(maxOffset);
     }
 }

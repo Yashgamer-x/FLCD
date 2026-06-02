@@ -194,6 +194,7 @@ public class TreeVisualizationView extends BorderPane {
                 rootifyNode(node);
                 node.getParent().precompute();
 
+                System.out.println("Rootified node with ID:" + nodeId);
             } catch (NumberFormatException e) {
                 // Handle the case where the input wasn't a valid integer
                 showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
