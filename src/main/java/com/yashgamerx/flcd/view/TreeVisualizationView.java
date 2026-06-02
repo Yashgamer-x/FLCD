@@ -209,6 +209,18 @@ public class TreeVisualizationView extends BorderPane {
                 .collect(Collectors.joining(", "));
         addInfoRow(grid, row++, "Children (" + node.getChildren().size() + ")", childrenStr);
 
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        // Services — show the simple class name, fall back to "none" if null
+        String precomputeName = node.getPrecomputable() != null
+                ? node.getPrecomputable().getClass().getSimpleName()
+                : "none";
+        String computeName = node.getComputable() != null
+                ? node.getComputable().getClass().getSimpleName()
+                : "none";
+        addInfoRow(grid, row++, "Precomputable", precomputeName);
+        addInfoRow(grid, row++, "Computable", computeName);
+
         // ── Assemble ─────────────────────────────────────────────────────────
         var panel = new VBox(4, header, grid);
         panel.setStyle(
@@ -318,30 +330,20 @@ public class TreeVisualizationView extends BorderPane {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void handleRootifyAction() {
-        // Create the input dialog
         var dialog = new TextInputDialog();
         dialog.setTitle("Rootify Node");
         dialog.setHeaderText("Enter Node ID");
         dialog.setContentText("Please enter an integer ID:");
 
-        // Show the dialog and wait for the user's input
         var result = dialog.showAndWait();
 
-        // Process the result if the user clicked "OK"
         result.ifPresent(input -> {
             try {
-                // Trim whitespace and parse to an integer
                 int nodeId = Integer.parseInt(input.trim());
-
-                // Check if the ID exists in the map
                 var node = abstractNodeMap.get(nodeId);
-
-                // If the ID doesn't exist, show an error message'
-                // Else, rootify the node and precomputes itself along with its siblings by calling parent#precompute()
                 rootifyNode(node);
                 renderTreeStructure();
             } catch (NumberFormatException e) {
-                // Handle the case where the input wasn't a valid integer
                 showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
             }
         });
@@ -352,7 +354,6 @@ public class TreeVisualizationView extends BorderPane {
         node.setComputable(new RootifiedCompute());
     }
 
-    /// Helper method to display an error if they type non-numeric text
     private void showErrorAlert(String header, String content) {
         var alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
