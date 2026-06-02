@@ -1,13 +1,20 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
+import com.yashgamerx.flcd.service.compute.inject.RightHeightChildComputeInjector;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class RightWidthChildCompute implements Computable {
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+    private final ComputeInjectable computeInjector = new RightHeightChildComputeInjector();
+
     @Override
     public void compute(AbstractNode widthNode) {
-        if (isLeafNode(widthNode)) return;
+        if (emptyListChecker.isEmpty(widthNode.getChildren())) return;
 
         double myAngle = widthNode.getLocalRadianAngle(); // Direction pointing into this node
 
@@ -23,14 +30,6 @@ public class RightWidthChildCompute implements Computable {
         double anchorY = widthNode.getGridY() - (forwardStepLength * Math.sin(myAngle));
 
         childrenComputationBasedOnAnchorAndTrajectory(widthNode, anchorX, anchorY, childAngleTrajectory);
-    }
-
-    private boolean isLeafNode(AbstractNode widthNode) {
-        return widthNode.getChildren() == null || widthNode.getChildren().isEmpty();
-    }
-
-    private void injectRightHeightChildCompute(AbstractNode heightChild) {
-        heightChild.setComputable(new RightHeightChildCompute());
     }
 
     private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode widthNode, double anchorX,
@@ -49,7 +48,7 @@ public class RightWidthChildCompute implements Computable {
             // Forward the calculated absolute orientation down-chain so descendants can follow the vector
             heightChild.setLocalRadianAngle(childAngleTrajectory);
 
-            injectRightHeightChildCompute(heightChild);
+            computeInjector.inject(heightChild);
 
             // Execute recursive cascading calls down to children to expand layout structures
             heightChild.compute();
