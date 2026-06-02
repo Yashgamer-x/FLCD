@@ -1,10 +1,18 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.list.EmptyListChecker;
+import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
+import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
+import com.yashgamerx.flcd.service.precompute.inject.WidthChildPreComputeInjector;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class HeightChildPreCompute implements Precomputable {
+
+    private final PrecomputeInjectable injectable = new WidthChildPreComputeInjector();
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+
     @Override
     public void precompute(AbstractNode heightNode) {
         if (isLeafNode(heightNode)) {
@@ -19,7 +27,7 @@ public class HeightChildPreCompute implements Precomputable {
 
     /// Checks if the node has no children
     private boolean isLeafNode(AbstractNode node) {
-        return node.getChildren() == null || node.getChildren().isEmpty();
+        return emptyListChecker.isEmpty(node.getChildren());
     }
 
     /// Initializes leaf node dimensions
@@ -30,13 +38,8 @@ public class HeightChildPreCompute implements Precomputable {
 
     /// Injects and then precomputes the width child
     private void injectAndPrecompute(AbstractNode widthChild) {
-        injectWidthChildPrecomputation(widthChild);
+        injectable.inject(widthChild);
         widthChild.precompute();
-    }
-
-    /// Injects [WidthChildPreCompute] dependency and then precomputes that child.
-    private void injectWidthChildPrecomputation(AbstractNode widthChild) {
-        widthChild.setPrecomputable(new WidthChildPreCompute());
     }
 
     /// Computes dimensions where children are stacked Horizontally
