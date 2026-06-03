@@ -40,6 +40,12 @@ public class FirstChildCompute implements Computable {
                 accumulatedRightDistance = projectChildAlongVector(child, anchorX, anchorY, rightAngle, accumulatedRightDistance);
             } else if (computable instanceof LeftSecondChildCompute) {
                 accumulatedLeftDistance = projectChildAlongVector(child, anchorX, anchorY, leftAngle, accumulatedLeftDistance);
+            } else if (computable instanceof LeftSecondRootifiedCompute) {
+                accumulatedLeftDistance = projectRootifiedChildAlongVector(child, anchorX, anchorY, leftAngle,
+                        Math.PI / 2, accumulatedLeftDistance);
+            } else if (computable instanceof RightSecondRootifiedCompute) {
+                accumulatedRightDistance = projectRootifiedChildAlongVector(child, anchorX, anchorY, rightAngle,
+                        -Math.PI / 2, accumulatedRightDistance);
             }
         }
     }
@@ -73,7 +79,27 @@ public class FirstChildCompute implements Computable {
         return newDistance;
     }
 
-    private double projectRootifiedChildAlongVector(AbstractNode child, double anchorX, double anchorY, double baselineAngle, double currentDistance) {
+    private double projectRootifiedChildAlongVector(AbstractNode child, double anchorX, double anchorY,
+                                                    double baselineAngle, double additionalAngle, double currentDistance) {
+        // Entire subtree - (Radius of Circle: 5.0) to get the exact point of
+        double centerPoint = currentDistance + WIDTH_SPACER + child.getSubtreeWidth() / 2;
 
+        // Polar layout projection mapped to Cartesian grid space
+        // Corrected Y calculation to handle screen inversion seamlessly
+        double childX = anchorX + (centerPoint * Math.cos(baselineAngle));
+        double childY = anchorY - (centerPoint * Math.sin(baselineAngle));
+
+        child.setGridX(childX);
+        child.setGridY(childY);
+
+        // Assign the true baseline angle to the child so its nested sub-elements
+        // know which vector they are traveling along when they process their own compute passes!
+        child.setLocalRadianAngle(baselineAngle + additionalAngle);
+
+        // Process nested layout branches recursively
+        child.compute();
+
+        // Return current tail boundary for the next sibling layout spacing step
+        return centerPoint + child.getSubtreeWidth() / 2;
     }
 }

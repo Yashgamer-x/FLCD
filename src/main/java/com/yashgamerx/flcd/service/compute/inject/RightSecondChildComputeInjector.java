@@ -2,8 +2,8 @@ package com.yashgamerx.flcd.service.compute.inject;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.RightSecondChildCompute;
+import com.yashgamerx.flcd.service.compute.RightSecondRootifiedCompute;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
-import com.yashgamerx.flcd.service.compute.SecondRightRootifiedCompute;
 
 public class RightSecondChildComputeInjector implements ComputeInjectable {
     @Override
@@ -14,7 +14,7 @@ public class RightSecondChildComputeInjector implements ComputeInjectable {
         }
 
         if (precomputable instanceof RootifiedCompute) {
-            abstractNode.setComputable(new SecondRightRootifiedCompute());
+            abstractNode.setComputable(new RightSecondRootifiedCompute());
         }
     }
 }
