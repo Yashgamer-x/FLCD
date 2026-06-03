@@ -21,4 +21,12 @@ public class VerticalSubtreeDimensionCalculator implements NodeDimensionCalculat
 
         return Math.max(maxWidth, node.getSubtreeWidth());
     }
+
+    private double accumulateHeight(AbstractNode node, double accumulatedHeight) {
+        if (node.getPrecomputable() instanceof RootifiedPreCompute) {
+            return accumulatedHeight + node.getSubtreeWidth();
+        }
+
+        return node.getSubtreeHeight();
+    }
 }
