@@ -51,6 +51,8 @@ public class LeftSecondChildCompute implements Computable {
                                               double childAngleTrajectory, double generalOffset) {
         // Map polar placement vectors into Cartesian screen coordinate tracking states
 
+        // Offset is based on the previous spacings + NODE_RADIUS
+        // to get to the enter point of the node.
         var centerPoint = generalOffset + NODE_RADIUS;
 
         double childX = anchorX + (centerPoint * Math.cos(childAngleTrajectory));
@@ -67,6 +69,8 @@ public class LeftSecondChildCompute implements Computable {
         // Execute recursive cascading calls down to children to expand layout structures
         heightChild.compute();
 
+        // Whatever the previous offset was + the entire height of the subtree + the height spacer
+        // The spacer is given so that the next one does not need to add its own spacer.
         return generalOffset + heightChild.getSubtreeHeight() + HEIGHT_SPACER;
     }
 
