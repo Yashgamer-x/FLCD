@@ -3,6 +3,8 @@ package com.yashgamerx.flcd.service.dimension;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 
+import static com.yashgamerx.flcd.model.AbstractNode.*;
+
 public class VerticalSubtreeDimensionCalculator implements NodeDimensionCalculator {
     @Override
     public void calculate(AbstractNode node) {
@@ -13,6 +15,20 @@ public class VerticalSubtreeDimensionCalculator implements NodeDimensionCalculat
             maxChildWidth = maxWidth(child, maxChildWidth);
             rawChildrenHeight = accumulateHeight(child, rawChildrenHeight);
         }
+
+        // Apply the spacer adjustments using your exact formulas
+        int totalChildren = node.getChildren().size();
+        double totalChildrenHeight = rawChildrenHeight + (HEIGHT_SPACER * (totalChildren - 1));
+
+        // Maximum Child Width + Width Spacing + Parent Width (10.0)
+        var subtreeWidth = Math.max(NODE_DIAMETER, maxChildWidth) + WIDTH_SPACER + NODE_DIAMETER;
+
+        // Children Height + Height Spacing + Parent Height (10.0)
+        var subtreeHeight = totalChildrenHeight + HEIGHT_SPACER + NODE_DIAMETER;
+
+        // Sets the dimensions
+        node.setSubtreeWidth(subtreeWidth);
+        node.setSubtreeHeight(subtreeHeight);
     }
 
     private double maxWidth(AbstractNode node, double maxWidth) {
