@@ -10,8 +10,8 @@ public class VerticalSubtreeDimensionCalculator implements NodeDimensionCalculat
         double rawChildrenHeight = 0;
 
         for (AbstractNode child : node.getChildren()) {
-            maxChildWidth = maxWidth(node, maxChildWidth);
-            rawChildrenHeight = accumulateHeight(node, rawChildrenHeight);
+            maxChildWidth = maxWidth(child, maxChildWidth);
+            rawChildrenHeight = accumulateHeight(child, rawChildrenHeight);
         }
     }
 
