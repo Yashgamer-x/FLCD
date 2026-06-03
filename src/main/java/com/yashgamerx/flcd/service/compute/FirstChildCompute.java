@@ -72,4 +72,8 @@ public class FirstChildCompute implements Computable {
         // Return current tail boundary for the next sibling layout spacing step
         return newDistance;
     }
+
+    private double projectRootifiedChildAlongVector(AbstractNode child, double anchorX, double anchorY, double baselineAngle, double currentDistance) {
+
+    }
 }
