@@ -6,8 +6,7 @@ import com.yashgamerx.flcd.service.compute.inject.LeftWidthChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 
-import static com.yashgamerx.flcd.model.AbstractNode.HEIGHT_SPACER;
-import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
+import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class LeftHeightChildCompute implements Computable {
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
@@ -33,21 +32,21 @@ public class LeftHeightChildCompute implements Computable {
         childrenComputationBasedOnAnchorAndTrajectory(heightChild, anchorX, anchorY, childAngleTrajectory);
     }
 
-    private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode secondChild, double anchorX, double anchorY, double childAngleTrajectory) {
+    private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode heightChild, double anchorX, double anchorY, double childAngleTrajectory) {
         // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER
         double generalOffset = NODE_RADIUS + HEIGHT_SPACER;
 
-        for (var heightChild : secondChild.getChildren()) {
-            if (!(heightChild.getComputable() instanceof RootifiedCompute)) {
-                generalOffset = projectChildAlongTheVector(heightChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
+        for (var widthChild : heightChild.getChildren()) {
+            if (!(widthChild.getComputable() instanceof RootifiedCompute)) {
+                generalOffset = projectChildAlongTheVector(widthChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
             } else {
-                generalOffset = projectRootifiedChildAlongTheVector(heightChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
+                generalOffset = projectRootifiedChildAlongTheVector(widthChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
             }
         }
     }
 
     /// Returns updated Offset
-    private double projectChildAlongTheVector(AbstractNode heightChild, double anchorX, double anchorY,
+    private double projectChildAlongTheVector(AbstractNode widthChild, double anchorX, double anchorY,
                                               double childAngleTrajectory, double generalOffset) {
         // Map polar placement vectors into Cartesian screen coordinate tracking states
 
@@ -58,43 +57,43 @@ public class LeftHeightChildCompute implements Computable {
         double childX = anchorX + (centerPoint * Math.cos(childAngleTrajectory));
         double childY = anchorY - (centerPoint * Math.sin(childAngleTrajectory));
 
-        heightChild.setGridX(childX);
-        heightChild.setGridY(childY);
+        widthChild.setGridX(childX);
+        widthChild.setGridY(childY);
 
         // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-        heightChild.setLocalRadianAngle(childAngleTrajectory);
+        widthChild.setLocalRadianAngle(childAngleTrajectory);
 
-        computeInjector.inject(heightChild);
+        computeInjector.inject(widthChild);
 
         // Execute recursive cascading calls down to children to expand layout structures
-        heightChild.compute();
+        widthChild.compute();
 
         // Whatever the previous offset was + the entire height of the subtree + the height spacer
         // The spacer is given so that the next one does not need to add its own spacer.
-        return generalOffset + heightChild.getSubtreeWidth() + HEIGHT_SPACER;
+        return generalOffset + widthChild.getSubtreeWidth() + WIDTH_SPACER;
     }
 
     /// Returns updated Offset
-    private double projectRootifiedChildAlongTheVector(AbstractNode heightChild, double anchorX, double anchorY,
+    private double projectRootifiedChildAlongTheVector(AbstractNode widthChild, double anchorX, double anchorY,
                                                        double childAngleTrajectory, double generalOffset) {
         // Map polar placement vectors into Cartesian screen coordinate tracking states
 
-        var centerPoint = generalOffset + (heightChild.getSubtreeWidth() / 2);
+        var centerPoint = generalOffset + (widthChild.getSubtreeWidth() / 2);
 
         double childX = anchorX + (centerPoint * Math.cos(childAngleTrajectory));
         double childY = anchorY - (centerPoint * Math.sin(childAngleTrajectory));
 
-        heightChild.setGridX(childX);
-        heightChild.setGridY(childY);
+        widthChild.setGridX(childX);
+        widthChild.setGridY(childY);
 
         // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-        heightChild.setLocalRadianAngle(childAngleTrajectory - (Math.PI / 2));
+        widthChild.setLocalRadianAngle(childAngleTrajectory - (Math.PI / 2));
 
-        computeInjector.inject(heightChild);
+        computeInjector.inject(widthChild);
 
         // Execute recursive cascading calls down to children to expand layout structures
-        heightChild.compute();
+        widthChild.compute();
 
-        return centerPoint + (heightChild.getSubtreeWidth() / 2) + HEIGHT_SPACER;
+        return centerPoint + (widthChild.getSubtreeWidth() / 2) + WIDTH_SPACER;
     }
 }
