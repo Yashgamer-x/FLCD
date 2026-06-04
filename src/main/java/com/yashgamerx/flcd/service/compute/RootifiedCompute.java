@@ -33,33 +33,30 @@ public class RootifiedCompute implements Computable {
             var firstChild = children.get(i);
             double currentAngle = beginningAngle + i * angularStep + (angularStep / 2);
 
-            configureChildLayoutState(firstChild, currentAngle, angularStep);
-            projectAndAssignCoordinates(rootNode, firstChild, currentAngle);
+            // Core mathematical alignment tracking logic
+            double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
 
+            // The node center sits directly at the edge of the clearance boundary plus its own radius
+            double nodeCenter = clearanceHeight + NODE_RADIUS;
+
+            // Total outer boundary used is where the center sits plus the remaining subtree height
+            double safeScalarOffset = nodeCenter + firstChild.getSubtreeHeight();
+
+            // Set node state properties
+            firstChild.setNodeOffset(safeScalarOffset);
+            firstChild.setLocalRadianAngle(currentAngle);
+
+            // Project coordinates using the corrected center vector
+            projectAndAssignCoordinates(rootNode, firstChild, currentAngle, nodeCenter);
+
+            // Recurse down the layout tree hierarchy
             computeInjector.inject(firstChild);
             firstChild.compute();
         }
     }
 
-    /// Calculates and assigns the safe radial distance boundary and angle for the child.
-    private void configureChildLayoutState(AbstractNode firstChild, double targetAngle, double angularStep) {
-        // Clearance calculation updated to reflect the 10.0 baseline node diameter
-        // tan(45) = width / clearance height
-        // clearance height = width / (tan(45) * 2.0)
-        // 2.0 is to divide the entirely equally width in half since the 45 angle is between the center to the end of 1 side.
-        // and first child has two sides. Left and right side for its children.
-        double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
-        double safeScalarOffset = clearanceHeight + firstChild.getSubtreeHeight();
-
-        firstChild.setNodeOffset(safeScalarOffset);
-        firstChild.setLocalRadianAngle(targetAngle);
-    }
-
-    ///
-    private void projectAndAssignCoordinates(AbstractNode rootNode, AbstractNode firstChild, double targetAngle) {
-        double safeScalarOffset = firstChild.getNodeOffset();
-        double nodeCenter = safeScalarOffset - NODE_RADIUS;
-
+    /// Computes spatial cartesian positions based on the exact vector center
+    private void projectAndAssignCoordinates(AbstractNode rootNode, AbstractNode firstChild, double targetAngle, double nodeCenter) {
         double childX = rootNode.getGridX() + (nodeCenter * Math.cos(targetAngle));
         double childY = rootNode.getGridY() - (nodeCenter * Math.sin(targetAngle));
 

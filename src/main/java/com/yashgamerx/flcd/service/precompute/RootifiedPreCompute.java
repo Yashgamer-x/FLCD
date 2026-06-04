@@ -16,7 +16,6 @@ public class RootifiedPreCompute implements Precomputable {
     @Override
     public void precompute(AbstractNode node) {
         node.getChildren().forEach(this::injectAndPrecompute);
-
         calculateSubtree(node);
     }
 
@@ -25,7 +24,7 @@ public class RootifiedPreCompute implements Precomputable {
         abstractNode.precompute();
     }
 
-    /// Calculates the offset of the firstChild from the root node.
+    /// Calculates the safe boundary offset requirement of a child from its parent node center.
     private double calculateScalarOffset(AbstractNode firstChild) {
         int totalChildren = firstChild.getParent().getChildren().size();
         double angularStep = angularCalculator.calculate(totalChildren);
@@ -36,10 +35,12 @@ public class RootifiedPreCompute implements Precomputable {
         // And the child in total is allocated 60 degrees.
         // 30 degrees to the extreme right side and 30 degrees to the extreme left side.
         double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
+
+        // Total safe boundary required is clearance height plus the child's own subtree height
         return clearanceHeight + firstChild.getSubtreeHeight();
     }
 
-    /// Calculates the Subtree area requirement based on the requirements firstChildren.
+    /// Calculates the Subtree area requirement based on the requirements of firstChildren.
     private void calculateSubtree(AbstractNode node) {
         var firstChildren = node.getChildren();
         double maxOffset = 0;
