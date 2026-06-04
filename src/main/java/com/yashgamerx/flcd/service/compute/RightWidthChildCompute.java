@@ -45,28 +45,6 @@ public class RightWidthChildCompute implements Computable {
                 generalOffset = projectRootifiedChildAlongTheVector(heightChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
             }
         }
-        // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
-        double runningStackedHeightDistance = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
-
-        for (var heightChild : widthNode.getChildren()) {
-            // Map polar placement vectors into Cartesian screen coordinate tracking states
-            double childX = anchorX + (runningStackedHeightDistance * Math.cos(childAngleTrajectory));
-            double childY = anchorY - (runningStackedHeightDistance * Math.sin(childAngleTrajectory));
-
-            heightChild.setGridX(childX);
-            heightChild.setGridY(childY);
-
-            // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-            heightChild.setLocalRadianAngle(childAngleTrajectory);
-
-            computeInjector.inject(heightChild);
-
-            // Execute recursive cascading calls down to children to expand layout structures
-            heightChild.compute();
-
-            // runningStackedHeightDistance  = runningStackedHeightDistance + child.subtreeHeight + HEIGHT_SPACER + (Child Radius: 5.0)
-            runningStackedHeightDistance += heightChild.getSubtreeHeight() + HEIGHT_SPACER;
-        }
     }
 
     private double projectChildAlongTheVector(AbstractNode heightChild, double anchorX, double anchorY,
