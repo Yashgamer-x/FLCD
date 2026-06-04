@@ -96,6 +96,4 @@ public class RightWidthChildCompute implements Computable {
 
         return centerPoint + (heightChild.getSubtreeWidth() / 2) + WIDTH_SPACER;
     }
-
-
 }
