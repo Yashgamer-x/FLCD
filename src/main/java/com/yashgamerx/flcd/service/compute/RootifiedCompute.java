@@ -39,11 +39,7 @@ public class RootifiedCompute implements Computable {
             // The node center sits directly at the edge of the clearance boundary plus its own radius
             double nodeCenter = clearanceHeight + firstChild.getSubtreeHeight() - NODE_RADIUS;
 
-            // Total outer boundary used is where the center sits plus the remaining subtree height
-            double safeScalarOffset = nodeCenter + firstChild.getSubtreeHeight();
-
             // Set node state properties
-            firstChild.setNodeOffset(safeScalarOffset);
             firstChild.setLocalRadianAngle(currentAngle);
 
             // Project coordinates using the corrected center vector
