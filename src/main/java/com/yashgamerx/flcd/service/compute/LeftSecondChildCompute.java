@@ -95,6 +95,6 @@ public class LeftSecondChildCompute implements Computable {
         // Execute recursive cascading calls down to children to expand layout structures
         heightChild.compute();
 
-        return centerPoint + (heightChild.getSubtreeWidth() / 2) + HEIGHT_SPACER;
+        return generalOffset + heightChild.getSubtreeWidth() + HEIGHT_SPACER;
     }
 }
