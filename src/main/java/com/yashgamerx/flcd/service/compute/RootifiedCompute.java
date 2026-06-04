@@ -8,7 +8,8 @@ import com.yashgamerx.flcd.service.compute.inject.FirstChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import lombok.extern.java.Log;
-import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
+
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 
 @Log
 public class RootifiedCompute implements Computable {
@@ -37,7 +38,7 @@ public class RootifiedCompute implements Computable {
             double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
 
             // The node center sits directly at the edge of the clearance boundary plus its own radius
-            double nodeCenter = clearanceHeight + firstChild.getSubtreeHeight() - NODE_RADIUS;
+            double nodeCenter = clearanceHeight + firstChild.getSubtreeHeight() - NODE_DIAMETER;
 
             // Set node state properties
             firstChild.setLocalRadianAngle(currentAngle);
