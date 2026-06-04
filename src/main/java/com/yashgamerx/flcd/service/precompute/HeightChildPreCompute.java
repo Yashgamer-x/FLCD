@@ -1,17 +1,20 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.dimension.HorizontalSubtreeDimensionCalculator;
+import com.yashgamerx.flcd.service.dimension.NodeDimensionCalculator;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import com.yashgamerx.flcd.service.precompute.inject.WidthChildPreComputeInjector;
 
-import static com.yashgamerx.flcd.model.AbstractNode.*;
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 
 public class HeightChildPreCompute implements Precomputable {
 
     private final PrecomputeInjectable injectable = new WidthChildPreComputeInjector();
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+    private final NodeDimensionCalculator nodeDimensionCalculator = new HorizontalSubtreeDimensionCalculator();
 
     @Override
     public void precompute(AbstractNode heightNode) {
@@ -22,7 +25,7 @@ public class HeightChildPreCompute implements Precomputable {
 
         heightNode.getChildren().forEach(this::injectAndPrecompute);
 
-        calculateHorizontalSubtreeDimensions(heightNode);
+        nodeDimensionCalculator.calculate(heightNode);
     }
 
     /// Checks if the node has no children
@@ -40,33 +43,5 @@ public class HeightChildPreCompute implements Precomputable {
     private void injectAndPrecompute(AbstractNode widthChild) {
         injectable.inject(widthChild);
         widthChild.precompute();
-    }
-
-    /// Computes dimensions where children are stacked Horizontally
-    private void calculateHorizontalSubtreeDimensions(AbstractNode heightNode) {
-        // Calculate the maximum child height using a stream
-        double maxChildHeight = heightNode.getChildren().stream()
-                .mapToDouble(AbstractNode::getSubtreeHeight)
-                .max()
-                .orElse(0.0);
-
-        // Calculate the combined raw width of all children using a stream
-        double rawCombinedWidth = heightNode.getChildren().stream()
-                .mapToDouble(AbstractNode::getSubtreeWidth)
-                .sum();
-
-        // Apply the spacer adjustments using your exact formulas
-        int totalChildren = heightNode.getChildren().size();
-        double totalChildrenWidth = rawCombinedWidth + (WIDTH_SPACER * (totalChildren - 1));
-
-        // Total Children Width + Width Spacing + (Parent Diameter: 10.0)
-        var subtreeWidth = totalChildrenWidth + WIDTH_SPACER + NODE_DIAMETER;
-
-        // Maximum Child Height + Height Spacing + (Parent Diameter: 10.0)
-        var subtreeHeight = Math.max(NODE_DIAMETER, maxChildHeight) + HEIGHT_SPACER + NODE_DIAMETER;
-
-        // Sets the dimensions
-        heightNode.setSubtreeWidth(subtreeWidth);
-        heightNode.setSubtreeHeight(subtreeHeight);
     }
 }
