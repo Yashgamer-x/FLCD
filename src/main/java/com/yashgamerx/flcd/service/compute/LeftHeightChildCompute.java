@@ -33,8 +33,8 @@ public class LeftHeightChildCompute implements Computable {
     }
 
     private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode heightChild, double anchorX, double anchorY, double childAngleTrajectory) {
-        // Clearance offset Height: (Parent Radius: 5.0) + HEIGHT_SPACER
-        double generalOffset = NODE_RADIUS + HEIGHT_SPACER;
+        // Clearance offset Width: (Parent Radius: 5.0) + WIDTH_SPACER
+        double generalOffset = NODE_RADIUS + WIDTH_SPACER;
 
         for (var widthChild : heightChild.getChildren()) {
             if (!(widthChild.getComputable() instanceof RootifiedCompute)) {
