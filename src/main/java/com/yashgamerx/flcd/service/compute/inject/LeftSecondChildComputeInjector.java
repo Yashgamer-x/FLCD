@@ -8,12 +8,12 @@ import com.yashgamerx.flcd.service.compute.RootifiedCompute;
 public class LeftSecondChildComputeInjector implements ComputeInjectable {
     @Override
     public void inject(AbstractNode abstractNode) {
-        var precomputable = abstractNode.getComputable();
-        if ((!(precomputable instanceof LeftSecondChildCompute || precomputable instanceof RootifiedCompute))) {
+        var computable = abstractNode.getComputable();
+        if ((!(computable instanceof LeftSecondChildCompute || computable instanceof RootifiedCompute))) {
             abstractNode.setComputable(new LeftSecondChildCompute());
         }
 
-        if (precomputable instanceof RootifiedCompute) {
+        if (computable instanceof RootifiedCompute) {
             abstractNode.setComputable(new LeftSecondRootifiedCompute());
         }
     }
