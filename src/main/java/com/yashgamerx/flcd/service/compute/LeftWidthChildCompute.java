@@ -88,7 +88,7 @@ public class LeftWidthChildCompute implements Computable {
         heightChild.setGridY(childY);
 
         // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-        heightChild.setLocalRadianAngle(childAngleTrajectory - (Math.PI / 2));
+        heightChild.setLocalRadianAngle(childAngleTrajectory + (Math.PI / 2));
 
         computeInjector.inject(heightChild);
 
