@@ -33,7 +33,7 @@ public class HorizontalSubtreeDimensionCalculator implements NodeDimensionCalcul
 
     private double maxHeight(AbstractNode node, double maxHeight) {
         if (node.getPrecomputable() instanceof RootifiedPreCompute) {
-            return Math.max(maxHeight, node.getSubtreeWidth());
+            return Math.max(maxHeight, node.getSubtreeHeight());
         }
 
         return Math.max(maxHeight, node.getSubtreeHeight());
@@ -41,7 +41,7 @@ public class HorizontalSubtreeDimensionCalculator implements NodeDimensionCalcul
 
     private double accumulateWidth(AbstractNode node, double accumulatedWidth) {
         if (node.getPrecomputable() instanceof RootifiedPreCompute) {
-            return accumulatedWidth + node.getSubtreeHeight();
+            return accumulatedWidth + node.getSubtreeWidth();
         }
 
         return accumulatedWidth + node.getSubtreeWidth();
