@@ -25,9 +25,7 @@ public class RootifiedPreCompute implements Precomputable {
     }
 
     /// Calculates the safe boundary offset requirement of a child from its parent node center.
-    private double calculateScalarOffset(AbstractNode firstChild) {
-        int totalChildren = firstChild.getParent().getChildren().size();
-        double angularStep = angularCalculator.calculate(totalChildren);
+    private double calculateScalarOffset(AbstractNode firstChild, double angularStep) {
         // Clearance calculation updated to reflect the 10.0 baseline node diameter
         // clearance height = width / (tan(theta/2) * 2.0)
         // theta/2 is required so that, if the first children are placed at differences of angle 60 degrees;
@@ -44,9 +42,11 @@ public class RootifiedPreCompute implements Precomputable {
     private void calculateSubtree(AbstractNode node) {
         var firstChildren = node.getChildren();
         double maxOffset = 0;
+        int totalChildren = node.getChildren().size();
+        double angularStep = angularCalculator.calculate(totalChildren);
 
         for (var firstChild : firstChildren) {
-            double safeScalarOffset = calculateScalarOffset(firstChild);
+            double safeScalarOffset = calculateScalarOffset(firstChild, angularStep);
             maxOffset = Math.max(maxOffset, safeScalarOffset);
         }
 
