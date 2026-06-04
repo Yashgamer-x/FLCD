@@ -7,19 +7,18 @@ import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import lombok.extern.java.Log;
 
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 
 @Log
 public class TreeVisualizationView extends BorderPane {
@@ -97,16 +96,16 @@ public class TreeVisualizationView extends BorderPane {
         circle.setStrokeWidth(1);
         circle.setCursor(Cursor.HAND);
 
-        var text = new Text(String.valueOf(node.getIdentifier()));
+        var text = new Label(String.valueOf(node.getIdentifier()));
         text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
 
         // Set the anchor point of the text right in its center
-        text.setTextOrigin(VPos.CENTER);
-        text.setTextAlignment(TextAlignment.CENTER);
+        text.setAlignment(Pos.CENTER);
 
         // Position the center anchor exactly at the circle's (x, y)
-        text.setX(x);
-        text.setY(y);
+        text.setLayoutX(x - NODE_RADIUS);
+        text.setLayoutY(y - NODE_RADIUS);
+        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
 
         // Show the info panel when a node circle is clicked.
         // e.consume() prevents the canvas drag handler from also firing.
