@@ -87,7 +87,7 @@ public class RightHeightChildCompute implements Computable {
         widthChild.setGridY(childY);
 
         // Forward the calculated absolute orientation down-chain so descendants can follow the vector
-        widthChild.setLocalRadianAngle(childAngleTrajectory - (Math.PI / 2));
+        widthChild.setLocalRadianAngle(childAngleTrajectory + (Math.PI / 2));
 
         computeInjector.inject(widthChild);
 
