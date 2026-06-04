@@ -71,7 +71,7 @@ public class RightWidthChildCompute implements Computable {
 
         // Whatever the previous offset was + the entire height of the subtree + the height spacer
         // The spacer is given so that the next one does not need to add its own spacer.
-        return generalOffset + heightChild.getSubtreeWidth() + WIDTH_SPACER;
+        return generalOffset + heightChild.getSubtreeHeight() + HEIGHT_SPACER;
     }
 
     private double projectRootifiedChildAlongTheVector(AbstractNode heightChild, double anchorX, double anchorY,
