@@ -19,7 +19,7 @@ public class RightWidthChildCompute implements Computable {
         double myAngle = widthNode.getLocalRadianAngle(); // Direction pointing into this node
 
         // Turn right by -90 degrees (-π/2 radians) relative to parent's angle vector orientation
-        double childAngleTrajectory = myAngle - (Math.PI / 2.0);
+        double childAngleTrajectory = myAngle + (Math.PI / 2.0);
 
         // Clearance offset length: (Parent Radius: 5.0) + WIDTH_SPACER + (Child Radius: 5.0)
         double forwardStepLength = NODE_RADIUS + WIDTH_SPACER + NODE_RADIUS;
