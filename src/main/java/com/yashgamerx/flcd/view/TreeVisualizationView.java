@@ -106,6 +106,7 @@ public class TreeVisualizationView extends BorderPane {
         text.setLayoutX(x - NODE_RADIUS);
         text.setLayoutY(y - NODE_RADIUS);
         text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
+        text.setMouseTransparent(true);
 
         // Show the info panel when a node circle is clicked.
         // e.consume() prevents the canvas drag handler from also firing.
