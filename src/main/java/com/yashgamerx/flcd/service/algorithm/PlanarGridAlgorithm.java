@@ -3,8 +3,16 @@ package com.yashgamerx.flcd.service.algorithm;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.RootCompute;
 import com.yashgamerx.flcd.service.precompute.RootPreCompute;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableOption;
 
 public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
+
+    private final PreComputableFactoryImplementation factory;
+
+    public PlanarGridAlgorithm(PreComputableFactoryImplementation preComputableFactoryImplementation) {
+        this.factory = preComputableFactoryImplementation;
+    }
 
     @Override
     public void calculate(AbstractNode root, double originX, double originY) {
@@ -26,7 +34,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
     /// Injects [RootPreCompute]
     private void injectPrecompute(AbstractNode root) {
-        root.setPrecomputable(new RootPreCompute());
+        root.setPrecomputable(factory.getPreComputable(PreComputableOption.ROOT));
     }
 
     /// Injects [RootCompute]
