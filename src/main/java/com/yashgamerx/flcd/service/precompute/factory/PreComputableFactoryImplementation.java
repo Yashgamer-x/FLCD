@@ -6,7 +6,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class PreComputeFactoryImplementation implements PreComputeFactory {
+public class PreComputableFactoryImplementation implements PreComputableFactory {
 
     // Using highly-optimized EnumMap instead of HashMap for enum keys
     private final Map<PreComputableOption, Precomputable> precomputeCache = new EnumMap<>(PreComputableOption.class);
@@ -14,7 +14,7 @@ public class PreComputeFactoryImplementation implements PreComputeFactory {
     // Immutable routing registry mapping options directly to their initialization targets
     private final Map<PreComputableOption, Supplier<Precomputable>> registry = new EnumMap<>(PreComputableOption.class);
 
-    public PreComputeFactoryImplementation() {
+    public PreComputableFactoryImplementation() {
         registry.put(PreComputableOption.ROOT, RootifiedPreCompute::new);
         registry.put(PreComputableOption.FIRST_CHILD, FirstChildPreCompute::new);
         registry.put(PreComputableOption.SECOND_CHILD, SecondChildPreCompute::new);

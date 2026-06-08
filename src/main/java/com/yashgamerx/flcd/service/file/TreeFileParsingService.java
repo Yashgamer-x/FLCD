@@ -2,6 +2,8 @@ package com.yashgamerx.flcd.service.file;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.Node;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
 import lombok.extern.java.Log;
 
 import java.io.File;
@@ -13,6 +15,8 @@ import java.util.stream.Stream;
 
 @Log
 public class TreeFileParsingService implements FileParsingService {
+
+    private final PreComputableFactory precomputeFactory = new PreComputableFactoryImplementation();
 
     @Override
     public Optional<Map<Integer, AbstractNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {

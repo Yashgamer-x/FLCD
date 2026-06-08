@@ -2,6 +2,7 @@ package com.yashgamerx.flcd.model;
 
 import com.yashgamerx.flcd.service.compute.Computable;
 import com.yashgamerx.flcd.service.precompute.Precomputable;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.ArrayList;
@@ -31,18 +32,20 @@ public abstract class AbstractNode {
     protected double gridY; // Screen Y coordinate
 
     // Services
+    protected final PreComputableFactory preComputableFactory;
     protected Precomputable precomputable;
     protected Computable computable;
 
     // Constructor
-    public AbstractNode(int identifier, String name, AbstractNode parent) {
+    public AbstractNode(int identifier, String name, AbstractNode parent, PreComputableFactory preComputableFactory) {
         this.identifier = identifier;
         this.name = name;
         this.parent = parent;
+        this.preComputableFactory = preComputableFactory;
     }
 
-    public AbstractNode(int identifier) {
-        this(identifier, "", null);
+    public AbstractNode(int identifier, PreComputableFactory preComputableFactory) {
+        this(identifier, "", null, preComputableFactory);
     }
 
     // Abstract methods for FLCD phases
