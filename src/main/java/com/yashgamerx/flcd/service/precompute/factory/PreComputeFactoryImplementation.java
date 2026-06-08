@@ -11,9 +11,9 @@ public class PreComputeFactoryImplementation implements PreComputeFactory {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Precomputable> T getPreComputable(PreComputableOption option) {
+    public Precomputable getPreComputable(PreComputableOption option) {
 
-        return (T) switch (option) {
+        return switch (option) {
             case ROOT -> getRootPreComputable();
             case FIRST_CHILD -> getFirstChildPreCompute();
             case SECOND_CHILD -> getSecondChildPreCompute();
@@ -23,27 +23,27 @@ public class PreComputeFactoryImplementation implements PreComputeFactory {
         };
     }
 
-    private RootifiedPreCompute getRootPreComputable() {
-        return (RootifiedPreCompute) precomputeCache.computeIfAbsent(RootPreCompute.class, _ -> new RootifiedPreCompute());
+    private Precomputable getRootPreComputable() {
+        return precomputeCache.computeIfAbsent(RootPreCompute.class, _ -> new RootifiedPreCompute());
     }
 
-    private FirstChildPreCompute getFirstChildPreCompute() {
-        return (FirstChildPreCompute) precomputeCache.computeIfAbsent(FirstChildPreCompute.class, _ -> new FirstChildPreCompute());
+    private Precomputable getFirstChildPreCompute() {
+        return precomputeCache.computeIfAbsent(FirstChildPreCompute.class, _ -> new FirstChildPreCompute());
     }
 
-    private SecondChildPreCompute getSecondChildPreCompute() {
-        return (SecondChildPreCompute) precomputeCache.computeIfAbsent(SecondChildPreCompute.class, _ -> new SecondChildPreCompute());
+    private Precomputable getSecondChildPreCompute() {
+        return precomputeCache.computeIfAbsent(SecondChildPreCompute.class, _ -> new SecondChildPreCompute());
     }
 
-    private HeightChildPreCompute getHeightChildPreCompute() {
-        return (HeightChildPreCompute) precomputeCache.computeIfAbsent(HeightChildPreCompute.class, _ -> new HeightChildPreCompute());
+    private Precomputable getHeightChildPreCompute() {
+        return precomputeCache.computeIfAbsent(HeightChildPreCompute.class, _ -> new HeightChildPreCompute());
     }
 
-    private WidthChildPreCompute getWidthChildPreCompute() {
-        return (WidthChildPreCompute) precomputeCache.computeIfAbsent(WidthChildPreCompute.class, _ -> new WidthChildPreCompute());
+    private Precomputable getWidthChildPreCompute() {
+        return precomputeCache.computeIfAbsent(WidthChildPreCompute.class, _ -> new WidthChildPreCompute());
     }
 
-    private RootifiedPreCompute getRootifiedPreCompute() {
-        return (RootifiedPreCompute) precomputeCache.computeIfAbsent(RootifiedPreCompute.class, _ -> new RootifiedPreCompute());
+    private Precomputable getRootifiedPreCompute() {
+        return precomputeCache.computeIfAbsent(RootifiedPreCompute.class, _ -> new RootifiedPreCompute());
     }
 }
