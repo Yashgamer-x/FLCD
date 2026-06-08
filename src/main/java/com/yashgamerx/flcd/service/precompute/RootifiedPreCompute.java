@@ -3,6 +3,8 @@ package com.yashgamerx.flcd.service.precompute;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.FirstChildPreComputeInjector;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 
@@ -10,8 +12,13 @@ import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 
 public class RootifiedPreCompute implements Precomputable {
 
+    private final PreComputableFactory factory;
     private final AngularCalculator angularCalculator = new Angle180Calculator();
     private final PrecomputeInjectable injector = new FirstChildPreComputeInjector();
+
+    public RootifiedPreCompute(PreComputableFactoryImplementation preComputableFactoryImplementation) {
+        this.factory = preComputableFactoryImplementation;
+    }
 
     @Override
     public void precompute(AbstractNode node) {

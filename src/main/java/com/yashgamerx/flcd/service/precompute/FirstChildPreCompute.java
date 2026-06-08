@@ -6,6 +6,8 @@ import com.yashgamerx.flcd.service.compute.inject.LeftSecondChildComputeInjector
 import com.yashgamerx.flcd.service.compute.inject.RightSecondChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
@@ -17,10 +19,15 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 @Log
 public class FirstChildPreCompute implements Precomputable {
 
+    private final PreComputableFactory factory;
     private final PrecomputeInjectable injectable = new SecondChildPreComputeInjector();
     private final ComputeInjectable rightComputeInjector = new RightSecondChildComputeInjector();
     private final ComputeInjectable leftComputeInjector = new LeftSecondChildComputeInjector();
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+
+    public FirstChildPreCompute(PreComputableFactoryImplementation preComputableFactoryImplementation) {
+        this.factory = preComputableFactoryImplementation;
+    }
 
     @Override
     public void precompute(AbstractNode firstChild) {
