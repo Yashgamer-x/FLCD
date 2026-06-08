@@ -13,11 +13,12 @@ import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 public class RootPreCompute implements Precomputable {
 
     private final PreComputableFactory factory;
-    private final PrecomputeInjectable preComputeInjector = new FirstChildPreComputeInjector();
+    private final PrecomputeInjectable preComputeInjector;
     private final AngularCalculator angularCalculator = new Angle360Calculator();
 
     public RootPreCompute(PreComputableFactoryImplementation preComputableFactoryImplementation) {
         this.factory = preComputableFactoryImplementation;
+        this.preComputeInjector = new FirstChildPreComputeInjector(factory);
     }
 
     @Override
