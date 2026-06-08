@@ -15,7 +15,7 @@ public class PreComputeFactoryImplementation implements PreComputeFactory {
     private final Map<PreComputableOption, Supplier<Precomputable>> registry = new EnumMap<>(PreComputableOption.class);
 
     public PreComputeFactoryImplementation() {
-        registry.put(PreComputableOption.ROOT, RootifiedPreCompute::new); // Fixed cache mismatch if intentional
+        registry.put(PreComputableOption.ROOT, RootifiedPreCompute::new);
         registry.put(PreComputableOption.FIRST_CHILD, FirstChildPreCompute::new);
         registry.put(PreComputableOption.SECOND_CHILD, SecondChildPreCompute::new);
         registry.put(PreComputableOption.HEIGHT_CHILD, HeightChildPreCompute::new);
