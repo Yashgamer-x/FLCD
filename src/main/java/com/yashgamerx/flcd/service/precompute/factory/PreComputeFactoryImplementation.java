@@ -2,48 +2,40 @@ package com.yashgamerx.flcd.service.precompute.factory;
 
 import com.yashgamerx.flcd.service.precompute.*;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class PreComputeFactoryImplementation implements PreComputeFactory {
 
-    private Map<Class<? extends Precomputable>, Precomputable> precomputeCache = new HashMap<>();
+    // Using highly-optimized EnumMap instead of HashMap for enum keys
+    private final Map<PreComputableOption, Precomputable> precomputeCache = new EnumMap<>(PreComputableOption.class);
+
+    // Immutable routing registry mapping options directly to their initialization targets
+    private final Map<PreComputableOption, Supplier<Precomputable>> registry = new EnumMap<>(PreComputableOption.class);
+
+    public PreComputeFactoryImplementation() {
+        registry.put(PreComputableOption.ROOT, RootifiedPreCompute::new); // Fixed cache mismatch if intentional
+        registry.put(PreComputableOption.FIRST_CHILD, FirstChildPreCompute::new);
+        registry.put(PreComputableOption.SECOND_CHILD, SecondChildPreCompute::new);
+        registry.put(PreComputableOption.HEIGHT_CHILD, HeightChildPreCompute::new);
+        registry.put(PreComputableOption.WIDTH_CHILD, WidthChildPreCompute::new);
+        registry.put(PreComputableOption.ROOTIFIED_CHILD, RootifiedPreCompute::new);
+    }
 
     @Override
     @SuppressWarnings("unchecked")
     public Precomputable getPreComputable(PreComputableOption option) {
+        if (option == null) {
+            throw new IllegalArgumentException("PreComputableOption strategy selector cannot be null.");
+        }
 
-        return switch (option) {
-            case ROOT -> getRootPreComputable();
-            case FIRST_CHILD -> getFirstChildPreCompute();
-            case SECOND_CHILD -> getSecondChildPreCompute();
-            case HEIGHT_CHILD -> getHeightChildPreCompute();
-            case WIDTH_CHILD -> getWidthChildPreCompute();
-            case ROOTIFIED_CHILD -> getRootifiedPreCompute();
-        };
-    }
-
-    private Precomputable getRootPreComputable() {
-        return precomputeCache.computeIfAbsent(RootPreCompute.class, _ -> new RootifiedPreCompute());
-    }
-
-    private Precomputable getFirstChildPreCompute() {
-        return precomputeCache.computeIfAbsent(FirstChildPreCompute.class, _ -> new FirstChildPreCompute());
-    }
-
-    private Precomputable getSecondChildPreCompute() {
-        return precomputeCache.computeIfAbsent(SecondChildPreCompute.class, _ -> new SecondChildPreCompute());
-    }
-
-    private Precomputable getHeightChildPreCompute() {
-        return precomputeCache.computeIfAbsent(HeightChildPreCompute.class, _ -> new HeightChildPreCompute());
-    }
-
-    private Precomputable getWidthChildPreCompute() {
-        return precomputeCache.computeIfAbsent(WidthChildPreCompute.class, _ -> new WidthChildPreCompute());
-    }
-
-    private Precomputable getRootifiedPreCompute() {
-        return precomputeCache.computeIfAbsent(RootifiedPreCompute.class, _ -> new RootifiedPreCompute());
+        return precomputeCache.computeIfAbsent(option, opt -> {
+            Supplier<Precomputable> supplier = registry.get(opt);
+            if (supplier == null) {
+                throw new UnsupportedOperationException("No layout strategy registered for option: " + opt);
+            }
+            return supplier.get();
+        });
     }
 }
