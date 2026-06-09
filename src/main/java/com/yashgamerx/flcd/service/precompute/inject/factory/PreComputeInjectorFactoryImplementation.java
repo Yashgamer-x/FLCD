@@ -1,7 +1,6 @@
 package com.yashgamerx.flcd.service.precompute.inject.factory;
 
 import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableOption;
 import com.yashgamerx.flcd.service.precompute.inject.*;
 
 import java.util.EnumMap;
@@ -23,14 +22,10 @@ public class PreComputeInjectorFactoryImplementation implements PreComputeInject
         // The cache breaks circular dependencies because an instance can be registered
         // in the cache BEFORE its recursive pipeline steps execute!
         return (T) precomputeCache.computeIfAbsent(option, opt -> switch (opt) {
-            case FIRST_CHILD ->
-                    new FirstChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.FIRST_CHILD));
-            case SECOND_CHILD ->
-                    new SecondChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.SECOND_CHILD));
-            case HEIGHT_CHILD ->
-                    new HeightChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.HEIGHT_CHILD));
-            case WIDTH_CHILD ->
-                    new WidthChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.WIDTH_CHILD));
+            case FIRST_CHILD -> new FirstChildPreComputeInjector(preComputableFactory);
+            case SECOND_CHILD -> new SecondChildPreComputeInjector(preComputableFactory);
+            case HEIGHT_CHILD -> new HeightChildPreComputeInjector(preComputableFactory);
+            case WIDTH_CHILD -> new WidthChildPreComputeInjector(preComputableFactory);
         });
     }
 }
