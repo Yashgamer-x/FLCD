@@ -1,9 +1,11 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
-import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableOption;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -38,13 +40,16 @@ public class TreeVisualizationView extends BorderPane {
     private static final double MAX_SCALE = 5.0;
 
     private final TreeLayoutAlgorithm layoutAlgorithm;
+    private final PreComputableFactory preComputableFactory;
 
     /// Tracks the currently visible node info panel so it can be removed when needed.
     private VBox currentInfoPanel = null;
 
-    public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
+    public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap,
+                                 final PreComputableFactory preComputableFactory) {
         this.abstractNodeMap = abstractNodeMap;
-        this.layoutAlgorithm = algorithm;
+        this.preComputableFactory = preComputableFactory;
+        this.layoutAlgorithm = new PlanarGridAlgorithm(preComputableFactory);
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
@@ -350,7 +355,7 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void rootifyNode(AbstractNode node) {
-        node.setPrecomputable(new RootifiedPreCompute());
+        node.setPrecomputable(preComputableFactory.getPreComputable(PreComputableOption.ROOTIFIED_CHILD));
         node.setComputable(new RootifiedCompute());
     }
 

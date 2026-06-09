@@ -3,15 +3,15 @@ package com.yashgamerx.flcd.service.algorithm;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.RootCompute;
 import com.yashgamerx.flcd.service.precompute.RootPreCompute;
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
 import com.yashgamerx.flcd.service.precompute.factory.PreComputableOption;
 
 public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
-    private final PreComputableFactoryImplementation factory;
+    private final PreComputableFactory factory;
 
-    public PlanarGridAlgorithm(PreComputableFactoryImplementation preComputableFactoryImplementation) {
-        this.factory = preComputableFactoryImplementation;
+    public PlanarGridAlgorithm(PreComputableFactory preComputableFactory) {
+        this.factory = preComputableFactory;
     }
 
     @Override
