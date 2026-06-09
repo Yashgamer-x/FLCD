@@ -23,8 +23,8 @@ public class PreComputableFactoryImplementation implements PreComputableFactory 
             case ROOT -> new RootPreCompute(this);
             case FIRST_CHILD -> new FirstChildPreCompute(preComputeInjectorFactory);
             case SECOND_CHILD -> new SecondChildPreCompute(preComputeInjectorFactory);
-            case HEIGHT_CHILD -> new HeightChildPreCompute(this);
-            case WIDTH_CHILD -> new WidthChildPreCompute(this);
+            case HEIGHT_CHILD -> new HeightChildPreCompute(preComputeInjectorFactory);
+            case WIDTH_CHILD -> new WidthChildPreCompute(preComputeInjectorFactory);
             case ROOTIFIED_CHILD -> new RootifiedPreCompute(this);
         });
     }

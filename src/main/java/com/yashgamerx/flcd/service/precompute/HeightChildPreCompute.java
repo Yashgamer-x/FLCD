@@ -5,9 +5,9 @@ import com.yashgamerx.flcd.service.dimension.HorizontalSubtreeDimensionCalculato
 import com.yashgamerx.flcd.service.dimension.NodeDimensionCalculator;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
-import com.yashgamerx.flcd.service.precompute.inject.WidthChildPreComputeInjector;
+import com.yashgamerx.flcd.service.precompute.inject.factory.PreComputeInjectorFactory;
+import com.yashgamerx.flcd.service.precompute.inject.factory.PreComputeInjectorOption;
 
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 
@@ -17,8 +17,8 @@ public class HeightChildPreCompute implements Precomputable {
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
     private final NodeDimensionCalculator nodeDimensionCalculator = new HorizontalSubtreeDimensionCalculator();
 
-    public HeightChildPreCompute(PreComputableFactoryImplementation preComputableFactoryImplementation) {
-        this.injectable = new WidthChildPreComputeInjector(preComputableFactoryImplementation);
+    public HeightChildPreCompute(PreComputeInjectorFactory preComputableFactoryImplementation) {
+        this.injectable = preComputableFactoryImplementation.getInjector(PreComputeInjectorOption.WIDTH_CHILD);
     }
 
     @Override
