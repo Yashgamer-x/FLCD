@@ -1,13 +1,19 @@
 package com.yashgamerx.flcd.service.precompute.inject.factory;
 
-import com.yashgamerx.flcd.service.precompute.*;
-import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
+import com.yashgamerx.flcd.service.precompute.factory.PreComputableOption;
+import com.yashgamerx.flcd.service.precompute.inject.*;
 
 import java.util.EnumMap;
 import java.util.Map;
 
 public class PreComputeInjectorFactoryImplementation implements PreComputeInjectorFactory {
     private final Map<PreComputeInjectorOption, PrecomputeInjectable> precomputeCache = new EnumMap<>(PreComputeInjectorOption.class);
+    private final PreComputableFactory preComputableFactory;
+
+    public PreComputeInjectorFactoryImplementation(PreComputableFactory preComputableFactory) {
+        this.preComputableFactory = preComputableFactory;
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -17,12 +23,14 @@ public class PreComputeInjectorFactoryImplementation implements PreComputeInject
         // The cache breaks circular dependencies because an instance can be registered
         // in the cache BEFORE its recursive pipeline steps execute!
         return (T) precomputeCache.computeIfAbsent(option, opt -> switch (opt) {
-            case ROOT -> new RootPreCompute(this);
-            case FIRST_CHILD -> new FirstChildPreCompute(this);
-            case SECOND_CHILD -> new SecondChildPreCompute(this);
-            case HEIGHT_CHILD -> new HeightChildPreCompute(this);
-            case WIDTH_CHILD -> new WidthChildPreCompute(this);
-            case ROOTIFIED_CHILD -> new RootifiedPreCompute(this);
+            case FIRST_CHILD ->
+                    new FirstChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.FIRST_CHILD));
+            case SECOND_CHILD ->
+                    new SecondChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.SECOND_CHILD));
+            case HEIGHT_CHILD ->
+                    new HeightChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.HEIGHT_CHILD));
+            case WIDTH_CHILD ->
+                    new WidthChildPreComputeInjector(preComputableFactory.getPreComputable(PreComputableOption.WIDTH_CHILD));
         });
     }
 }
