@@ -22,7 +22,7 @@ public class PreComputableFactoryImplementation implements PreComputableFactory 
         return (T) precomputeCache.computeIfAbsent(option, opt -> switch (opt) {
             case ROOT -> new RootPreCompute(this);
             case FIRST_CHILD -> new FirstChildPreCompute(preComputeInjectorFactory);
-            case SECOND_CHILD -> new SecondChildPreCompute(this);
+            case SECOND_CHILD -> new SecondChildPreCompute(preComputeInjectorFactory);
             case HEIGHT_CHILD -> new HeightChildPreCompute(this);
             case WIDTH_CHILD -> new WidthChildPreCompute(this);
             case ROOTIFIED_CHILD -> new RootifiedPreCompute(this);
