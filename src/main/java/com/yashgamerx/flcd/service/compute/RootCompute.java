@@ -4,10 +4,12 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.angular.Angle360Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
-import com.yashgamerx.flcd.service.compute.inject.FirstChildComputeInjector;
+import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorFactory;
+import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorOption;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import lombok.extern.java.Log;
+
 import static com.yashgamerx.flcd.model.AbstractNode.NODE_RADIUS;
 
 @Log
@@ -15,7 +17,11 @@ public class RootCompute implements Computable {
 
     private final AngularCalculator angularCalculator = new Angle360Calculator();
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
-    private final ComputeInjectable computeInjector = new FirstChildComputeInjector();
+    private final ComputeInjectable computeInjector;
+
+    public RootCompute(ComputeInjectorFactory computeInjectorFactory) {
+        this.computeInjector = computeInjectorFactory.getInjector(ComputeInjectorOption.FIRST_CHILD);
+    }
 
     @Override
     public void compute(AbstractNode rootNode) {
