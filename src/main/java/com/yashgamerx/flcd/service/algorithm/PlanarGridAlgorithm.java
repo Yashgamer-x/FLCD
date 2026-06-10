@@ -10,11 +10,11 @@ import com.yashgamerx.flcd.service.precompute.factory.PreComputableOption;
 
 public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
-    private final PreComputableFactory factory;
+    private final PreComputableFactory preComputableFactory;
     private final ComputeInjectorFactory computeInjectorFactory = new ComputeInjectorFactoryImplementation();
 
     public PlanarGridAlgorithm(PreComputableFactory preComputableFactory) {
-        this.factory = preComputableFactory;
+        this.preComputableFactory = preComputableFactory;
     }
 
     @Override
@@ -37,7 +37,7 @@ public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
     /// Injects [RootPreCompute]
     private void injectPrecompute(AbstractNode root) {
-        root.setPrecomputable(factory.getPreComputable(PreComputableOption.ROOT));
+        root.setPrecomputable(preComputableFactory.getPreComputable(PreComputableOption.ROOT));
     }
 
     /// Injects [RootCompute]
