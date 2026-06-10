@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.view;
 
+import com.yashgamerx.flcd.service.compute.factory.ComputableFactoryImplementation;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
 import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
@@ -99,10 +100,11 @@ public class AlgorithmSelectorView extends BorderPane {
         // Get the parsed result
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
         var precomputableFactory = new PreComputableFactoryImplementation();
+        var computableFactory = new ComputableFactoryImplementation();
 
         parsingResult.ifPresentOrElse(map -> {
             // Create the new View
-            var visualizationView = new TreeVisualizationView(map, precomputableFactory);
+            var visualizationView = new TreeVisualizationView(map, precomputableFactory, computableFactory);
 
             // Swap the Root of the Scene
             // Since this class is currently the root of the Scene, we replace it.

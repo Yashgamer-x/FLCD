@@ -1,7 +1,6 @@
 package com.yashgamerx.flcd.service.compute.inject.factory;
 
 import com.yashgamerx.flcd.service.compute.factory.ComputableFactory;
-import com.yashgamerx.flcd.service.compute.factory.ComputableFactoryImplementation;
 import com.yashgamerx.flcd.service.compute.inject.*;
 
 import java.util.EnumMap;
@@ -9,7 +8,11 @@ import java.util.Map;
 
 public class ComputeInjectorFactoryImplementation implements ComputeInjectorFactory {
     private final Map<ComputeInjectorOption, ComputeInjectable> computeInjectorCache = new EnumMap<>(ComputeInjectorOption.class);
-    private final ComputableFactory computableFactory = new ComputableFactoryImplementation();
+    private final ComputableFactory computableFactory;
+
+    public ComputeInjectorFactoryImplementation(ComputableFactory computableFactory) {
+        this.computableFactory = computableFactory;
+    }
 
 
     @Override
