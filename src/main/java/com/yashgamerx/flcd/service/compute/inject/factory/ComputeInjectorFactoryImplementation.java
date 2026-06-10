@@ -19,7 +19,7 @@ public class ComputeInjectorFactoryImplementation implements ComputeInjectorFact
 
         return (T) computeInjectorCache.computeIfAbsent(option, key -> switch (key) {
             case FIRST_CHILD -> new FirstChildComputeInjector(computableFactory);
-            case LEFT_SECOND_CHILD -> new LeftSecondChildComputeInjector();
+            case LEFT_SECOND_CHILD -> new LeftSecondChildComputeInjector(computableFactory);
             case RIGHT_SECOND_CHILD -> new RightSecondChildComputeInjector();
             case LEFT_HEIGHT_CHILD -> new LeftHeightChildComputeInjector();
             case RIGHT_HEIGHT_CHILD -> new RightHeightChildComputeInjector();
