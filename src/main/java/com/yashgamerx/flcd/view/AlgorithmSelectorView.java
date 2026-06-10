@@ -99,8 +99,8 @@ public class AlgorithmSelectorView extends BorderPane {
 
         // Get the parsed result
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
-        var precomputableFactory = new PreComputableFactoryImplementation();
         var computableFactory = new ComputableFactoryImplementation();
+        var precomputableFactory = new PreComputableFactoryImplementation(computableFactory);
 
         parsingResult.ifPresentOrElse(map -> {
             // Create the new View

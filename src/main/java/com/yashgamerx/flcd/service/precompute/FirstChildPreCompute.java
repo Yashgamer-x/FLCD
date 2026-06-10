@@ -1,9 +1,9 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.service.compute.factory.ComputableFactory;
+import com.yashgamerx.flcd.service.compute.factory.ComputableOption;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
-import com.yashgamerx.flcd.service.compute.inject.LeftSecondChildComputeInjector;
-import com.yashgamerx.flcd.service.compute.inject.RightSecondChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
@@ -18,12 +18,14 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 @Log
 public class FirstChildPreCompute implements Precomputable {
     private final PrecomputeInjectable injectable;
-    private final ComputeInjectable rightComputeInjector = new RightSecondChildComputeInjector();
-    private final ComputeInjectable leftComputeInjector = new LeftSecondChildComputeInjector();
+    private final ComputeInjectable rightComputeInjector;
+    private final ComputeInjectable leftComputeInjector;
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
 
-    public FirstChildPreCompute(PreComputeInjectorFactory preComputeInjectorFactory) {
+    public FirstChildPreCompute(PreComputeInjectorFactory preComputeInjectorFactory, ComputableFactory computableFactory) {
         this.injectable = preComputeInjectorFactory.getInjector(PreComputeInjectorOption.SECOND_CHILD);
+        this.leftComputeInjector = computableFactory.getComputable(ComputableOption.LEFT_SECOND_CHILD);
+        this.rightComputeInjector = computableFactory.getComputable(ComputableOption.RIGHT_SECOND_CHILD);
     }
 
     @Override

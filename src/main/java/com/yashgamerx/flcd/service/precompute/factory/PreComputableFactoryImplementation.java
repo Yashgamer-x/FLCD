@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.service.precompute.factory;
 
+import com.yashgamerx.flcd.service.compute.factory.ComputableFactory;
 import com.yashgamerx.flcd.service.precompute.*;
 import com.yashgamerx.flcd.service.precompute.inject.factory.PreComputeInjectorFactory;
 import com.yashgamerx.flcd.service.precompute.inject.factory.PreComputeInjectorFactoryImplementation;
@@ -11,6 +12,11 @@ public class PreComputableFactoryImplementation implements PreComputableFactory 
 
     private final Map<PreComputableOption, Precomputable> precomputeCache = new EnumMap<>(PreComputableOption.class);
     private final PreComputeInjectorFactory preComputeInjectorFactory = new PreComputeInjectorFactoryImplementation(this);
+    private final ComputableFactory computableFactory;
+
+    public PreComputableFactoryImplementation(ComputableFactory computableFactory) {
+        this.computableFactory = computableFactory;
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -21,7 +27,7 @@ public class PreComputableFactoryImplementation implements PreComputableFactory 
         // in the cache BEFORE its recursive pipeline steps execute!
         return (T) precomputeCache.computeIfAbsent(option, opt -> switch (opt) {
             case ROOT -> new RootPreCompute(this);
-            case FIRST_CHILD -> new FirstChildPreCompute(preComputeInjectorFactory);
+            case FIRST_CHILD -> new FirstChildPreCompute(preComputeInjectorFactory, computableFactory);
             case SECOND_CHILD -> new SecondChildPreCompute(preComputeInjectorFactory);
             case HEIGHT_CHILD -> new HeightChildPreCompute(preComputeInjectorFactory);
             case WIDTH_CHILD -> new WidthChildPreCompute(preComputeInjectorFactory);
