@@ -19,7 +19,7 @@ public class ComputableFactoryImplementation implements ComputableFactory {
         return (T) computableCache.computeIfAbsent(option, key -> switch (key) {
             case ROOT -> new RootCompute(computeInjectorFactory);
             case FIRST_CHILD -> new FirstChildCompute();
-            case LEFT_SECOND_CHILD -> new LeftSecondChildCompute();
+            case LEFT_SECOND_CHILD -> new LeftSecondChildCompute(computeInjectorFactory);
             case RIGHT_SECOND_CHILD -> new RightSecondChildCompute();
             case LEFT_HEIGHT_CHILD -> new LeftHeightChildCompute();
             case RIGHT_HEIGHT_CHILD -> new RightHeightChildCompute();

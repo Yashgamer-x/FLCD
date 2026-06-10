@@ -17,11 +17,11 @@ public class LeftSecondChildComputeInjector implements ComputeInjectable {
     public void inject(AbstractNode abstractNode) {
         var computable = abstractNode.getComputable();
         if ((!(computable instanceof LeftSecondChildCompute || computable instanceof RootifiedCompute))) {
-            abstractNode.setComputable(new LeftSecondChildCompute());
+            abstractNode.setComputable(computableFactory.getComputable(ComputableOption.LEFT_SECOND_CHILD));
         }
 
         if (computable instanceof RootifiedCompute) {
-            abstractNode.setComputable(computableFactory.getComputable(ComputableOption.LEFT_SECOND_CHILD));
+            abstractNode.setComputable(computableFactory.getComputable(ComputableOption.LEFT_SECOND_ROOTIFIED_CHILD));
         }
     }
 }
