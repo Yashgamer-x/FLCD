@@ -1,7 +1,7 @@
 package com.yashgamerx.flcd.service.compute.factory;
 
-import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
+import com.yashgamerx.flcd.service.compute.Computable;
 
 public interface ComputableFactory {
-    <T extends ComputeInjectable> T getComputable(ComputableOption option);
+    <T extends Computable> T getComputable(ComputableOption option);
 }
