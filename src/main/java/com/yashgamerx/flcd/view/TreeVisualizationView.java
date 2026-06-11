@@ -142,7 +142,23 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void handleReadjustAction() {
-        //TODO: Implement readjustment
+        var dialog = new TextInputDialog();
+        dialog.setTitle("Readjust Node");
+        dialog.setHeaderText("Enter Node ID");
+        dialog.setContentText("Please enter an integer ID:");
+
+        var result = dialog.showAndWait();
+
+        result.ifPresent(input -> {
+            try {
+                int nodeId = Integer.parseInt(input.trim());
+                var node = abstractNodeMap.get(nodeId);
+                //TODO: Readjust the node
+                renderTreeStructure();
+            } catch (NumberFormatException e) {
+                showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
+            }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
