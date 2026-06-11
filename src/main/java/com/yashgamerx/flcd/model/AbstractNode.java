@@ -19,6 +19,7 @@ public abstract class AbstractNode {
     private final int identifier;
     private String name; // Added name as per document (Case Study format)
     protected List<AbstractNode> children = new ArrayList<>();
+    protected List<AbstractNode> rootifiedChildren = new ArrayList<>();
     private AbstractNode parent;
 
     // Algorithmic State as per FLCD document
