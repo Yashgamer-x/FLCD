@@ -24,7 +24,7 @@ public class ComputeInjectorFactoryImplementation implements ComputeInjectorFact
             case FIRST_CHILD -> new FirstChildComputeInjector(computableFactory);
             case LEFT_SECOND_CHILD -> new LeftSecondChildComputeInjector(computableFactory);
             case RIGHT_SECOND_CHILD -> new RightSecondChildComputeInjector(computableFactory);
-            case LEFT_HEIGHT_CHILD -> new LeftHeightChildComputeInjector();
+            case LEFT_HEIGHT_CHILD -> new LeftHeightChildComputeInjector(computableFactory);
             case RIGHT_HEIGHT_CHILD -> new RightHeightChildComputeInjector();
             case LEFT_WIDTH_CHILD -> new LeftWidthChildComputeInjector();
             case RIGHT_WIDTH_CHILD -> new RightWidthChildComputeInjector();

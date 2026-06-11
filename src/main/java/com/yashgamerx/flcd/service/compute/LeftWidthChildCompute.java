@@ -13,6 +13,9 @@ public class LeftWidthChildCompute implements Computable {
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
     private final ComputeInjectable computeInjector = new LeftHeightChildComputeInjector();
 
+    public LeftWidthChildCompute() {
+    }
+
     @Override
     public void compute(AbstractNode widthNode) {
         if (emptyListChecker.isEmpty(widthNode.getChildren())) return;
