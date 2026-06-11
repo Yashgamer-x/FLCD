@@ -3,12 +3,14 @@ package com.yashgamerx.flcd.service.compute.factory;
 import com.yashgamerx.flcd.service.compute.*;
 import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorFactory;
 import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorFactoryImplementation;
+import lombok.Getter;
 
 import java.util.EnumMap;
 import java.util.Map;
 
 public class ComputableFactoryImplementation implements ComputableFactory {
     private final Map<ComputableOption, Computable> computableCache = new EnumMap<>(ComputableOption.class);
+    @Getter
     private final ComputeInjectorFactory computeInjectorFactory = new ComputeInjectorFactoryImplementation(this);
 
     @Override
