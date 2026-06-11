@@ -370,6 +370,11 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void rootifyNode(AbstractNode node) {
+        var parent = node.getParent();
+
+        parent.getChildren().remove(node);
+        parent.getRootifiedChildren().add(node);
+
         node.setPrecomputable(new RootifiedPreCompute());
         node.setComputable(new RootifiedCompute());
     }
