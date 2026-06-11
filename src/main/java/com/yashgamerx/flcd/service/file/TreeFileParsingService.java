@@ -47,11 +47,11 @@ public class TreeFileParsingService implements FileParsingService {
             // PRINCIPLE: Identity Map Pattern
             // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = nodeMap.computeIfAbsent(parentId, key -> new Node(key));
+            var parentNode = nodeMap.computeIfAbsent(parentId, Node::new);
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, key -> new Node(key));
+                var childNode = nodeMap.computeIfAbsent(childId, Node::new);
                 parentNode.addChild(childNode);
             }
         } catch (NumberFormatException e) {

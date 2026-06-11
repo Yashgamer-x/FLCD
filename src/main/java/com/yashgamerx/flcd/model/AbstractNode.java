@@ -4,7 +4,6 @@ import com.yashgamerx.flcd.service.compute.Computable;
 import com.yashgamerx.flcd.service.precompute.Precomputable;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.util.ArrayList;
 import java.util.List;
 

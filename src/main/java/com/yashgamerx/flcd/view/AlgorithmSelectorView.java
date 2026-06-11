@@ -1,9 +1,8 @@
 package com.yashgamerx.flcd.view;
 
-import com.yashgamerx.flcd.service.compute.factory.ComputableFactoryImplementation;
+import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
@@ -99,13 +98,10 @@ public class AlgorithmSelectorView extends BorderPane {
 
         // Get the parsed result
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
-        var computableFactory = new ComputableFactoryImplementation();
-        var computeInjectorFactory = computableFactory.getComputeInjectorFactory();
-        var precomputableFactory = new PreComputableFactoryImplementation(computeInjectorFactory);
 
         parsingResult.ifPresentOrElse(map -> {
             // Create the new View
-            var visualizationView = new TreeVisualizationView(map, precomputableFactory, computableFactory);
+            var visualizationView = new TreeVisualizationView(map, new PlanarGridAlgorithm());
 
             // Swap the Root of the Scene
             // Since this class is currently the root of the Scene, we replace it.

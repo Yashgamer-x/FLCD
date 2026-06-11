@@ -2,13 +2,12 @@ package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
-import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorFactory;
-import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorOption;
+import com.yashgamerx.flcd.service.compute.inject.LeftSecondChildComputeInjector;
+import com.yashgamerx.flcd.service.compute.inject.RightSecondChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
-import com.yashgamerx.flcd.service.precompute.inject.factory.PreComputeInjectorFactory;
-import com.yashgamerx.flcd.service.precompute.inject.factory.PreComputeInjectorOption;
+import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
 
 import java.util.Comparator;
@@ -17,16 +16,11 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 @Log
 public class FirstChildPreCompute implements Precomputable {
-    private final PrecomputeInjectable injectable;
-    private final ComputeInjectable rightComputeInjector;
-    private final ComputeInjectable leftComputeInjector;
-    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
 
-    public FirstChildPreCompute(PreComputeInjectorFactory preComputeInjectorFactory, ComputeInjectorFactory computeInjectorFactory) {
-        this.injectable = preComputeInjectorFactory.getInjector(PreComputeInjectorOption.SECOND_CHILD);
-        this.leftComputeInjector = computeInjectorFactory.getInjector(ComputeInjectorOption.LEFT_SECOND_CHILD);
-        this.rightComputeInjector = computeInjectorFactory.getInjector(ComputeInjectorOption.RIGHT_SECOND_CHILD);
-    }
+    private final PrecomputeInjectable injectable = new SecondChildPreComputeInjector();
+    private final ComputeInjectable rightComputeInjector = new RightSecondChildComputeInjector();
+    private final ComputeInjectable leftComputeInjector = new LeftSecondChildComputeInjector();
+    private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
 
     @Override
     public void precompute(AbstractNode firstChild) {

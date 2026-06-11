@@ -4,8 +4,7 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
-import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorFactory;
-import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorOption;
+import com.yashgamerx.flcd.service.compute.inject.FirstChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import lombok.extern.java.Log;
@@ -17,11 +16,7 @@ public class RootifiedCompute implements Computable {
 
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
     private final AngularCalculator angularCalculator = new Angle180Calculator();
-    private final ComputeInjectable computeInjector;
-
-    public RootifiedCompute(ComputeInjectorFactory computeInjectorFactory) {
-        this.computeInjector = computeInjectorFactory.getInjector(ComputeInjectorOption.FIRST_CHILD);
-    }
+    private final ComputeInjectable computeInjector = new FirstChildComputeInjector();
 
     @Override
     public void compute(AbstractNode rootNode) {
