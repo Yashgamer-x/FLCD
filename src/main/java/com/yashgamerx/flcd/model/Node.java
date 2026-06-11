@@ -1,11 +1,9 @@
 package com.yashgamerx.flcd.model;
 
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
-
 public class Node extends AbstractNode {
 
-    public Node(int identifier, PreComputableFactory preComputableFactory) {
-        super(identifier, preComputableFactory);
+    public Node(int identifier) {
+        super(identifier);
     }
 
     @Override

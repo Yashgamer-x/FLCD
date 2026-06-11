@@ -2,8 +2,6 @@ package com.yashgamerx.flcd.service.file;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.Node;
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactory;
-import com.yashgamerx.flcd.service.precompute.factory.PreComputableFactoryImplementation;
 import lombok.extern.java.Log;
 
 import java.io.File;
@@ -15,8 +13,6 @@ import java.util.stream.Stream;
 
 @Log
 public class TreeFileParsingService implements FileParsingService {
-
-    private final PreComputableFactory precomputeFactory = new PreComputableFactoryImplementation();
 
     @Override
     public Optional<Map<Integer, AbstractNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
@@ -51,11 +47,11 @@ public class TreeFileParsingService implements FileParsingService {
             // PRINCIPLE: Identity Map Pattern
             // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = nodeMap.computeIfAbsent(parentId, key -> new Node(key, precomputeFactory));
+            var parentNode = nodeMap.computeIfAbsent(parentId, key -> new Node(key));
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, key -> new Node(key, precomputeFactory));
+                var childNode = nodeMap.computeIfAbsent(childId, key -> new Node(key));
                 parentNode.addChild(childNode);
             }
         } catch (NumberFormatException e) {
