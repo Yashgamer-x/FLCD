@@ -25,7 +25,7 @@ public class ComputableFactoryImplementation implements ComputableFactory {
             case RIGHT_SECOND_CHILD -> new RightSecondChildCompute(computeInjectorFactory);
             case LEFT_HEIGHT_CHILD -> new LeftHeightChildCompute(computeInjectorFactory);
             case RIGHT_HEIGHT_CHILD -> new RightHeightChildCompute();
-            case LEFT_WIDTH_CHILD -> new LeftWidthChildCompute();
+            case LEFT_WIDTH_CHILD -> new LeftWidthChildCompute(computeInjectorFactory);
             case RIGHT_WIDTH_CHILD -> new RightWidthChildCompute();
             case ROOTIFIED_CHILD -> new RootifiedCompute(computeInjectorFactory);
             case LEFT_SECOND_ROOTIFIED_CHILD -> new LeftSecondRootifiedCompute(computeInjectorFactory);

@@ -2,7 +2,8 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
-import com.yashgamerx.flcd.service.compute.inject.LeftHeightChildComputeInjector;
+import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorFactory;
+import com.yashgamerx.flcd.service.compute.inject.factory.ComputeInjectorOption;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 
@@ -11,9 +12,10 @@ import static com.yashgamerx.flcd.model.AbstractNode.*;
 public class LeftWidthChildCompute implements Computable {
 
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
-    private final ComputeInjectable computeInjector = new LeftHeightChildComputeInjector();
+    private final ComputeInjectable computeInjector;
 
-    public LeftWidthChildCompute() {
+    public LeftWidthChildCompute(ComputeInjectorFactory computeInjectorFactory) {
+        this.computeInjector = computeInjectorFactory.getInjector(ComputeInjectorOption.LEFT_HEIGHT_CHILD);
     }
 
     @Override
