@@ -57,7 +57,7 @@ public class TreeVisualizationView extends BorderPane {
         attachMouseGestureListeners();
         attachZoomListeners();
 
-        Platform.runLater(this::handleReadjustAction);
+        Platform.runLater(this::handlePanelAction);
     }
 
     private void initializeComponentLayout() {
@@ -127,7 +127,7 @@ public class TreeVisualizationView extends BorderPane {
         drawingCanvas.getChildren().addFirst(line);
     }
 
-    private void handleReadjustAction() {
+    private void handlePanelAction() {
         // Dismiss any open info panel before resetting the view
         dismissInfoPanel();
 
@@ -139,6 +139,10 @@ public class TreeVisualizationView extends BorderPane {
 
         scrollPaneContainer.setHvalue(0.5);
         scrollPaneContainer.setVvalue(0.5);
+    }
+
+    private void handleReadjustAction() {
+        //TODO: Implement readjustment
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -318,10 +322,10 @@ public class TreeVisualizationView extends BorderPane {
         var btnRoot = new Button("Rootify");
         btnRoot.setOnAction(_ -> handleRootifyAction());
         var btnReset = new Button("Readjust");
+        btnReset.setOnAction(_ -> handleReadjustAction());
         var toolbar = new HBox(15, btnAdd, btnRoot, btnReset);
         toolbar.setAlignment(Pos.CENTER);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
-        btnReset.setOnAction(_ -> handleReadjustAction());
         return toolbar;
     }
 
