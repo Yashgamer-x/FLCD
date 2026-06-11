@@ -9,11 +9,13 @@ import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
+
 import java.util.Comparator;
+
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 @Log
-public class FirstChildPreCompute implements Precomputable {
+public class FirstChildWithReadjustmentModificationPreCompute implements Precomputable {
 
     private final PrecomputeInjectable injectable = new SecondChildPreComputeInjector();
     private final ComputeInjectable rightComputeInjector = new RightSecondChildComputeInjector();
