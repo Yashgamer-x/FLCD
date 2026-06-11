@@ -56,7 +56,7 @@ public class FirstChildWithReadjustmentModificationPreCompute implements Precomp
     /// Sorts the children in descending order based on their area.
     /// Injects the Computable based on the balance
     private void calculateBalancedSubTreeDimensions(AbstractNode firstChild) {
-        var areaComparator = Comparator.comparingDouble((AbstractNode node) -> (node.getSubtreeWidth()) * (node.getSubtreeHeight()));
+        var areaComparator = Comparator.comparingDouble(this::calculateArea);
         firstChild.getChildren().sort(areaComparator.reversed());
 
         // Area
