@@ -3,6 +3,7 @@ package com.yashgamerx.flcd.view;
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
+import com.yashgamerx.flcd.service.precompute.RootPreCompute;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -82,6 +83,16 @@ public class TreeVisualizationView extends BorderPane {
     private void drawCalculatedTree(AbstractNode node) {
         // Render edges first so they sit visually behind the circles
         for (var child : node.getChildren()) {
+            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawCalculatedTree(child);
+        }
+
+        for (var child : node.getRootifiedChildren()) {
+            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawCalculatedTree(child);
+        }
+
+        for (var child : node.getReadjustedChildren()) {
             drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
             drawCalculatedTree(child);
         }
@@ -370,6 +381,17 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void rootifyNode(AbstractNode node) {
+        var parent = node.getParent();
+        if (parent == null) {
+            log.warning("Cannot rootify node with no parent.");
+            return;
+        }
+
+        if (!(parent.getPrecomputable() instanceof RootifiedPreCompute || parent.getPrecomputable() instanceof RootPreCompute)) {
+            parent.getChildren().remove(node);
+            parent.getRootifiedChildren().add(node);
+        }
+
         node.setPrecomputable(new RootifiedPreCompute());
         node.setComputable(new RootifiedCompute());
     }

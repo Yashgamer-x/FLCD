@@ -10,6 +10,8 @@ import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
 import java.util.Comparator;
+import java.util.stream.Stream;
+
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 @Log
@@ -29,7 +31,8 @@ public class FirstChildPreCompute implements Precomputable {
         }
 
         // Injects SecondChildPreCompute dependency and Precomputes all the children
-        firstChild.getChildren().forEach(this::injectAndPrecompute);
+        Stream.concat(firstChild.getChildren().stream(), firstChild.getRootifiedChildren().stream())
+                .forEach(this::injectAndPrecompute);
 
         calculateBalancedSubTreeDimensions(firstChild);
     }
@@ -54,42 +57,52 @@ public class FirstChildPreCompute implements Precomputable {
     /// Sorts the children in descending order based on their area.
     /// Injects the Computable based on the balance
     private void calculateBalancedSubTreeDimensions(AbstractNode firstChild) {
-        var areaComparator = Comparator.comparingDouble(this::calculateArea);
-        firstChild.getChildren().sort(areaComparator.reversed());
+        // 1. Sort collections using a descriptive reusable comparator
+        var areaDescending = Comparator.comparingDouble(this::calculateArea).reversed();
+        firstChild.getChildren().sort(areaDescending);
+        firstChild.getRootifiedChildren().sort(areaDescending);
 
-        // Area
-        double leftAccumulatedArea = 0;
-        double rightAccumulatedArea = 0;
+        // 2. Initialize tracking states for the greedy wing-balancing heuristic
+        SideState left = new SideState();
+        SideState right = new SideState();
 
-        // Width
-        double rightWidth = 0;
-        double leftWidth = 0;
+        // 3. Process all target children through a unified processing stream
+        Stream.concat(firstChild.getChildren().stream(), firstChild.getRootifiedChildren().stream())
+                .forEach(secondChild -> {
+                    // Balance dynamically on whichever side currently contains less area
+                    if (left.accumulatedArea <= right.accumulatedArea) {
+                        processChildPlacement(secondChild, left, leftComputeInjector);
+                    } else {
+                        processChildPlacement(secondChild, right, rightComputeInjector);
+                    }
+                });
 
-        // Height
-        double maxLeftHeight = 0;
-        double maxRightHeight = 0;
-
-        for (var secondChild : firstChild.getChildren()) {
-            if (leftAccumulatedArea <= rightAccumulatedArea) {
-                leftComputeInjector.inject(secondChild);
-                leftAccumulatedArea += calculateArea(secondChild);
-                leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                maxLeftHeight = Math.max(maxLeftHeight, secondChild.getSubtreeHeight());
-            } else {
-                rightComputeInjector.inject(secondChild);
-                rightAccumulatedArea += calculateArea(secondChild);
-                rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                maxRightHeight = Math.max(maxRightHeight, secondChild.getSubtreeHeight());
-            }
-        }
-
-        double maxSideWidth = Math.max(leftWidth, rightWidth);
-
-        // Max Width * 2 + (Node Diameter: 10.0)
+        // 4. Resolve final composite boundaries
+        double maxSideWidth = Math.max(left.width, right.width);
         double totalWidth = (maxSideWidth * 2) + NODE_DIAMETER;
+
         firstChild.setSubtreeWidth(Math.max(NODE_DIAMETER, totalWidth));
 
-        // Height calculation remains the same: this node + vertical gap + tallest child + SPACER (between Root and First Child)
-        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
+        double maxChildHeight = Math.max(left.maxHeight, right.maxHeight);
+        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + maxChildHeight);
+    }
+
+    /**
+     * Helper method to handle injection and boundary state accumulation for a given child node.
+     */
+    private void processChildPlacement(AbstractNode child, SideState side, ComputeInjectable injector) {
+        injector.inject(child);
+        side.accumulatedArea += calculateArea(child);
+        side.width += child.getSubtreeWidth() + WIDTH_SPACER;
+        side.maxHeight = Math.max(side.maxHeight, child.getSubtreeHeight());
+    }
+
+    /**
+     * Light mutable structural container tracking a layout wing's current dimensions.
+     */
+    private static class SideState {
+        double accumulatedArea = 0;
+        double width = 0;
+        double maxHeight = 0;
     }
 }

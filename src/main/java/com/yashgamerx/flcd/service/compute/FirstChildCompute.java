@@ -4,6 +4,8 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 
+import java.util.stream.Stream;
+
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 public class FirstChildCompute implements Computable {
@@ -12,42 +14,51 @@ public class FirstChildCompute implements Computable {
 
     @Override
     public void compute(AbstractNode firstChild) {
-        // If is leaf node then do nothing
-        if (emptyListChecker.isEmpty(firstChild.getChildren())) return;
+        // Unified early exit boundary checking both child subsets
+        if (emptyListChecker.isEmpty(firstChild.getChildren()) &&
+                emptyListChecker.isEmpty(firstChild.getRootifiedChildren())) {
+            return;
+        }
 
         double parentAngle = firstChild.getLocalRadianAngle();
 
-        // Perpendicular wing baseline vectors [cite: 86, 88]
-        double rightAngle = parentAngle - (Math.PI / 2.0); // -90 degrees relative
-        double leftAngle = parentAngle + (Math.PI / 2.0);  // +90 degrees relative
+        // Perpendicular wing baseline vectors
+        double rightAngle = parentAngle - (Math.PI / 2.0);
+        double leftAngle = parentAngle + (Math.PI / 2.0);
 
-        // Clearance offset length pushing children downstream from parent perimeter:
-        // (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
+        // Offset distance pushing children downstream from the parent perimeter
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
-        // Establish the baseline anchor point directly in front of the parent node
-        // Correcting for screen coordinate Y-inversion globally (subtraction for positive Y step)
+        // Establish baseline anchor coordinates (correcting for global Y-inversion)
         double anchorX = firstChild.getGridX() - (forwardStepLength * Math.cos(parentAngle));
         double anchorY = firstChild.getGridY() + (forwardStepLength * Math.sin(parentAngle));
 
-        // Track sequential slide displacements along the wings
-        double accumulatedRightDistance = 0.0;
-        double accumulatedLeftDistance = 0.0;
+        // Element 0 tracks Right side; Element 1 tracks Left side
+        double[] accumulatedDistances = {0.0, 0.0};
 
-        for (var child : firstChild.getChildren()) {
-            var computable = child.getComputable();
-            if (computable instanceof RightSecondChildCompute) {
-                accumulatedRightDistance = projectChildAlongVector(child, anchorX, anchorY, rightAngle, accumulatedRightDistance);
-            } else if (computable instanceof LeftSecondChildCompute) {
-                accumulatedLeftDistance = projectChildAlongVector(child, anchorX, anchorY, leftAngle, accumulatedLeftDistance);
-            } else if (computable instanceof LeftSecondRootifiedCompute) {
-                accumulatedLeftDistance = projectRootifiedChildAlongVector(child, anchorX, anchorY, leftAngle,
-                        Math.PI / 2, accumulatedLeftDistance);
-            } else if (computable instanceof RightSecondRootifiedCompute) {
-                accumulatedRightDistance = projectRootifiedChildAlongVector(child, anchorX, anchorY, rightAngle,
-                        -Math.PI / 2, accumulatedRightDistance);
-            }
-        }
+        // 2. DRY Execution: Combine standard and rootified subtrees into a single loop
+        Stream.concat(firstChild.getChildren().stream(), firstChild.getRootifiedChildren().stream())
+                .forEach(child -> {
+                    var computable = child.getComputable();
+
+                    if (computable instanceof RightSecondChildCompute) {
+                        accumulatedDistances[0] = projectChildAlongVector(
+                                child, anchorX, anchorY, rightAngle, accumulatedDistances[0]
+                        );
+                    } else if (computable instanceof LeftSecondChildCompute) {
+                        accumulatedDistances[1] = projectChildAlongVector(
+                                child, anchorX, anchorY, leftAngle, accumulatedDistances[1]
+                        );
+                    } else if (computable instanceof LeftSecondRootifiedCompute) {
+                        accumulatedDistances[1] = projectRootifiedChildAlongVector(
+                                child, anchorX, anchorY, leftAngle, Math.PI / 2, accumulatedDistances[1]
+                        );
+                    } else if (computable instanceof RightSecondRootifiedCompute) {
+                        accumulatedDistances[0] = projectRootifiedChildAlongVector(
+                                child, anchorX, anchorY, rightAngle, -Math.PI / 2, accumulatedDistances[0]
+                        );
+                    }
+                });
     }
 
 
