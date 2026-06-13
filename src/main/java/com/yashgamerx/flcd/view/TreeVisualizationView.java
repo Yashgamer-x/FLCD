@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
@@ -370,6 +371,9 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void rootifyNode(AbstractNode node) {
+
+        node.setStatus(NodeStatus.ROOTIFIED);
+
         node.setPrecomputable(new RootifiedPreCompute());
         node.setComputable(new RootifiedCompute());
     }

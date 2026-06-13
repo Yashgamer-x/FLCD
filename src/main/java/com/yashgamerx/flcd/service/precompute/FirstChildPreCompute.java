@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.service.precompute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
 import com.yashgamerx.flcd.service.compute.inject.LeftSecondChildComputeInjector;
 import com.yashgamerx.flcd.service.compute.inject.RightSecondChildComputeInjector;
@@ -9,7 +10,11 @@ import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.inject.PrecomputeInjectable;
 import com.yashgamerx.flcd.service.precompute.inject.SecondChildPreComputeInjector;
 import lombok.extern.java.Log;
+
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.stream.Stream;
+
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
 @Log
@@ -55,33 +60,48 @@ public class FirstChildPreCompute implements Precomputable {
     /// Injects the Computable based on the balance
     private void calculateBalancedSubTreeDimensions(AbstractNode firstChild) {
         var areaComparator = Comparator.comparingDouble(this::calculateArea);
+        // Sort the original collection before filtering down into specific status buckets
         firstChild.getChildren().sort(areaComparator.reversed());
 
-        // Area
-        double leftAccumulatedArea = 0;
-        double rightAccumulatedArea = 0;
+        // Local state tracking context layout:
+        // [0] leftAccumulatedArea, [1] rightAccumulatedArea
+        // [2] leftWidth,           [3] rightWidth
+        // [4] maxLeftHeight,       [5] maxRightHeight
+        double[] metrics = new double[6];
 
-        // Width
-        double rightWidth = 0;
-        double leftWidth = 0;
+        // Separate the nodes dynamically by status arrays
+        AbstractNode[] normalNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.NORMAL)
+                .toArray(AbstractNode[]::new);
 
-        // Height
-        double maxLeftHeight = 0;
-        double maxRightHeight = 0;
+        AbstractNode[] rootifiedNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.ROOTIFIED)
+                .toArray(AbstractNode[]::new);
 
-        for (var secondChild : firstChild.getChildren()) {
-            if (leftAccumulatedArea <= rightAccumulatedArea) {
-                leftComputeInjector.inject(secondChild);
-                leftAccumulatedArea += calculateArea(secondChild);
-                leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                maxLeftHeight = Math.max(maxLeftHeight, secondChild.getSubtreeHeight());
-            } else {
-                rightComputeInjector.inject(secondChild);
-                rightAccumulatedArea += calculateArea(secondChild);
-                rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                maxRightHeight = Math.max(maxRightHeight, secondChild.getSubtreeHeight());
-            }
-        }
+        // Process combined elements sequentially: Normal first, then Rootified
+        Stream.concat(Arrays.stream(normalNodes), Arrays.stream(rootifiedNodes))
+                .forEach(secondChild -> {
+                    double nodeArea = calculateArea(secondChild);
+
+                    // Balanced greedy layout heuristic allocation step
+                    if (metrics[0] <= metrics[1]) { // leftAccumulatedArea <= rightAccumulatedArea
+                        leftComputeInjector.inject(secondChild);
+                        metrics[0] += nodeArea;                                                // leftAccumulatedArea
+                        metrics[2] += secondChild.getSubtreeWidth() + WIDTH_SPACER;            // leftWidth
+                        metrics[4] = Math.max(metrics[4], secondChild.getSubtreeHeight());     // maxLeftHeight
+                    } else {
+                        rightComputeInjector.inject(secondChild);
+                        metrics[1] += nodeArea;                                                // rightAccumulatedArea
+                        metrics[3] += secondChild.getSubtreeWidth() + WIDTH_SPACER;            // rightWidth
+                        metrics[5] = Math.max(metrics[5], secondChild.getSubtreeHeight());     // maxRightHeight
+                    }
+                });
+
+        // 3. Extract finalized measurements for layout assignment
+        double leftWidth = metrics[2];
+        double rightWidth = metrics[3];
+        double maxLeftHeight = metrics[4];
+        double maxRightHeight = metrics[5];
 
         double maxSideWidth = Math.max(leftWidth, rightWidth);
 
