@@ -1,10 +1,14 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
 import com.yashgamerx.flcd.service.compute.inject.RightWidthChildComputeInjector;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
@@ -33,16 +37,34 @@ public class RightHeightChildCompute implements Computable {
     }
 
     private void childrenComputationBasedOnAnchorAndTrajectory(AbstractNode heightChild, double anchorX, double anchorY, double childAngleTrajectory) {
-        // Clearance offset Width: (Parent Radius: 5.0) + WIDTH_SPACER
-        double generalOffset = NODE_RADIUS + WIDTH_SPACER;
+        // Initialize tracker as a 1-element primitive wrapper array to support mutations inside lambda
+        // Offset Height layout: (Parent Radius: 5.0) + WIDTH_SPACER
+        double[] trackingOffset = {NODE_RADIUS + WIDTH_SPACER};
 
-        for (var widthChild : heightChild.getChildren()) {
-            if (!(widthChild.getComputable() instanceof RootifiedCompute)) {
-                generalOffset = projectChildAlongTheVector(widthChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
-            } else {
-                generalOffset = projectRootifiedChildAlongTheVector(widthChild, anchorX, anchorY, childAngleTrajectory, generalOffset);
-            }
-        }
+        // 2. Isolate into dynamic status collections
+        var normalChildren = heightChild.getChildren()
+                .stream()
+                .filter(child -> child.getStatus() == NodeStatus.NORMAL)
+                .toArray(AbstractNode[]::new);
+
+        var rootifiedChildren = heightChild.getChildren()
+                .stream()
+                .filter(child -> child.getStatus() == NodeStatus.ROOTIFIED)
+                .toArray(AbstractNode[]::new);
+
+        // Concatenate and execute sequentially
+        Stream.concat(Arrays.stream(rootifiedChildren), Arrays.stream(normalChildren))
+                .forEach(widthChild -> {
+                    if (!(widthChild.getComputable() instanceof RootifiedCompute)) {
+                        trackingOffset[0] = projectChildAlongTheVector(
+                                widthChild, anchorX, anchorY, childAngleTrajectory, trackingOffset[0]
+                        );
+                    } else {
+                        trackingOffset[0] = projectRootifiedChildAlongTheVector(
+                                widthChild, anchorX, anchorY, childAngleTrajectory, trackingOffset[0]
+                        );
+                    }
+                });
     }
 
     /// Returns updated Offset
