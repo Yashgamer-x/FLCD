@@ -31,7 +31,7 @@ public class SecondChildPreCompute implements Precomputable {
 
     /// Checks if the node has no children
     private boolean isLeafNode(AbstractNode node) {
-        return emptyListChecker.isEmpty(node.getChildren()) && emptyListChecker.isEmpty(node.getReadjustedChildren());
+        return emptyListChecker.isEmpty(node.getChildren());
     }
 
     /// Initializes leaf node dimensions
