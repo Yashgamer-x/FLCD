@@ -1,5 +1,8 @@
 package com.yashgamerx.flcd.model;
 
+import com.yashgamerx.flcd.service.precompute.HeightChildPreCompute;
+import com.yashgamerx.flcd.service.precompute.RootPreCompute;
+
 public class Node extends AbstractNode {
 
     public Node(int identifier) {
@@ -20,8 +23,26 @@ public class Node extends AbstractNode {
     public void readjust() {
         var parent = getParent();
         if (parent == null) throw new IllegalStateException("Cannot readjust a root node");
-        if (parent.getStatus() == NodeStatus.ROOTIFIED) return;
 
+        if (precomputable instanceof RootPreCompute) return;
+
+        if (precomputable instanceof HeightChildPreCompute) {
+            boolean hasMultipleReadjusted = parent.getChildren().stream()
+                    .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                    .skip(1)            // Skip the first allowed occurrence
+                    .findAny()          // Short-circuits as soon as a 2nd occurrence is found
+                    .isPresent();
+
+            if (hasMultipleReadjusted) {
+                throw new IllegalStateException("More than one READJUSTED child node detected.");
+            }
+        }
+
+        // Readjusts the status of the current node if it belongs to the following list:
+        // SecondChildPrecompute: There are no restrictions on readjusting the width of a node as all its siblings can be readjusted.
+        // HeightChildPrecompute: Only one READJUSTED child node is allowed.
+        // WidthChildPreCompute: There are no restrictions on readjusting the width of a node as all its siblings can be readjusted.
+        this.setStatus(NodeStatus.READJUSTED);
 
         parent.readjust();
     }
