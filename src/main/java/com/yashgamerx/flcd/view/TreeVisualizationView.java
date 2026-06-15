@@ -4,7 +4,7 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
-import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
+import com.yashgamerx.flcd.service.precompute.*;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -160,7 +160,11 @@ public class TreeVisualizationView extends BorderPane {
                     throw new IllegalStateException("Node is already readjusted.");
                 if (!node.getChildren().isEmpty())
                     throw new IllegalStateException("Node cannot be readjusted because it has children.");
+                if (isNotReadjustable(node.getPrecomputable()))
+                    throw new IllegalStateException("Node cannot be readjusted because it is not readjustable.");
+
                 node.setStatus(NodeStatus.READJUSTED);
+                node.readjust();
 
                 renderTreeStructure();
             } catch (NumberFormatException e) {
@@ -170,6 +174,14 @@ public class TreeVisualizationView extends BorderPane {
                 showErrorAlert("Readjust Error", e.getMessage());
             }
         });
+    }
+
+    private boolean isNotReadjustable(Precomputable precomputable) {
+        return precomputable instanceof RootPreCompute ||
+                precomputable instanceof FirstChildPreCompute ||
+                precomputable instanceof SecondChildPreCompute ||
+                precomputable instanceof RootifiedPreCompute;
+
     }
 
     // ─────────────────────────────────────────────────────────────────────────
