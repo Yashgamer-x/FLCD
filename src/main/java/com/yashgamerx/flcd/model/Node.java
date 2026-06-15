@@ -22,7 +22,7 @@ public class Node extends AbstractNode {
     @Override
     public void readjust() {
         var parent = getParent();
-        if (parent == null) throw new IllegalStateException("Cannot readjust a root node");
+        if (parent == null) throw new IllegalStateException("Parent cannot be null.");
 
         if (precomputable instanceof FirstChildPreCompute) return;
 
