@@ -78,8 +78,13 @@ public class FirstChildPreCompute implements Precomputable {
                 .filter(node -> node.getStatus() == NodeStatus.ROOTIFIED)
                 .toArray(AbstractNode[]::new);
 
+        AbstractNode[] readjustedNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .toArray(AbstractNode[]::new);
+
         // Process combined elements sequentially: Normal first, then Rootified
-        Stream.concat(Arrays.stream(normalNodes), Arrays.stream(rootifiedNodes))
+        Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
+                .flatMap(Arrays::stream)
                 .forEach(secondChild -> {
                     double nodeArea = calculateArea(secondChild);
 

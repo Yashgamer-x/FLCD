@@ -47,8 +47,13 @@ public class FirstChildCompute implements Computable {
                 .filter(node -> node.getStatus() == NodeStatus.ROOTIFIED)
                 .toArray(AbstractNode[]::new);
 
+        AbstractNode[] readjustedNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .toArray(AbstractNode[]::new);
+
         // Recombine and execute sequentially inside a clean forEach pipeline
-        Stream.concat(Arrays.stream(normalNodes), Arrays.stream(rootifiedNodes))
+        Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
+                .flatMap(Arrays::stream)
                 .forEach(child -> {
                     var computable = child.getComputable();
 
