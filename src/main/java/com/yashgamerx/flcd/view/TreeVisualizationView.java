@@ -166,7 +166,6 @@ public class TreeVisualizationView extends BorderPane {
                 if (isNotReadjustable(node.getPrecomputable()))
                     throw new IllegalStateException("Node cannot be readjusted because it is not readjustable.");
 
-                node.setStatus(NodeStatus.READJUSTED);
                 node.readjust();
 
                 renderTreeStructure();
