@@ -154,8 +154,12 @@ public class LeftWidthChildCompute implements Computable {
         double newAx = bx + radius * Math.cos(newAngle);
         double newAy = by - radius * Math.sin(newAngle);
 
-        readjustableNode.setGridX(newAx);
-        readjustableNode.setGridY(newAy);
+        double quarterPI = (Math.PI / 4.0);
+        double readjustedAx = newAx + NODE_RADIUS * Math.cos(newAngle - quarterPI);
+        double readjustedAy = newAy - NODE_RADIUS * Math.sin(newAngle - quarterPI);
+
+        readjustableNode.setGridX(readjustedAx);
+        readjustableNode.setGridY(readjustedAy);
     }
 
     private double projectChildAlongTheVector(AbstractNode heightChild, double anchorX, double anchorY,
