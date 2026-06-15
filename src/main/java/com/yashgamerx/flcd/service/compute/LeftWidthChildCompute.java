@@ -154,7 +154,7 @@ public class LeftWidthChildCompute implements Computable {
         double newAx = bx + radius * Math.cos(newAngle);
         double newAy = by - radius * Math.sin(newAngle);
 
-        double newNodeRadius = NODE_DIAMETER / Math.sin(angularStep);
+        double newNodeRadius = NODE_RADIUS / Math.sin(halfAngularStep);
         double readjustedAx = newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle());
         double readjustedAy = newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle());
 

@@ -153,7 +153,7 @@ public class RightWidthChildCompute implements Computable {
         double newAy = by - radius * Math.sin(newAngle);
 
         // newAngle - 45 degrees
-        double newNodeRadius = NODE_DIAMETER / Math.sin(angularStep);
+        double newNodeRadius = NODE_RADIUS / Math.sin(halfAngularStep);
         double readjustedAx = newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle());
         double readjustedAy = newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle());
 
