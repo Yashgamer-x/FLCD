@@ -154,10 +154,20 @@ public class TreeVisualizationView extends BorderPane {
             try {
                 int nodeId = Integer.parseInt(input.trim());
                 var node = abstractNodeMap.get(nodeId);
-                //TODO: Readjust the node
+
+                // Changes the status of the node to readjusted.
+                if (node.getStatus() == NodeStatus.READJUSTED)
+                    throw new IllegalStateException("Node is already readjusted.");
+                if (!node.getChildren().isEmpty())
+                    throw new IllegalStateException("Node cannot be readjusted because it has children.");
+                node.setStatus(NodeStatus.READJUSTED);
+
                 renderTreeStructure();
             } catch (NumberFormatException e) {
                 showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
+            } catch (IllegalStateException e) {
+                log.warning(e.getMessage());
+                showErrorAlert("Readjust Error", e.getMessage());
             }
         });
     }
