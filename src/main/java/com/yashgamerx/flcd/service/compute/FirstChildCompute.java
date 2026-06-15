@@ -1,8 +1,12 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
@@ -12,17 +16,17 @@ public class FirstChildCompute implements Computable {
 
     @Override
     public void compute(AbstractNode firstChild) {
-        // If is leaf node then do nothing
+        // Structural check: Early exit if there are no children to position
         if (emptyListChecker.isEmpty(firstChild.getChildren())) return;
 
         double parentAngle = firstChild.getLocalRadianAngle();
 
-        // Perpendicular wing baseline vectors [cite: 86, 88]
+        // Perpendicular wing baseline vectors
         double rightAngle = parentAngle - (Math.PI / 2.0); // -90 degrees relative
         double leftAngle = parentAngle + (Math.PI / 2.0);  // +90 degrees relative
+        double additionalAngle = Math.PI / 2.0;
 
-        // Clearance offset length pushing children downstream from parent perimeter:
-        // (Parent Radius: 5.0) + HEIGHT_SPACER + (Child Radius: 5.0)
+        // Clearance offset length pushing children downstream from parent perimeter
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
         // Establish the baseline anchor point directly in front of the parent node
@@ -30,24 +34,42 @@ public class FirstChildCompute implements Computable {
         double anchorX = firstChild.getGridX() - (forwardStepLength * Math.cos(parentAngle));
         double anchorY = firstChild.getGridY() + (forwardStepLength * Math.sin(parentAngle));
 
-        // Track sequential slide displacements along the wings
-        double accumulatedRightDistance = 0.0;
-        double accumulatedLeftDistance = 0.0;
+        // Primitive wrapper array to allow safe state tracking mutations inside the Stream lambda body:
+        // Index [0] = accumulatedRightDistance, Index [1] = accumulatedLeftDistance
+        double[] accumulatedDistances = {0.0, 0.0};
 
-        for (var child : firstChild.getChildren()) {
-            var computable = child.getComputable();
-            if (computable instanceof RightSecondChildCompute) {
-                accumulatedRightDistance = projectChildAlongVector(child, anchorX, anchorY, rightAngle, accumulatedRightDistance);
-            } else if (computable instanceof LeftSecondChildCompute) {
-                accumulatedLeftDistance = projectChildAlongVector(child, anchorX, anchorY, leftAngle, accumulatedLeftDistance);
-            } else if (computable instanceof LeftSecondRootifiedCompute) {
-                accumulatedLeftDistance = projectRootifiedChildAlongVector(child, anchorX, anchorY, leftAngle,
-                        Math.PI / 2, accumulatedLeftDistance);
-            } else if (computable instanceof RightSecondRootifiedCompute) {
-                accumulatedRightDistance = projectRootifiedChildAlongVector(child, anchorX, anchorY, rightAngle,
-                        -Math.PI / 2, accumulatedRightDistance);
-            }
-        }
+        // Separate into status buckets from the sorted list
+        AbstractNode[] normalNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.NORMAL)
+                .toArray(AbstractNode[]::new);
+
+        AbstractNode[] rootifiedNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.ROOTIFIED)
+                .toArray(AbstractNode[]::new);
+
+        // Recombine and execute sequentially inside a clean forEach pipeline
+        Stream.concat(Arrays.stream(normalNodes), Arrays.stream(rootifiedNodes))
+                .forEach(child -> {
+                    var computable = child.getComputable();
+
+                    if (computable instanceof RightSecondChildCompute) {
+                        accumulatedDistances[0] = projectChildAlongVector(
+                                child, anchorX, anchorY, rightAngle, accumulatedDistances[0]
+                        );
+                    } else if (computable instanceof LeftSecondChildCompute) {
+                        accumulatedDistances[1] = projectChildAlongVector(
+                                child, anchorX, anchorY, leftAngle, accumulatedDistances[1]
+                        );
+                    } else if (computable instanceof LeftSecondRootifiedCompute) {
+                        accumulatedDistances[1] = projectRootifiedChildAlongVector(
+                                child, anchorX, anchorY, leftAngle, additionalAngle, accumulatedDistances[1]
+                        );
+                    } else if (computable instanceof RightSecondRootifiedCompute) {
+                        accumulatedDistances[0] = projectRootifiedChildAlongVector(
+                                child, anchorX, anchorY, rightAngle, -additionalAngle, accumulatedDistances[0]
+                        );
+                    }
+                });
     }
 
 

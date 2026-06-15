@@ -19,7 +19,6 @@ public abstract class AbstractNode {
     private final int identifier;
     private String name; // Added name as per document (Case Study format)
     protected List<AbstractNode> children = new ArrayList<>();
-    protected List<AbstractNode> rootifiedChildren = new ArrayList<>();
     private AbstractNode parent;
 
     // Algorithmic State as per FLCD document
@@ -35,11 +34,14 @@ public abstract class AbstractNode {
     protected Precomputable precomputable;
     protected Computable computable;
 
+    protected NodeStatus status;
+
     // Constructor
     public AbstractNode(int identifier, String name, AbstractNode parent) {
         this.identifier = identifier;
         this.name = name;
         this.parent = parent;
+        this.status = NodeStatus.NORMAL;
     }
 
     public AbstractNode(int identifier) {
