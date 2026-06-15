@@ -266,6 +266,10 @@ public class TreeVisualizationView extends BorderPane {
         addInfoRow(grid, row++, "Precomputable", precomputeName);
         addInfoRow(grid, row++, "Computable", computeName);
 
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        addInfoRow(grid, row++, "Status", node.getStatus().toString());
+
         // ── Assemble ─────────────────────────────────────────────────────────
         var panel = new VBox(4, header, grid);
         panel.setStyle(
