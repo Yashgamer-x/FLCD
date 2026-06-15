@@ -29,7 +29,7 @@ public class Node extends AbstractNode {
         if (precomputable instanceof HeightChildPreCompute) {
             boolean hasReadjusted = parent.getChildren()
                     .stream()
-                    .anyMatch(node -> node.getStatus() == NodeStatus.READJUSTED);
+                    .anyMatch(node -> node.getStatus() == NodeStatus.READJUSTED && node != this);
 
             if (hasReadjusted) {
                 throw new IllegalStateException("A READJUSTED child node already exists.");
