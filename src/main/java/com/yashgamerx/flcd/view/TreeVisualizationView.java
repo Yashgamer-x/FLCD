@@ -4,7 +4,10 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
-import com.yashgamerx.flcd.service.precompute.*;
+import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
+import com.yashgamerx.flcd.service.precompute.Precomputable;
+import com.yashgamerx.flcd.service.precompute.RootPreCompute;
+import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -179,7 +182,6 @@ public class TreeVisualizationView extends BorderPane {
     private boolean isNotReadjustable(Precomputable precomputable) {
         return precomputable instanceof RootPreCompute ||
                 precomputable instanceof FirstChildPreCompute ||
-                precomputable instanceof SecondChildPreCompute ||
                 precomputable instanceof RootifiedPreCompute;
 
     }
