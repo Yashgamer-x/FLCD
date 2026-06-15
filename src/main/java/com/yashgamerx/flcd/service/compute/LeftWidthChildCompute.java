@@ -53,8 +53,13 @@ public class LeftWidthChildCompute implements Computable {
                 .filter(child -> child.getStatus() == NodeStatus.ROOTIFIED)
                 .toArray(AbstractNode[]::new);
 
+        var readjustedNodes = secondChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .toArray(AbstractNode[]::new);
+
         // Concatenate and execute sequentially
-        Stream.concat(Arrays.stream(rootifiedChildren), Arrays.stream(normalChildren))
+        Stream.of(rootifiedChildren, normalChildren, readjustedNodes)
+                .flatMap(Arrays::stream)
                 .forEach(heightChild -> {
                     if (!(heightChild.getComputable() instanceof RootifiedCompute)) {
                         trackingOffset[0] = projectChildAlongTheVector(
