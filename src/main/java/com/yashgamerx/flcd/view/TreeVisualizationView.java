@@ -390,10 +390,16 @@ public class TreeVisualizationView extends BorderPane {
             try {
                 int nodeId = Integer.parseInt(input.trim());
                 var node = abstractNodeMap.get(nodeId);
+
+                if (node.getChildren().isEmpty()) throw new IllegalStateException("Node has no children.");
+
                 rootifyNode(node);
                 renderTreeStructure();
             } catch (NumberFormatException e) {
                 showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
+            } catch (IllegalStateException e) {
+                log.warning(e.getMessage());
+                showErrorAlert("Rootification Error", e.getMessage());
             }
         });
     }
