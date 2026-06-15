@@ -151,9 +151,9 @@ public class RightHeightChildCompute implements Computable {
         double newAy = by - radius * Math.sin(newAngle);
 
         // newAngle - 45 degrees
-        double quarterPI = (Math.PI / 4.0);
-        double readjustedAx = newAx + NODE_RADIUS * Math.cos(newAngle + quarterPI);
-        double readjustedAy = newAy - NODE_RADIUS * Math.sin(newAngle + quarterPI);
+        double newNodeRadius = NODE_DIAMETER / Math.sin(angularStep);
+        double readjustedAx = newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle());
+        double readjustedAy = newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle());
 
         readjustableNode.setGridX(readjustedAx);
         readjustableNode.setGridY(readjustedAy);
