@@ -1,7 +1,7 @@
 package com.yashgamerx.flcd.model;
 
+import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
 import com.yashgamerx.flcd.service.precompute.HeightChildPreCompute;
-import com.yashgamerx.flcd.service.precompute.RootPreCompute;
 
 public class Node extends AbstractNode {
 
@@ -24,7 +24,7 @@ public class Node extends AbstractNode {
         var parent = getParent();
         if (parent == null) throw new IllegalStateException("Cannot readjust a root node");
 
-        if (precomputable instanceof RootPreCompute) return;
+        if (precomputable instanceof FirstChildPreCompute) return;
 
         if (precomputable instanceof HeightChildPreCompute) {
             boolean hasMultipleReadjusted = parent.getChildren().stream()
