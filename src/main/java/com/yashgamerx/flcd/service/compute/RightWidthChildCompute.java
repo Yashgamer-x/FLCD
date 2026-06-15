@@ -137,7 +137,7 @@ public class RightWidthChildCompute implements Computable {
         // --------------------------------------------------
 
         double halfAngularStep = (angularStep / 2.0);
-        double newAngle = firstChild.getLocalRadianAngle() + halfAngularStep;
+        double newAngle = firstChild.getLocalRadianAngle() - halfAngularStep;
 
         // --------------------------------------------------
         // Compute new radius from root
