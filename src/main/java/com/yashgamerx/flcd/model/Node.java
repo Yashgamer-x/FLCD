@@ -27,14 +27,12 @@ public class Node extends AbstractNode {
         if (precomputable instanceof FirstChildPreCompute) return;
 
         if (precomputable instanceof HeightChildPreCompute) {
-            boolean hasMultipleReadjusted = parent.getChildren().stream()
-                    .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
-                    .skip(1)            // Skip the first allowed occurrence
-                    .findAny()          // Short-circuits as soon as a 2nd occurrence is found
-                    .isPresent();
+            boolean hasReadjusted = parent.getChildren()
+                    .stream()
+                    .anyMatch(node -> node.getStatus() == NodeStatus.READJUSTED);
 
-            if (hasMultipleReadjusted) {
-                throw new IllegalStateException("More than one READJUSTED child node detected.");
+            if (hasReadjusted) {
+                throw new IllegalStateException("A READJUSTED child node already exists.");
             }
         }
 
