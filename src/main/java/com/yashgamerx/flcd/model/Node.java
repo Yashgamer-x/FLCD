@@ -36,13 +36,13 @@ public class Node extends AbstractNode {
             }
         }
 
+        parent.readjust();
+
         // Readjusts the status of the current node if it belongs to the following list:
         // SecondChildPrecompute: There are no restrictions on readjusting the width of a node as all its siblings can be readjusted.
         // HeightChildPrecompute: Only one READJUSTED child node is allowed.
         // WidthChildPreCompute: There are no restrictions on readjusting the width of a node as all its siblings can be readjusted.
         this.setStatus(NodeStatus.READJUSTED);
-
-        parent.readjust();
     }
 
     @Override
