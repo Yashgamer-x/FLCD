@@ -75,7 +75,10 @@ public class FirstChildCompute implements Computable {
                         accumulatedDistances[1] = projectChildAlongVector(
                                 child, anchorX, anchorY, leftAngle, accumulatedDistances[1]
                         );
-                        readjustNode(child, false);
+                        if (isReadjustable(child)) {
+                            log.info("Readjusted Node: " + child.getIdentifier());
+                            readjustNode(child, false);
+                        }
                     } else if (computable instanceof LeftSecondRootifiedCompute) {
                         accumulatedDistances[1] = projectRootifiedChildAlongVector(
                                 child, anchorX, anchorY, leftAngle, additionalAngle, accumulatedDistances[1]
