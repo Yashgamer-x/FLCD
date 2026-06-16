@@ -27,6 +27,13 @@ import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 @Log
 public class TreeVisualizationView extends BorderPane {
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mode enum — tracks what a node click should do
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Current interaction mode — determines what happens when a node is clicked.
+    private ActiveMode activeMode = ActiveMode.NONE;
+
     private final Map<Integer, AbstractNode> abstractNodeMap;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
@@ -45,6 +52,22 @@ public class TreeVisualizationView extends BorderPane {
 
     /// Tracks the currently visible node info panel so it can be removed when needed.
     private VBox currentInfoPanel = null;
+    /// Reference to the active toggle button so it can be deselected after an action.
+    private ToggleButton activeModeButton = null;
+
+    /// Sets the active mode when a toolbar toggle button is pressed.
+    /// Pressing the same button again (or pressing Escape) returns to NONE.
+    private void setMode(ActiveMode mode, ToggleButton source) {
+        if (activeMode == mode) {
+            // Same button toggled off — return to idle
+            activeMode = ActiveMode.NONE;
+            activeModeButton = null;
+        } else {
+            activeMode = mode;
+            activeModeButton = source;
+        }
+        dismissInfoPanel();
+    }
 
     public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
         this.abstractNodeMap = abstractNodeMap;
@@ -72,6 +95,55 @@ public class TreeVisualizationView extends BorderPane {
         this.setCenter(scrollPaneContainer);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mode management
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Resets mode to NONE and deselects the toolbar toggle button.
+    private void clearMode() {
+        activeMode = ActiveMode.NONE;
+        if (activeModeButton != null) {
+            activeModeButton.setSelected(false);
+            activeModeButton = null;
+        }
+    }
+
+    private void renderNodeVisuals(AbstractNode node, double x, double y) {
+        var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
+        circle.setStroke(Color.DARKSLATEGRAY);
+        circle.setStrokeWidth(1);
+        circle.setCursor(Cursor.HAND);
+
+        var text = new Label(String.valueOf(node.getIdentifier()));
+        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
+
+        // Set the anchor point of the text right in its center
+        text.setAlignment(Pos.CENTER);
+
+        // Position the center anchor exactly at the circle's (x, y)
+        text.setLayoutX(x - NODE_RADIUS);
+        text.setLayoutY(y - NODE_RADIUS);
+        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
+        text.setMouseTransparent(true);
+
+        // Dispatch to the currently active mode on click.
+        // e.consume() prevents the canvas drag handler from also firing.
+        circle.setOnMouseClicked(e -> {
+            switch (activeMode) {
+                case READJUST -> handleReadjustOnNode(node);
+                case ROOTIFY -> handleRootifyOnNode(node);
+                default -> showNodeInfoPanel(node, x, y);
+            }
+            e.consume();
+        });
+
+        drawingCanvas.getChildren().addAll(circle, text);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rendering
+    // ─────────────────────────────────────────────────────────────────────────
+
     /// Executes the rendering pass after the algorithm has computed the grid
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
@@ -94,32 +166,22 @@ public class TreeVisualizationView extends BorderPane {
         renderNodeVisuals(node, node.getGridX(), node.getGridY());
     }
 
-    private void renderNodeVisuals(AbstractNode node, double x, double y) {
-        var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
-        circle.setStroke(Color.DARKSLATEGRAY);
-        circle.setStrokeWidth(1);
-        circle.setCursor(Cursor.HAND);
+    private void handleReadjustOnNode(AbstractNode node) {
+        try {
+            if (node.getStatus() == NodeStatus.READJUSTED)
+                throw new IllegalStateException("Node is already readjusted.");
+            if (!node.getChildren().isEmpty())
+                throw new IllegalStateException("Node cannot be readjusted because it has children.");
+            if (isNotReadjustable(node.getPrecomputable()))
+                throw new IllegalStateException("Node cannot be readjusted because it is not readjustable.");
 
-        var text = new Label(String.valueOf(node.getIdentifier()));
-        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
-
-        // Set the anchor point of the text right in its center
-        text.setAlignment(Pos.CENTER);
-
-        // Position the center anchor exactly at the circle's (x, y)
-        text.setLayoutX(x - NODE_RADIUS);
-        text.setLayoutY(y - NODE_RADIUS);
-        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
-        text.setMouseTransparent(true);
-
-        // Show the info panel when a node circle is clicked.
-        // e.consume() prevents the canvas drag handler from also firing.
-        circle.setOnMouseClicked(e -> {
-            showNodeInfoPanel(node, x, y);
-            e.consume();
-        });
-
-        drawingCanvas.getChildren().addAll(circle, text);
+            node.readjust();
+//            clearMode();
+            renderTreeStructure();
+        } catch (IllegalStateException e) {
+            log.warning(e.getMessage());
+            showErrorAlert("Readjust Error", e.getMessage());
+        }
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -145,44 +207,45 @@ public class TreeVisualizationView extends BorderPane {
         scrollPaneContainer.setVvalue(0.5);
     }
 
-    private void handleReadjustAction() {
-        var dialog = new TextInputDialog();
-        dialog.setTitle("Readjust Node");
-        dialog.setHeaderText("Enter Node ID");
-        dialog.setContentText("Please enter an integer ID:");
+    // ─────────────────────────────────────────────────────────────────────────
+    // Readjust action — triggered directly by clicking a node in READJUST mode
+    // ─────────────────────────────────────────────────────────────────────────
 
-        var result = dialog.showAndWait();
+    private HBox createActionToolbar() {
+        var btnAdd = new Button("Add Node");
 
-        result.ifPresent(input -> {
-            try {
-                int nodeId = Integer.parseInt(input.trim());
-                var node = abstractNodeMap.get(nodeId);
+        // ToggleGroup ensures only one mode button is active at a time
+        var modeGroup = new ToggleGroup();
 
-                // Changes the status of the node to readjusted.
-                if (node.getStatus() == NodeStatus.READJUSTED)
-                    throw new IllegalStateException("Node is already readjusted.");
-                if (!node.getChildren().isEmpty())
-                    throw new IllegalStateException("Node cannot be readjusted because it has children.");
-                if (isNotReadjustable(node.getPrecomputable()))
-                    throw new IllegalStateException("Node cannot be readjusted because it is not readjustable.");
+        var btnRootify = new ToggleButton("Rootify");
+        btnRootify.setToggleGroup(modeGroup);
+        btnRootify.setOnAction(_ -> setMode(ActiveMode.ROOTIFY, btnRootify));
 
-                node.readjust();
+        var btnReadjust = new ToggleButton("Readjust");
+        btnReadjust.setToggleGroup(modeGroup);
+        btnReadjust.setOnAction(_ -> setMode(ActiveMode.READJUST, btnReadjust));
 
-                renderTreeStructure();
-            } catch (NumberFormatException e) {
-                showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
-            } catch (IllegalStateException e) {
-                log.warning(e.getMessage());
-                showErrorAlert("Readjust Error", e.getMessage());
-            }
+        // Hint label shown while a mode is active
+        var hintLabel = new Label();
+        hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
+
+        // Update hint text whenever the selected toggle changes
+        modeGroup.selectedToggleProperty().addListener((_, _, newToggle) -> {
+            if (newToggle == btnRootify) hintLabel.setText("Click a node to rootify it");
+            else if (newToggle == btnReadjust) hintLabel.setText("Click a node to readjust it");
+            else hintLabel.setText("");
         });
+
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, hintLabel);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
+        return toolbar;
     }
 
     private boolean isNotReadjustable(Precomputable precomputable) {
         return precomputable instanceof RootPreCompute ||
                 precomputable instanceof FirstChildPreCompute ||
                 precomputable instanceof RootifiedPreCompute;
-
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -361,52 +424,28 @@ public class TreeVisualizationView extends BorderPane {
     // Toolbar
     // ─────────────────────────────────────────────────────────────────────────
 
-    private HBox createActionToolbar() {
-        var btnAdd = new Button("Add Node");
-        var btnRoot = new Button("Rootify");
-        btnRoot.setOnAction(_ -> handleRootifyAction());
-        var btnReset = new Button("Readjust");
-        btnReset.setOnAction(_ -> handleReadjustAction());
-        var toolbar = new HBox(15, btnAdd, btnRoot, btnReset);
-        toolbar.setAlignment(Pos.CENTER);
-        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
-        return toolbar;
+    private void handleRootifyOnNode(AbstractNode node) {
+        try {
+            if (node.getChildren().isEmpty())
+                throw new IllegalStateException("Node has no children.");
+
+            rootifyNode(node);
+//            clearMode();
+            renderTreeStructure();
+        } catch (IllegalStateException e) {
+            log.warning(e.getMessage());
+            showErrorAlert("Rootification Error", e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Rootify action
+    // Rootify action — triggered directly by clicking a node in ROOTIFY mode
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void handleRootifyAction() {
-        var dialog = new TextInputDialog();
-        dialog.setTitle("Rootify Node");
-        dialog.setHeaderText("Enter Node ID");
-        dialog.setContentText("Please enter an integer ID:");
-
-        var result = dialog.showAndWait();
-
-        result.ifPresent(input -> {
-            try {
-                int nodeId = Integer.parseInt(input.trim());
-                var node = abstractNodeMap.get(nodeId);
-
-                if (node.getChildren().isEmpty()) throw new IllegalStateException("Node has no children.");
-
-                rootifyNode(node);
-                renderTreeStructure();
-            } catch (NumberFormatException e) {
-                showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
-            } catch (IllegalStateException e) {
-                log.warning(e.getMessage());
-                showErrorAlert("Rootification Error", e.getMessage());
-            }
-        });
-    }
+    private enum ActiveMode {NONE, READJUST, ROOTIFY}
 
     private void rootifyNode(AbstractNode node) {
-
         node.setStatus(NodeStatus.ROOTIFIED);
-
         node.setPrecomputable(new RootifiedPreCompute());
         node.setComputable(new RootifiedCompute());
     }
