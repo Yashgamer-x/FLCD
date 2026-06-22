@@ -2,6 +2,7 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.NodeStatus;
+import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.Angle360Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
@@ -21,7 +22,8 @@ public class LeftSecondChildCompute implements Computable {
 
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
     private final ComputeInjectable computeInjector = new LeftHeightChildComputeInjector();
-    private final AngularCalculator angularCalculator = new Angle360Calculator();
+    private final AngularCalculator angular360Calculator = new Angle360Calculator();
+    private final AngularCalculator angular180Calculator = new Angle180Calculator();
 
     @Override
     public void compute(AbstractNode secondChild) {
@@ -88,6 +90,10 @@ public class LeftSecondChildCompute implements Computable {
         return node.getChildren().isEmpty() && node.getStatus() == NodeStatus.READJUSTED;
     }
 
+    private boolean isAncestorRootified(AbstractNode rootNode) {
+        return rootNode.getStatus() == NodeStatus.ROOTIFIED;
+    }
+
     private void readjustNode(AbstractNode readjustableNode) {
 
         // A = readjustableNode
@@ -110,7 +116,10 @@ public class LeftSecondChildCompute implements Computable {
         double by = rootNode.getGridY();
 
         int totalChildren = rootNode.getChildren().size();
-        double angularStep = angularCalculator.calculate(totalChildren);
+
+        double angularStep = isAncestorRootified(rootNode) ?
+                angular180Calculator.calculate(totalChildren) :
+                angular360Calculator.calculate(totalChildren);
 
         // --------------------------------------------------
         // Compute perpendicular distance from A to line BC
@@ -154,6 +163,7 @@ public class LeftSecondChildCompute implements Computable {
         double newAx = bx + radius * Math.cos(newAngle);
         double newAy = by - radius * Math.sin(newAngle);
 
+        // newAngle - 45 degrees
         double newNodeRadius = NODE_RADIUS / Math.sin(halfAngularStep);
         double readjustedAx = newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle());
         double readjustedAy = newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle());
