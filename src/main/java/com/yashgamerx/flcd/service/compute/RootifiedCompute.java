@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.compute.inject.ComputeInjectable;
@@ -32,24 +33,49 @@ public class RootifiedCompute implements Computable {
 
         for (int i = 0; i < totalChildren; i++) {
             var firstChild = children.get(i);
-            double currentAngle = beginningAngle + i * angularStep + (angularStep / 2);
 
-            // Core mathematical alignment tracking logic
-            double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
-
-            // The node center sits directly at the edge of the clearance boundary plus its own radius
-            double nodeCenter = clearanceHeight + firstChild.getSubtreeHeight() - NODE_DIAMETER;
-
-            // Set node state properties
-            firstChild.setLocalRadianAngle(currentAngle);
-
-            // Project coordinates using the corrected center vector
-            projectAndAssignCoordinates(rootNode, firstChild, currentAngle, nodeCenter);
+            if (firstChild.getStatus() == NodeStatus.ROOTIFIED) {
+                calculateRootifiedProjection(firstChild, rootNode, beginningAngle, angularStep, i);
+            } else {
+                calculateProjection(firstChild, rootNode, beginningAngle, angularStep, i);
+            }
 
             // Recurse down the layout tree hierarchy
             computeInjector.inject(firstChild);
             firstChild.compute();
         }
+    }
+
+    private void calculateRootifiedProjection(AbstractNode firstChild, AbstractNode rootNode, double beginningAngle, double angularStep, int i) {
+        double currentAngle = beginningAngle + i * angularStep + (angularStep / 2);
+
+        // Core mathematical alignment tracking logic
+        double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
+
+        // The node center sits directly at the edge of the clearance boundary plus its own radius
+        double nodeCenter = clearanceHeight;
+
+        // Set node state properties
+        firstChild.setLocalRadianAngle(currentAngle);
+
+        // Project coordinates using the corrected center vector
+        projectAndAssignCoordinates(rootNode, firstChild, currentAngle, nodeCenter);
+    }
+
+    private void calculateProjection(AbstractNode firstChild, AbstractNode rootNode, double beginningAngle, double angularStep, int i) {
+        double currentAngle = beginningAngle + i * angularStep + (angularStep / 2);
+
+        // Core mathematical alignment tracking logic
+        double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
+
+        // The node center sits directly at the edge of the clearance boundary plus its own radius
+        double nodeCenter = clearanceHeight + firstChild.getSubtreeHeight() - NODE_DIAMETER;
+
+        // Set node state properties
+        firstChild.setLocalRadianAngle(currentAngle);
+
+        // Project coordinates using the corrected center vector
+        projectAndAssignCoordinates(rootNode, firstChild, currentAngle, nodeCenter);
     }
 
     /// Computes spatial cartesian positions based on the exact vector center
