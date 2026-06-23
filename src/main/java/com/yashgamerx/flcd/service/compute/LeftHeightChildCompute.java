@@ -12,6 +12,7 @@ import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
 import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.stream.Stream;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
@@ -60,6 +61,7 @@ public class LeftHeightChildCompute implements Computable {
 
         var readjustedNodes = heightChild.getChildren().stream()
                 .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .sorted(Comparator.comparingInt(AbstractNode::getDepth))
                 .toArray(AbstractNode[]::new);
 
         // Concatenate and execute sequentially
