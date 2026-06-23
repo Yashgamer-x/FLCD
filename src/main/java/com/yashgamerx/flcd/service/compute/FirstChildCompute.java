@@ -10,6 +10,7 @@ import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
 import lombok.extern.java.Log;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.stream.Stream;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
@@ -55,6 +56,7 @@ public class FirstChildCompute implements Computable {
 
         AbstractNode[] readjustedNodes = firstChild.getChildren().stream()
                 .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .sorted(Comparator.comparingInt(AbstractNode::getDepth))
                 .toArray(AbstractNode[]::new);
 
         // Recombine and execute sequentially inside a clean forEach pipeline

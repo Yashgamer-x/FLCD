@@ -18,7 +18,6 @@ public class SecondChildPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode secondChild) {
-        secondChild.incrementDepth();
         if (isLeafNode(secondChild)) {
             initializeLeafDimensions(secondChild);
             return;
@@ -39,6 +38,7 @@ public class SecondChildPreCompute implements Precomputable {
     private void initializeLeafDimensions(AbstractNode node) {
         node.setSubtreeWidth(NODE_DIAMETER);
         node.setSubtreeHeight(NODE_DIAMETER);
+        node.setDepth(0);
     }
 
     /// Injects {@link HeightChildPreCompute} dependency and Precomputes the child
