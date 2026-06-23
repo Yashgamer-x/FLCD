@@ -18,6 +18,7 @@ public class WidthChildPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode widthNode) {
+        widthNode.incrementDepth();
         if (isLeafNode(widthNode)) {
             initializeLeafDimensions(widthNode);
             return;

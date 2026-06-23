@@ -18,6 +18,7 @@ public class SecondChildPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode secondChild) {
+        secondChild.incrementDepth();
         if (isLeafNode(secondChild)) {
             initializeLeafDimensions(secondChild);
             return;

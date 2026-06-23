@@ -18,6 +18,7 @@ public class HeightChildPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode heightNode) {
+        heightNode.incrementDepth();
         if (isLeafNode(heightNode)) {
             initializeLeafDimensions(heightNode);
             return;

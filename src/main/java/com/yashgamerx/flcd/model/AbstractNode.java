@@ -29,6 +29,7 @@ public abstract class AbstractNode {
     protected double globalRadianAngle; // Per-child angular step for subtree
     protected double gridX; // Screen X coordinate
     protected double gridY; // Screen Y coordinate
+    protected int depth;
 
     // Services
     protected Precomputable precomputable;
@@ -59,5 +60,10 @@ public abstract class AbstractNode {
     public void addChild(AbstractNode child) {
         this.children.add(child);
         child.setParent(this);
+    }
+
+    public void incrementDepth() {
+        if (parent == null) this.depth = 0;
+        else this.depth = parent.getDepth() + 1;
     }
 }

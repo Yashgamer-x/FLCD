@@ -27,6 +27,7 @@ public class FirstChildPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode firstChild) {
+        firstChild.incrementDepth();
         // Checks if the node has no children
         if (emptyListChecker.isEmpty(firstChild.getChildren())) {
             initializeLeafDimensions(firstChild);

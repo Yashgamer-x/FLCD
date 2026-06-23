@@ -331,6 +331,7 @@ public class TreeVisualizationView extends BorderPane {
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
         addInfoRow(grid, row++, "Status", node.getStatus().toString());
+        addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
 
         // ── Assemble ─────────────────────────────────────────────────────────
         var panel = new VBox(4, header, grid);
