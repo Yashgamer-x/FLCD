@@ -56,7 +56,7 @@ public class FirstChildCompute implements Computable {
 
         AbstractNode[] readjustedNodes = firstChild.getChildren().stream()
                 .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
-                .sorted(Comparator.comparingInt(AbstractNode::getDepth))
+                .sorted(Comparator.comparingInt(AbstractNode::getDepth).reversed())
                 .toArray(AbstractNode[]::new);
 
         // Recombine and execute sequentially inside a clean forEach pipeline
