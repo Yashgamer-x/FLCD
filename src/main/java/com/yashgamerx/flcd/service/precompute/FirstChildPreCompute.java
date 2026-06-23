@@ -35,6 +35,7 @@ public class FirstChildPreCompute implements Precomputable {
 
         // Injects SecondChildPreCompute dependency and Precomputes all the children
         firstChild.getChildren().forEach(this::injectAndPrecompute);
+        firstChild.incrementDepth();
 
         calculateBalancedSubTreeDimensions(firstChild);
     }

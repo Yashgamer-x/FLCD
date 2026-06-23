@@ -25,6 +25,7 @@ public class SecondChildPreCompute implements Precomputable {
 
         // Inject and Precompute
         secondChild.getChildren().forEach(this::injectAndPrecomputeChildren);
+        secondChild.incrementDepth();
 
         nodeDimensionCalculator.calculate(secondChild);
     }

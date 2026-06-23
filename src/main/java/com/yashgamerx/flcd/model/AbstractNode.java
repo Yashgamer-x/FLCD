@@ -61,4 +61,12 @@ public abstract class AbstractNode {
         this.children.add(child);
         child.setParent(this);
     }
+
+    public void incrementDepth() {
+        int depth = this.getChildren().stream()
+                .mapToInt(AbstractNode::getDepth)
+                .max()
+                .orElse(0);
+        this.depth = depth + 1;
+    }
 }

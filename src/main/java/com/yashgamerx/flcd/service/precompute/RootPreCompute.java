@@ -15,8 +15,8 @@ public class RootPreCompute implements Precomputable {
 
     @Override
     public void precompute(AbstractNode root) {
-        root.setDepth(0);
         root.getChildren().forEach(this::injectAndPrecompute);
+        root.incrementDepth();
 
         calculateSubtree(root);
     }

@@ -24,6 +24,7 @@ public class HeightChildPreCompute implements Precomputable {
         }
 
         heightNode.getChildren().forEach(this::injectAndPrecompute);
+        heightNode.incrementDepth();
 
         nodeDimensionCalculator.calculate(heightNode);
     }

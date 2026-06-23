@@ -24,6 +24,7 @@ public class WidthChildPreCompute implements Precomputable {
         }
 
         widthNode.getChildren().forEach(this::injectAndPrecomputeChildren);
+        widthNode.incrementDepth();
 
         nodeDimensionCalculator.calculate(widthNode);
     }
