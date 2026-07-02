@@ -19,6 +19,7 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import lombok.extern.java.Log;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -50,8 +51,10 @@ public class TreeVisualizationView extends BorderPane {
 
     private final TreeLayoutAlgorithm layoutAlgorithm;
 
-    /// Tracks the currently visible node info panel so it can be removed when needed.
-    private VBox currentInfoPanel = null;
+    /// Tracks all currently visible node info panels, keyed by node identifier,
+    /// so any number of them can stay open at once. A panel is only ever
+    /// removed when its own ✕ button is clicked, or when the tree is redrawn.
+    private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
     /// Reference to the active toggle button so it can be deselected after an action.
     private ToggleButton activeModeButton = null;
 
@@ -66,7 +69,7 @@ public class TreeVisualizationView extends BorderPane {
             activeMode = mode;
             activeModeButton = source;
         }
-        dismissInfoPanel();
+        // Info panels are intentionally left open — they only close via their ✕ button.
     }
 
     public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
@@ -147,7 +150,7 @@ public class TreeVisualizationView extends BorderPane {
     /// Executes the rendering pass after the algorithm has computed the grid
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
-        currentInfoPanel = null; // Panel references are cleared with the canvas
+        openInfoPanels.clear(); // Panel references are cleared with the canvas
         var rootNode = abstractNodeMap.get(1);
         if (rootNode != null) {
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
@@ -194,9 +197,6 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void handlePanelAction() {
-        // Dismiss any open info panel before resetting the view
-        dismissInfoPanel();
-
         drawingCanvas.setTranslateX(0);
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
@@ -255,7 +255,9 @@ public class TreeVisualizationView extends BorderPane {
     /// Builds and positions a floating info panel on the canvas anchored to the
     /// clicked node. Any previously shown panel is removed first.
     private void showNodeInfoPanel(AbstractNode node, double nodeX, double nodeY) {
-        dismissInfoPanel();
+        // If this node's panel is already open, leave it as-is instead of
+        // duplicating it — panels only close via their own ✕ button.
+        if (openInfoPanels.containsKey(node.getIdentifier())) return;
 
         // ── Header row (title + close button) ────────────────────────────────
         var titleLabel = new Label("Node #" + node.getIdentifier());
@@ -352,17 +354,18 @@ public class TreeVisualizationView extends BorderPane {
         panel.setOnMouseClicked(javafx.event.Event::consume);
         panel.setOnMousePressed(javafx.event.Event::consume);
 
-        closeBtn.setOnAction(_ -> dismissInfoPanel());
+        closeBtn.setOnAction(_ -> dismissInfoPanel(node.getIdentifier()));
 
-        currentInfoPanel = panel;
+        openInfoPanels.put(node.getIdentifier(), panel);
         drawingCanvas.getChildren().add(panel);
     }
 
-    /// Removes the info panel from the canvas if one is currently shown.
-    private void dismissInfoPanel() {
-        if (currentInfoPanel != null) {
-            drawingCanvas.getChildren().remove(currentInfoPanel);
-            currentInfoPanel = null;
+    /// Removes a single node's info panel from the canvas, identified by node id.
+    /// This is the only path that closes a panel — it's wired to that panel's ✕ button.
+    private void dismissInfoPanel(int nodeIdentifier) {
+        var panel = openInfoPanels.remove(nodeIdentifier);
+        if (panel != null) {
+            drawingCanvas.getChildren().remove(panel);
         }
     }
 
@@ -417,8 +420,8 @@ public class TreeVisualizationView extends BorderPane {
             mouseDragAnchorY = e.getSceneY();
         });
 
-        // Clicking on blank canvas space dismisses the info panel
-        drawingCanvas.setOnMouseClicked(e -> dismissInfoPanel());
+        // Clicking on blank canvas space no longer dismisses info panels —
+        // panels stay open until their own ✕ button is clicked.
     }
 
     // ─────────────────────────────────────────────────────────────────────────
