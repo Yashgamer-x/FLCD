@@ -236,7 +236,10 @@ public class TreeVisualizationView extends BorderPane {
             else hintLabel.setText("");
         });
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, hintLabel);
+        var btnCalculateArea = new Button("Calculate Area");
+        btnCalculateArea.setOnAction(_ -> handleCalculateArea());
+
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnCalculateArea, hintLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -452,6 +455,84 @@ public class TreeVisualizationView extends BorderPane {
         node.setStatus(NodeStatus.ROOTIFIED);
         node.setPrecomputable(new RootifiedPreCompute());
         node.setComputable(new RootifiedCompute());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Calculate Area action
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Scans all currently rendered nodes to find the bounding box of the tree,
+    /// accounting for NODE_RADIUS so the box encloses the full node circles
+    /// (not just their center points), then displays the resulting area.
+    private void handleCalculateArea() {
+        if (abstractNodeMap.isEmpty()) {
+            showErrorAlert("Calculate Area Error", "There are no nodes to measure.");
+            return;
+        }
+
+        double minX = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+
+        AbstractNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
+
+        for (var node : abstractNodeMap.values()) {
+            double x = node.getGridX();
+            double y = node.getGridY();
+
+            if (x - NODE_RADIUS < minX) {
+                minX = x - NODE_RADIUS;
+                leftMost = node;
+            }
+            if (x + NODE_RADIUS > maxX) {
+                maxX = x + NODE_RADIUS;
+                rightMost = node;
+            }
+            // In screen/scene coordinates, smaller Y is "up" (top), larger Y is "down" (bottom).
+            if (y - NODE_RADIUS < minY) {
+                minY = y - NODE_RADIUS;
+                topMost = node;
+            }
+            if (y + NODE_RADIUS > maxY) {
+                maxY = y + NODE_RADIUS;
+                bottomMost = node;
+            }
+        }
+
+        double width = maxX - minX;
+        double height = maxY - minY;
+        double area = width * height;
+
+        showAreaResultAlert(width, height, area, leftMost, rightMost, topMost, bottomMost);
+    }
+
+    /// Displays the calculated bounding-box area in a popup dialog, including
+    /// which nodes defined each extreme edge.
+    private void showAreaResultAlert(double width, double height, double area,
+                                     AbstractNode leftMost, AbstractNode rightMost,
+                                     AbstractNode topMost, AbstractNode bottomMost) {
+        var alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Bounding Area");
+        alert.setHeaderText("Tree Bounding Box Area");
+
+        String content = String.format(
+                "Width:  %.2f%n" +
+                        "Height: %.2f%n" +
+                        "Area:   %.2f%n%n" +
+                        "Leftmost node:   #%d%n" +
+                        "Rightmost node:  #%d%n" +
+                        "Topmost node:    #%d%n" +
+                        "Bottommost node: #%d%n%n" +
+                        "(NODE_RADIUS of %.1f included so the box encloses full node circles.)",
+                width, height, area,
+                leftMost.getIdentifier(), rightMost.getIdentifier(),
+                topMost.getIdentifier(), bottomMost.getIdentifier(),
+                NODE_RADIUS
+        );
+
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 
     private void showErrorAlert(String header, String content) {
