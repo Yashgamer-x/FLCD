@@ -531,7 +531,17 @@ public class TreeVisualizationView extends BorderPane {
                 NODE_RADIUS
         );
 
-        alert.setContentText(content);
+        // Use a read-only, selectable TextArea instead of setContentText so the
+        // user can click-drag/select and copy (Ctrl+C) the results — Alert's
+        // plain contentText label does not support text selection.
+        var textArea = new TextArea(content);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefWidth(360);
+        textArea.setPrefHeight(220);
+        textArea.setStyle("-fx-font-family: monospace;");
+
+        alert.getDialogPane().setContent(textArea);
         alert.showAndWait();
     }
 
