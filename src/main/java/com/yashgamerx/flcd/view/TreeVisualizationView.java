@@ -40,7 +40,7 @@ public class TreeVisualizationView extends BorderPane {
     private final ScrollPane scrollPaneContainer;
 
     /// Matches the diameter of 5.0 established in the preCompute phase.
-    private static final double NODE_RADIUS = 5;
+    private static final double NODE_RADIUS = AbstractNode.NODE_RADIUS;
 
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
