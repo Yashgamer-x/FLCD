@@ -35,6 +35,7 @@ public class FirstChildPreCompute implements Precomputable {
 
         // Injects SecondChildPreCompute dependency and Precomputes all the children
         firstChild.getChildren().forEach(this::injectAndPrecompute);
+        firstChild.incrementDepth();
 
         calculateBalancedSubTreeDimensions(firstChild);
     }
@@ -43,6 +44,7 @@ public class FirstChildPreCompute implements Precomputable {
     private void initializeLeafDimensions(AbstractNode node) {
         node.setSubtreeWidth(NODE_DIAMETER);
         node.setSubtreeHeight(NODE_DIAMETER);
+        node.setDepth(0);
     }
 
     /// Injects SecondChildPreCompute dependency and Precomputes the child
@@ -67,7 +69,8 @@ public class FirstChildPreCompute implements Precomputable {
         // [0] leftAccumulatedArea, [1] rightAccumulatedArea
         // [2] leftWidth,           [3] rightWidth
         // [4] maxLeftHeight,       [5] maxRightHeight
-        double[] metrics = new double[6];
+        // [6] maxDepth
+        double[] metrics = new double[7];
 
         // Separate the nodes dynamically by status arrays
         AbstractNode[] normalNodes = firstChild.getChildren().stream()
@@ -78,8 +81,13 @@ public class FirstChildPreCompute implements Precomputable {
                 .filter(node -> node.getStatus() == NodeStatus.ROOTIFIED)
                 .toArray(AbstractNode[]::new);
 
+        AbstractNode[] readjustedNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .toArray(AbstractNode[]::new);
+
         // Process combined elements sequentially: Normal first, then Rootified
-        Stream.concat(Arrays.stream(normalNodes), Arrays.stream(rootifiedNodes))
+        Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
+                .flatMap(Arrays::stream)
                 .forEach(secondChild -> {
                     double nodeArea = calculateArea(secondChild);
 
@@ -95,6 +103,8 @@ public class FirstChildPreCompute implements Precomputable {
                         metrics[3] += secondChild.getSubtreeWidth() + WIDTH_SPACER;            // rightWidth
                         metrics[5] = Math.max(metrics[5], secondChild.getSubtreeHeight());     // maxRightHeight
                     }
+
+                    metrics[6] = Math.max(metrics[6], secondChild.getDepth());
                 });
 
         // 3. Extract finalized measurements for layout assignment
@@ -102,6 +112,7 @@ public class FirstChildPreCompute implements Precomputable {
         double rightWidth = metrics[3];
         double maxLeftHeight = metrics[4];
         double maxRightHeight = metrics[5];
+        double maxDepth = metrics[6];
 
         double maxSideWidth = Math.max(leftWidth, rightWidth);
 
@@ -111,5 +122,7 @@ public class FirstChildPreCompute implements Precomputable {
 
         // Height calculation remains the same: this node + vertical gap + tallest child + SPACER (between Root and First Child)
         firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(maxLeftHeight, maxRightHeight));
+
+        firstChild.setDepth((int) (maxDepth + 1));
     }
 }

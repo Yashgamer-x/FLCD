@@ -24,6 +24,7 @@ public class HeightChildPreCompute implements Precomputable {
         }
 
         heightNode.getChildren().forEach(this::injectAndPrecompute);
+        heightNode.incrementDepth();
 
         nodeDimensionCalculator.calculate(heightNode);
     }
@@ -37,6 +38,7 @@ public class HeightChildPreCompute implements Precomputable {
     private void initializeLeafDimensions(AbstractNode node) {
         node.setSubtreeWidth(NODE_DIAMETER);
         node.setSubtreeHeight(NODE_DIAMETER);
+        node.setDepth(0);
     }
 
     /// Injects and then precomputes the width child

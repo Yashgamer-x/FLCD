@@ -14,7 +14,7 @@ public abstract class AbstractNode {
     public static final double WIDTH_SPACER = 5.0;
     public static final double HEIGHT_SPACER = 5.0;
     public static final double NODE_DIAMETER = 10.0;
-    public static final double NODE_RADIUS = 5.0;
+    public static final double NODE_RADIUS = NODE_DIAMETER / 2.0;
 
     private final int identifier;
     private String name; // Added name as per document (Case Study format)
@@ -29,6 +29,7 @@ public abstract class AbstractNode {
     protected double globalRadianAngle; // Per-child angular step for subtree
     protected double gridX; // Screen X coordinate
     protected double gridY; // Screen Y coordinate
+    protected int depth;
 
     // Services
     protected Precomputable precomputable;
@@ -59,5 +60,13 @@ public abstract class AbstractNode {
     public void addChild(AbstractNode child) {
         this.children.add(child);
         child.setParent(this);
+    }
+
+    public void incrementDepth() {
+        int depth = this.getChildren().stream()
+                .mapToInt(AbstractNode::getDepth)
+                .max()
+                .orElse(0);
+        this.depth = depth + 1;
     }
 }

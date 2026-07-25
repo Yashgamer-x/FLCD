@@ -24,6 +24,7 @@ public class WidthChildPreCompute implements Precomputable {
         }
 
         widthNode.getChildren().forEach(this::injectAndPrecomputeChildren);
+        widthNode.incrementDepth();
 
         nodeDimensionCalculator.calculate(widthNode);
     }
@@ -37,6 +38,7 @@ public class WidthChildPreCompute implements Precomputable {
     private void initializeLeafDimensions(AbstractNode node) {
         node.setSubtreeWidth(NODE_DIAMETER);
         node.setSubtreeHeight(NODE_DIAMETER);
+        node.setDepth(0);
     }
 
     /// Injects the dependency and then precomputes that child.

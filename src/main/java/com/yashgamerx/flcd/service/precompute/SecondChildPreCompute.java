@@ -25,6 +25,7 @@ public class SecondChildPreCompute implements Precomputable {
 
         // Inject and Precompute
         secondChild.getChildren().forEach(this::injectAndPrecomputeChildren);
+        secondChild.incrementDepth();
 
         nodeDimensionCalculator.calculate(secondChild);
     }
@@ -38,6 +39,7 @@ public class SecondChildPreCompute implements Precomputable {
     private void initializeLeafDimensions(AbstractNode node) {
         node.setSubtreeWidth(NODE_DIAMETER);
         node.setSubtreeHeight(NODE_DIAMETER);
+        node.setDepth(0);
     }
 
     /// Injects {@link HeightChildPreCompute} dependency and Precomputes the child

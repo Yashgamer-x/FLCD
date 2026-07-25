@@ -2,17 +2,24 @@ package com.yashgamerx.flcd.service.compute;
 
 import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.NodeStatus;
+import com.yashgamerx.flcd.service.angular.Angle360Calculator;
+import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.list.EmptyListChecker;
 import com.yashgamerx.flcd.service.list.EmptyListCheckerImplementation;
+import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
+import lombok.extern.java.Log;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.stream.Stream;
 
 import static com.yashgamerx.flcd.model.AbstractNode.*;
 
+@Log
 public class FirstChildCompute implements Computable {
 
     private final EmptyListChecker emptyListChecker = new EmptyListCheckerImplementation();
+    private final AngularCalculator angularCalculator = new Angle360Calculator();
 
     @Override
     public void compute(AbstractNode firstChild) {
@@ -47,8 +54,14 @@ public class FirstChildCompute implements Computable {
                 .filter(node -> node.getStatus() == NodeStatus.ROOTIFIED)
                 .toArray(AbstractNode[]::new);
 
+        AbstractNode[] readjustedNodes = firstChild.getChildren().stream()
+                .filter(node -> node.getStatus() == NodeStatus.READJUSTED)
+                .sorted(Comparator.comparingInt(AbstractNode::getDepth))
+                .toArray(AbstractNode[]::new);
+
         // Recombine and execute sequentially inside a clean forEach pipeline
-        Stream.concat(Arrays.stream(normalNodes), Arrays.stream(rootifiedNodes))
+        Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
+                .flatMap(Arrays::stream)
                 .forEach(child -> {
                     var computable = child.getComputable();
 
@@ -56,10 +69,18 @@ public class FirstChildCompute implements Computable {
                         accumulatedDistances[0] = projectChildAlongVector(
                                 child, anchorX, anchorY, rightAngle, accumulatedDistances[0]
                         );
+                        if (isReadjustable(child)) {
+                            log.info("Readjusted Node: " + child.getIdentifier());
+                            readjustNode(child, true);
+                        }
                     } else if (computable instanceof LeftSecondChildCompute) {
                         accumulatedDistances[1] = projectChildAlongVector(
                                 child, anchorX, anchorY, leftAngle, accumulatedDistances[1]
                         );
+                        if (isReadjustable(child)) {
+                            log.info("Readjusted Node: " + child.getIdentifier());
+                            readjustNode(child, false);
+                        }
                     } else if (computable instanceof LeftSecondRootifiedCompute) {
                         accumulatedDistances[1] = projectRootifiedChildAlongVector(
                                 child, anchorX, anchorY, leftAngle, additionalAngle, accumulatedDistances[1]
@@ -69,7 +90,89 @@ public class FirstChildCompute implements Computable {
                                 child, anchorX, anchorY, rightAngle, -additionalAngle, accumulatedDistances[0]
                         );
                     }
+
+
                 });
+    }
+
+    private boolean isReadjustable(AbstractNode node) {
+        return node.getChildren().isEmpty() && node.getStatus() == NodeStatus.READJUSTED;
+    }
+
+    private void readjustNode(AbstractNode readjustableNode, boolean isRightNode) {
+
+        // A = readjustableNode
+        double ax = readjustableNode.getGridX();
+        double ay = readjustableNode.getGridY();
+
+        // Find C (first child)
+        AbstractNode firstChild = readjustableNode.getParent();
+        while (!(firstChild.getPrecomputable() instanceof FirstChildPreCompute)) {
+            firstChild = firstChild.getParent();
+        }
+
+        double cx = firstChild.getGridX();
+        double cy = firstChild.getGridY();
+
+        // Find B (root/rootified node)
+        AbstractNode rootNode = firstChild.getParent();
+
+        double bx = rootNode.getGridX();
+        double by = rootNode.getGridY();
+
+        int totalChildren = rootNode.getChildren().size();
+        double angularStep = angularCalculator.calculate(totalChildren);
+
+        // --------------------------------------------------
+        // Compute perpendicular distance from A to line BC
+        // --------------------------------------------------
+
+        double bcx = cx - bx;
+        double bcy = cy - by;
+
+        double bcLength = Math.hypot(bcx, bcy);
+
+        double ux = bcx / bcLength;
+        double uy = bcy / bcLength;
+
+        double bax = ax - bx;
+        double bay = ay - by;
+
+        double projection = bax * ux + bay * uy;
+
+        double px = bx + projection * ux;
+        double py = by + projection * uy;
+
+        double opposite = Math.hypot(ax - px, ay - py);
+
+        // --------------------------------------------------
+        // Compute new angle
+        // --------------------------------------------------
+
+        var negation = isRightNode ? -1.0 : 1.0;
+
+        double halfAngularStep = (angularStep / 2.0);
+        double newAngle = firstChild.getLocalRadianAngle() + negation * halfAngularStep;
+
+        // --------------------------------------------------
+        // Compute new radius from root
+        // --------------------------------------------------
+
+        double radius = opposite / Math.sin(halfAngularStep);
+
+        // --------------------------------------------------
+        // Compute new coordinates for A
+        // --------------------------------------------------
+
+        double newAx = bx + radius * Math.cos(newAngle);
+        double newAy = by - radius * Math.sin(newAngle);
+
+        double newNodeRadius = NODE_RADIUS / Math.sin(halfAngularStep);
+        double readjustedAx = newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle());
+        double readjustedAy = newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle());
+
+        readjustableNode.setGridX(readjustedAx);
+        readjustableNode.setGridY(readjustedAy);
     }
 
 

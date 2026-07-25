@@ -4,6 +4,9 @@ import com.yashgamerx.flcd.model.AbstractNode;
 import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.service.compute.RootifiedCompute;
+import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
+import com.yashgamerx.flcd.service.precompute.Precomputable;
+import com.yashgamerx.flcd.service.precompute.RootPreCompute;
 import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -16,6 +19,7 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import lombok.extern.java.Log;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -24,12 +28,19 @@ import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
 @Log
 public class TreeVisualizationView extends BorderPane {
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mode enum — tracks what a node click should do
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Current interaction mode — determines what happens when a node is clicked.
+    private ActiveMode activeMode = ActiveMode.NONE;
+
     private final Map<Integer, AbstractNode> abstractNodeMap;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
 
     /// Matches the diameter of 5.0 established in the preCompute phase.
-    private static final double NODE_RADIUS = 5;
+    private static final double NODE_RADIUS = AbstractNode.NODE_RADIUS;
 
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
@@ -40,8 +51,26 @@ public class TreeVisualizationView extends BorderPane {
 
     private final TreeLayoutAlgorithm layoutAlgorithm;
 
-    /// Tracks the currently visible node info panel so it can be removed when needed.
-    private VBox currentInfoPanel = null;
+    /// Tracks all currently visible node info panels, keyed by node identifier,
+    /// so any number of them can stay open at once. A panel is only ever
+    /// removed when its own ✕ button is clicked, or when the tree is redrawn.
+    private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    /// Reference to the active toggle button so it can be deselected after an action.
+    private ToggleButton activeModeButton = null;
+
+    /// Sets the active mode when a toolbar toggle button is pressed.
+    /// Pressing the same button again (or pressing Escape) returns to NONE.
+    private void setMode(ActiveMode mode, ToggleButton source) {
+        if (activeMode == mode) {
+            // Same button toggled off — return to idle
+            activeMode = ActiveMode.NONE;
+            activeModeButton = null;
+        } else {
+            activeMode = mode;
+            activeModeButton = source;
+        }
+        // Info panels are intentionally left open — they only close via their ✕ button.
+    }
 
     public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
         this.abstractNodeMap = abstractNodeMap;
@@ -69,26 +98,17 @@ public class TreeVisualizationView extends BorderPane {
         this.setCenter(scrollPaneContainer);
     }
 
-    /// Executes the rendering pass after the algorithm has computed the grid
-    private void renderTreeStructure() {
-        drawingCanvas.getChildren().clear();
-        currentInfoPanel = null; // Panel references are cleared with the canvas
-        var rootNode = abstractNodeMap.get(1);
-        if (rootNode != null) {
-            layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
-            drawCalculatedTree(rootNode);
-        }
-    }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mode management
+    // ─────────────────────────────────────────────────────────────────────────
 
-    private void drawCalculatedTree(AbstractNode node) {
-        // Render edges first so they sit visually behind the circles
-        for (var child : node.getChildren()) {
-            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
-            drawCalculatedTree(child);
+    /// Resets mode to NONE and deselects the toolbar toggle button.
+    private void clearMode() {
+        activeMode = ActiveMode.NONE;
+        if (activeModeButton != null) {
+            activeModeButton.setSelected(false);
+            activeModeButton = null;
         }
-
-        // Render node visuals on top
-        renderNodeVisuals(node, node.getGridX(), node.getGridY());
     }
 
     private void renderNodeVisuals(AbstractNode node, double x, double y) {
@@ -109,14 +129,62 @@ public class TreeVisualizationView extends BorderPane {
         text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
         text.setMouseTransparent(true);
 
-        // Show the info panel when a node circle is clicked.
+        // Dispatch to the currently active mode on click.
         // e.consume() prevents the canvas drag handler from also firing.
         circle.setOnMouseClicked(e -> {
-            showNodeInfoPanel(node, x, y);
+            switch (activeMode) {
+                case READJUST -> handleReadjustOnNode(node);
+                case ROOTIFY -> handleRootifyOnNode(node);
+                default -> showNodeInfoPanel(node, x, y);
+            }
             e.consume();
         });
 
         drawingCanvas.getChildren().addAll(circle, text);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rendering
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Executes the rendering pass after the algorithm has computed the grid
+    private void renderTreeStructure() {
+        drawingCanvas.getChildren().clear();
+        openInfoPanels.clear(); // Panel references are cleared with the canvas
+        var rootNode = abstractNodeMap.get(1);
+        if (rootNode != null) {
+            layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
+            drawCalculatedTree(rootNode);
+        }
+    }
+
+    private void drawCalculatedTree(AbstractNode node) {
+        // Render edges first so they sit visually behind the circles
+        for (var child : node.getChildren()) {
+            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawCalculatedTree(child);
+        }
+
+        // Render node visuals on top
+        renderNodeVisuals(node, node.getGridX(), node.getGridY());
+    }
+
+    private void handleReadjustOnNode(AbstractNode node) {
+        try {
+            if (node.getStatus() == NodeStatus.READJUSTED)
+                throw new IllegalStateException("Node is already readjusted.");
+            if (!node.getChildren().isEmpty())
+                throw new IllegalStateException("Node cannot be readjusted because it has children.");
+            if (isNotReadjustable(node.getPrecomputable()))
+                throw new IllegalStateException("Node cannot be readjusted because it is not readjustable.");
+
+            node.readjust();
+//            clearMode();
+            renderTreeStructure();
+        } catch (IllegalStateException e) {
+            log.warning(e.getMessage());
+            showErrorAlert("Readjust Error", e.getMessage());
+        }
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -129,9 +197,6 @@ public class TreeVisualizationView extends BorderPane {
     }
 
     private void handlePanelAction() {
-        // Dismiss any open info panel before resetting the view
-        dismissInfoPanel();
-
         drawingCanvas.setTranslateX(0);
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
@@ -142,24 +207,48 @@ public class TreeVisualizationView extends BorderPane {
         scrollPaneContainer.setVvalue(0.5);
     }
 
-    private void handleReadjustAction() {
-        var dialog = new TextInputDialog();
-        dialog.setTitle("Readjust Node");
-        dialog.setHeaderText("Enter Node ID");
-        dialog.setContentText("Please enter an integer ID:");
+    // ─────────────────────────────────────────────────────────────────────────
+    // Readjust action — triggered directly by clicking a node in READJUST mode
+    // ─────────────────────────────────────────────────────────────────────────
 
-        var result = dialog.showAndWait();
+    private HBox createActionToolbar() {
+        var btnAdd = new Button("Add Node");
 
-        result.ifPresent(input -> {
-            try {
-                int nodeId = Integer.parseInt(input.trim());
-                var node = abstractNodeMap.get(nodeId);
-                //TODO: Readjust the node
-                renderTreeStructure();
-            } catch (NumberFormatException e) {
-                showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
-            }
+        // ToggleGroup ensures only one mode button is active at a time
+        var modeGroup = new ToggleGroup();
+
+        var btnRootify = new ToggleButton("Rootify");
+        btnRootify.setToggleGroup(modeGroup);
+        btnRootify.setOnAction(_ -> setMode(ActiveMode.ROOTIFY, btnRootify));
+
+        var btnReadjust = new ToggleButton("Readjust");
+        btnReadjust.setToggleGroup(modeGroup);
+        btnReadjust.setOnAction(_ -> setMode(ActiveMode.READJUST, btnReadjust));
+
+        // Hint label shown while a mode is active
+        var hintLabel = new Label();
+        hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
+
+        // Update hint text whenever the selected toggle changes
+        modeGroup.selectedToggleProperty().addListener((_, _, newToggle) -> {
+            if (newToggle == btnRootify) hintLabel.setText("Click a node to rootify it");
+            else if (newToggle == btnReadjust) hintLabel.setText("Click a node to readjust it");
+            else hintLabel.setText("");
         });
+
+        var btnCalculateArea = new Button("Calculate Area");
+        btnCalculateArea.setOnAction(_ -> handleCalculateArea());
+
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnCalculateArea, hintLabel);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
+        return toolbar;
+    }
+
+    private boolean isNotReadjustable(Precomputable precomputable) {
+        return precomputable instanceof RootPreCompute ||
+                precomputable instanceof FirstChildPreCompute ||
+                precomputable instanceof RootifiedPreCompute;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -169,7 +258,9 @@ public class TreeVisualizationView extends BorderPane {
     /// Builds and positions a floating info panel on the canvas anchored to the
     /// clicked node. Any previously shown panel is removed first.
     private void showNodeInfoPanel(AbstractNode node, double nodeX, double nodeY) {
-        dismissInfoPanel();
+        // If this node's panel is already open, leave it as-is instead of
+        // duplicating it — panels only close via their own ✕ button.
+        if (openInfoPanels.containsKey(node.getIdentifier())) return;
 
         // ── Header row (title + close button) ────────────────────────────────
         var titleLabel = new Label("Node #" + node.getIdentifier());
@@ -242,6 +333,11 @@ public class TreeVisualizationView extends BorderPane {
         addInfoRow(grid, row++, "Precomputable", precomputeName);
         addInfoRow(grid, row++, "Computable", computeName);
 
+        grid.add(makeSeparator(), 0, row++, 2, 1);
+
+        addInfoRow(grid, row++, "Status", node.getStatus().toString());
+        addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
+
         // ── Assemble ─────────────────────────────────────────────────────────
         var panel = new VBox(4, header, grid);
         panel.setStyle(
@@ -261,17 +357,18 @@ public class TreeVisualizationView extends BorderPane {
         panel.setOnMouseClicked(javafx.event.Event::consume);
         panel.setOnMousePressed(javafx.event.Event::consume);
 
-        closeBtn.setOnAction(_ -> dismissInfoPanel());
+        closeBtn.setOnAction(_ -> dismissInfoPanel(node.getIdentifier()));
 
-        currentInfoPanel = panel;
+        openInfoPanels.put(node.getIdentifier(), panel);
         drawingCanvas.getChildren().add(panel);
     }
 
-    /// Removes the info panel from the canvas if one is currently shown.
-    private void dismissInfoPanel() {
-        if (currentInfoPanel != null) {
-            drawingCanvas.getChildren().remove(currentInfoPanel);
-            currentInfoPanel = null;
+    /// Removes a single node's info panel from the canvas, identified by node id.
+    /// This is the only path that closes a panel — it's wired to that panel's ✕ button.
+    private void dismissInfoPanel(int nodeIdentifier) {
+        var panel = openInfoPanels.remove(nodeIdentifier);
+        if (panel != null) {
+            drawingCanvas.getChildren().remove(panel);
         }
     }
 
@@ -326,56 +423,126 @@ public class TreeVisualizationView extends BorderPane {
             mouseDragAnchorY = e.getSceneY();
         });
 
-        // Clicking on blank canvas space dismisses the info panel
-        drawingCanvas.setOnMouseClicked(e -> dismissInfoPanel());
+        // Clicking on blank canvas space no longer dismisses info panels —
+        // panels stay open until their own ✕ button is clicked.
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Toolbar
     // ─────────────────────────────────────────────────────────────────────────
 
-    private HBox createActionToolbar() {
-        var btnAdd = new Button("Add Node");
-        var btnRoot = new Button("Rootify");
-        btnRoot.setOnAction(_ -> handleRootifyAction());
-        var btnReset = new Button("Readjust");
-        btnReset.setOnAction(_ -> handleReadjustAction());
-        var toolbar = new HBox(15, btnAdd, btnRoot, btnReset);
-        toolbar.setAlignment(Pos.CENTER);
-        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
-        return toolbar;
+    private void handleRootifyOnNode(AbstractNode node) {
+        try {
+            if (node.getChildren().isEmpty())
+                throw new IllegalStateException("Node has no children.");
+
+            rootifyNode(node);
+//            clearMode();
+            renderTreeStructure();
+        } catch (IllegalStateException e) {
+            log.warning(e.getMessage());
+            showErrorAlert("Rootification Error", e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Rootify action
+    // Rootify action — triggered directly by clicking a node in ROOTIFY mode
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void handleRootifyAction() {
-        var dialog = new TextInputDialog();
-        dialog.setTitle("Rootify Node");
-        dialog.setHeaderText("Enter Node ID");
-        dialog.setContentText("Please enter an integer ID:");
-
-        var result = dialog.showAndWait();
-
-        result.ifPresent(input -> {
-            try {
-                int nodeId = Integer.parseInt(input.trim());
-                var node = abstractNodeMap.get(nodeId);
-                rootifyNode(node);
-                renderTreeStructure();
-            } catch (NumberFormatException e) {
-                showErrorAlert("Invalid Input", "The value '" + input + "' is not a valid integer.");
-            }
-        });
-    }
+    private enum ActiveMode {NONE, READJUST, ROOTIFY}
 
     private void rootifyNode(AbstractNode node) {
-
         node.setStatus(NodeStatus.ROOTIFIED);
-
         node.setPrecomputable(new RootifiedPreCompute());
         node.setComputable(new RootifiedCompute());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Calculate Area action
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Scans all currently rendered nodes to find the bounding box of the tree,
+    /// accounting for NODE_RADIUS so the box encloses the full node circles
+    /// (not just their center points), then displays the resulting area.
+    private void handleCalculateArea() {
+        if (abstractNodeMap.isEmpty()) {
+            showErrorAlert("Calculate Area Error", "There are no nodes to measure.");
+            return;
+        }
+
+        double minX = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+
+        AbstractNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
+
+        for (var node : abstractNodeMap.values()) {
+            double x = node.getGridX();
+            double y = node.getGridY();
+
+            if (x - NODE_RADIUS < minX) {
+                minX = x - NODE_RADIUS;
+                leftMost = node;
+            }
+            if (x + NODE_RADIUS > maxX) {
+                maxX = x + NODE_RADIUS;
+                rightMost = node;
+            }
+            // In screen/scene coordinates, smaller Y is "up" (top), larger Y is "down" (bottom).
+            if (y - NODE_RADIUS < minY) {
+                minY = y - NODE_RADIUS;
+                topMost = node;
+            }
+            if (y + NODE_RADIUS > maxY) {
+                maxY = y + NODE_RADIUS;
+                bottomMost = node;
+            }
+        }
+
+        double width = maxX - minX;
+        double height = maxY - minY;
+        double area = width * height;
+
+        showAreaResultAlert(width, height, area, leftMost, rightMost, topMost, bottomMost);
+    }
+
+    /// Displays the calculated bounding-box area in a popup dialog, including
+    /// which nodes defined each extreme edge.
+    private void showAreaResultAlert(double width, double height, double area,
+                                     AbstractNode leftMost, AbstractNode rightMost,
+                                     AbstractNode topMost, AbstractNode bottomMost) {
+        var alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Bounding Area");
+        alert.setHeaderText("Tree Bounding Box Area");
+
+        String content = String.format(
+                "Width:  %.2f%n" +
+                        "Height: %.2f%n" +
+                        "Area:   %.2f%n%n" +
+                        "Leftmost node:   #%d%n" +
+                        "Rightmost node:  #%d%n" +
+                        "Topmost node:    #%d%n" +
+                        "Bottommost node: #%d%n%n" +
+                        "(NODE_RADIUS of %.1f included so the box encloses full node circles.)",
+                width, height, area,
+                leftMost.getIdentifier(), rightMost.getIdentifier(),
+                topMost.getIdentifier(), bottomMost.getIdentifier(),
+                NODE_RADIUS
+        );
+
+        // Use a read-only, selectable TextArea instead of setContentText so the
+        // user can click-drag/select and copy (Ctrl+C) the results — Alert's
+        // plain contentText label does not support text selection.
+        var textArea = new TextArea(content);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefWidth(360);
+        textArea.setPrefHeight(220);
+        textArea.setStyle("-fx-font-family: monospace;");
+
+        alert.getDialogPane().setContent(textArea);
+        alert.showAndWait();
     }
 
     private void showErrorAlert(String header, String content) {
