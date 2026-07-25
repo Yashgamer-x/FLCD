@@ -1,11 +1,12 @@
 package com.yashgamerx.flcd.view;
 
-import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
+import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithmType;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
@@ -21,6 +22,8 @@ public class AlgorithmSelectorView extends BorderPane {
     @FXML private Button selectTextFileButton;
     @FXML private Label selectedFileNameLabel;
     @FXML private Button processAlgorithmButton;
+    @FXML
+    private ComboBox<TreeLayoutAlgorithmType> algorithmComboBox;
 
     private File currentlySelectedTextFile;
 
@@ -49,6 +52,9 @@ public class AlgorithmSelectorView extends BorderPane {
     private void initialize(){
         selectTextFileButton.setOnAction(_->onSelectFileButtonClicked());
         processAlgorithmButton.setOnAction(_->onProcessAlgorithmButtonClicked());
+
+        algorithmComboBox.getItems().setAll(TreeLayoutAlgorithmType.values());
+        algorithmComboBox.getSelectionModel().selectFirst();
     }
 
     /// When the [selectTextFileButton] is clicked, this method will be invoked.
@@ -96,18 +102,15 @@ public class AlgorithmSelectorView extends BorderPane {
     private void executeFileProcessingAlgorithm() {
         log.info("Algorithm execution started.");
 
-        // Get the parsed result
+        var selectedAlgorithmType = algorithmComboBox.getValue();
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            // Create the new View
-            var visualizationView = new TreeVisualizationView(map, new PlanarGridAlgorithm());
+            var visualizationView = new TreeVisualizationView(map, selectedAlgorithmType.create());
 
-            // Swap the Root of the Scene
-            // Since this class is currently the root of the Scene, we replace it.
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
-            log.info("Transitioned to TreeVisualizationView.");
+            log.info("Transitioned to TreeVisualizationView using " + selectedAlgorithmType + ".");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }
