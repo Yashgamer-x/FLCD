@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 import static com.yashgamerx.flcd.model.FLCDNode.NODE_DIAMETER;
 
 @Log
-public class TreeVisualizationView extends BorderPane {
+public class FLCDTreeVisualizationView extends BorderPane {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Mode enum — tracks what a node click should do
@@ -71,7 +71,7 @@ public class TreeVisualizationView extends BorderPane {
         // Info panels are intentionally left open — they only close via their ✕ button.
     }
 
-    public TreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
+    public FLCDTreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();

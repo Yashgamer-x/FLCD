@@ -106,7 +106,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new TreeVisualizationView(map, selectedAlgorithmType.create());
+            var visualizationView = new FLCDTreeVisualizationView(map, selectedAlgorithmType.create());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
