@@ -33,17 +33,20 @@ import static com.yashgamerx.flcd.model.MaximumEdgeLengthNode.NODE_RADIUS;
 @Log
 public class MaximumEdgeLengthVisualizationView extends BorderPane {
 
+    private final Map<Integer, MaximumEdgeLengthNode> nodeMap;
+    private final MaximumEdgeLengthAlgorithm layoutAlgorithm;
+
+    private final Pane drawingCanvas;
+    private final ScrollPane scrollPaneContainer;
+
+    private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+
+    private double mouseDragAnchorX;
+    private double mouseDragAnchorY;
     private static final double VIRTUAL_CANVAS_SIZE = 8000.0;
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
-    private final Map<Integer, MaximumEdgeLengthNode> nodeMap;
-    private final MaximumEdgeLengthAlgorithm layoutAlgorithm;
-    private final Pane drawingCanvas;
-    private final ScrollPane scrollPaneContainer;
-    private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
-    private double mouseDragAnchorX;
-    private double mouseDragAnchorY;
 
     public MaximumEdgeLengthVisualizationView(final Map<Integer, MaximumEdgeLengthNode> nodeMap,
                                               final MaximumEdgeLengthAlgorithm algorithm) {

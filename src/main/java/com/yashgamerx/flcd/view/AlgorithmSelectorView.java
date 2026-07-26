@@ -1,7 +1,8 @@
 package com.yashgamerx.flcd.view;
 
+import com.yashgamerx.flcd.service.algorithm.AlgorithmFamily;
 import com.yashgamerx.flcd.service.algorithm.MaximumEdgeLengthAlgorithm;
-import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithmType;
+import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.MaximumEdgeLengthFileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
@@ -24,15 +25,12 @@ public class AlgorithmSelectorView extends BorderPane {
     @FXML private Button selectTextFileButton;
     @FXML private Label selectedFileNameLabel;
     @FXML private Button processAlgorithmButton;
-    private final MaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new MaximumEdgeLengthFileParsingService();
-    @FXML
-    private ComboBox<TreeLayoutAlgorithmType> algorithmComboBox;
+    private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
 
     private File currentlySelectedTextFile;
-
-    private final FileParsingService textFileParsingService = new TreeFileParsingService();
+    private final MaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new MaximumEdgeLengthFileParsingService();
     @FXML
-    private Button viewMaximumEdgeLengthButton;
+    private ComboBox<AlgorithmFamily> algorithmComboBox;
 
     public AlgorithmSelectorView() {
         loadFXML();
@@ -57,9 +55,8 @@ public class AlgorithmSelectorView extends BorderPane {
     private void initialize(){
         selectTextFileButton.setOnAction(_->onSelectFileButtonClicked());
         processAlgorithmButton.setOnAction(_->onProcessAlgorithmButtonClicked());
-        viewMaximumEdgeLengthButton.setOnAction(_ -> onViewMaximumEdgeLengthButtonClicked());
 
-        algorithmComboBox.getItems().setAll(TreeLayoutAlgorithmType.values());
+        algorithmComboBox.getItems().setAll(AlgorithmFamily.values());
         algorithmComboBox.getSelectionModel().selectFirst();
     }
 
@@ -91,46 +88,43 @@ public class AlgorithmSelectorView extends BorderPane {
         selectedFileNameLabel.setStyle("-fx-text-fill: #000000; -fx-font-weight: bold;");
 
         processAlgorithmButton.setDisable(false);
-        viewMaximumEdgeLengthButton.setDisable(false);
         log.info("Successfully targeted file: " + newlySelectedFile.getAbsolutePath());
     }
 
 
     /// When the button is clicked, it ensures that the [AlgorithmSelectorView#currentlySelectedTextFile] is not null
-    /// and invokes [AlgorithmSelectorView#executeFileProcessingAlgorithm] if the file still exists.
+    /// and dispatches to the parsing/view pipeline matching the selected [AlgorithmFamily].
     private void onProcessAlgorithmButtonClicked() {
-        if (currentlySelectedTextFile != null) {
-            log.info("Initiating submission logic for: " + currentlySelectedTextFile.getName());
-            executeFileProcessingAlgorithm();
+        if (currentlySelectedTextFile == null) return;
+
+        log.info("Initiating submission logic for: " + currentlySelectedTextFile.getName());
+
+        switch (algorithmComboBox.getValue()) {
+            case FLCD -> runFlcdPipeline();
+            case MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
         }
     }
 
-    /// Invokes the [FileParsingService] to process the selected file using the
-    /// FLCD (`FLCDNode`-based) algorithm chosen in [#algorithmComboBox].
-    private void executeFileProcessingAlgorithm() {
-        log.info("Algorithm execution started.");
-
-        var selectedAlgorithmType = algorithmComboBox.getValue();
-        var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+    /// Parses the selected file into an `FLCDNode` tree and transitions to
+    /// [FLCDTreeVisualizationView] using [PlanarGridAlgorithm].
+    private void runFlcdPipeline() {
+        var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new FLCDTreeVisualizationView(map, selectedAlgorithmType.create());
+            var visualizationView = new FLCDTreeVisualizationView(map, new PlanarGridAlgorithm());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
-            log.info("Transitioned to FLCDTreeVisualizationView using " + selectedAlgorithmType + ".");
+            log.info("Transitioned to FLCDTreeVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 
-    /// When clicked, parses the same selected file into a separate
-    /// [com.yashgamerx.flcd.model.MaximumEdgeLengthNode] tree and transitions
-    /// to the read-only [MaximumEdgeLengthVisualizationView]. This is a
-    /// distinct flow from [#executeFileProcessingAlgorithm] — different node
-    /// type, different algorithm, no shared UI controls.
-    private void onViewMaximumEdgeLengthButtonClicked() {
-        if (currentlySelectedTextFile == null) return;
-
-        log.info("Maximum Edge Length view requested for: " + currentlySelectedTextFile.getName());
+    /// Parses the selected file into a `MaximumEdgeLengthNode` tree and
+    /// transitions to [MaximumEdgeLengthVisualizationView] using
+    /// [MaximumEdgeLengthAlgorithm]. A distinct pipeline from
+    /// [#runFlcdPipeline] — different node type, different algorithm,
+    /// different (button-free) view.
+    private void runMaximumEdgeLengthPipeline() {
         var parsingResult = maximumEdgeLengthFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
