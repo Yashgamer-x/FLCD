@@ -1,7 +1,6 @@
 package com.yashgamerx.flcd.service.file;
 
-import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.model.Node;
+import com.yashgamerx.flcd.model.FLCDNode;
 import lombok.extern.java.Log;
 
 import java.io.File;
@@ -21,10 +20,10 @@ public class TreeFileParsingService implements FileParsingService {
     private static final String NAMED_FORMAT_HEADER = "Named";
 
     @Override
-    public Optional<Map<Integer, AbstractNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
+    public Optional<Map<Integer, FLCDNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
         // PRINCIPLE: Local State Isolation
         // We keep the map local so the service remains stateless and thread-safe.
-        var nodeLookupMap = new HashMap<Integer, AbstractNode>();
+        var nodeLookupMap = new HashMap<Integer, FLCDNode>();
 
         try (Stream<String> lineStream = Files.lines(textFileToProcess.toPath())) {
             List<String> lines = lineStream.filter(line -> !line.isBlank()).toList();
@@ -35,7 +34,7 @@ public class TreeFileParsingService implements FileParsingService {
             }
 
             // Logic: A file that opens with the "Named" header uses the
-            // <id> <parentId> <name> format (root is just <id> <name>).
+            // <id> <parentId> <n> format (root is just <id> <n>).
             // Otherwise fall back to the legacy adjacency-list format.
             boolean isNamedFormat = lines.getFirst().trim().equalsIgnoreCase(NAMED_FORMAT_HEADER);
             List<String> dataLines = isNamedFormat ? lines.subList(1, lines.size()) : lines;
@@ -64,7 +63,7 @@ public class TreeFileParsingService implements FileParsingService {
     }
 
     /// Legacy adjacency-list format: `<parentId> <childId1> <childId2> ...`
-    private void parseLineIntoTree(String line, HashMap<Integer, AbstractNode> nodeMap) {
+    private void parseLineIntoTree(String line, HashMap<Integer, FLCDNode> nodeMap) {
         var parts = line.trim().split("\\s+");
         if (parts.length < 1) return;
 
@@ -72,11 +71,11 @@ public class TreeFileParsingService implements FileParsingService {
             // PRINCIPLE: Identity Map Pattern
             // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = nodeMap.computeIfAbsent(parentId, Node::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, FLCDNode::new);
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, Node::new);
+                var childNode = nodeMap.computeIfAbsent(childId, FLCDNode::new);
                 parentNode.addChild(childNode);
             }
         } catch (NumberFormatException e) {
@@ -88,7 +87,7 @@ public class TreeFileParsingService implements FileParsingService {
     /// `<id> <parentId> <name...>`. Names may contain spaces (e.g. file paths
     /// like `C:\Program Files (x86)`), so once the numeric prefix is consumed
     /// the remainder of the line is taken verbatim as the name.
-    private void parseNamedLineIntoTree(String line, HashMap<Integer, AbstractNode> nodeMap) {
+    private void parseNamedLineIntoTree(String line, HashMap<Integer, FLCDNode> nodeMap) {
         var trimmedLine = line.trim();
         var firstSpaceIndex = trimmedLine.indexOf(' ');
 
@@ -105,7 +104,7 @@ public class TreeFileParsingService implements FileParsingService {
 
             // PRINCIPLE: Identity Map Pattern
             // Ensuring every ID points to exactly one object instance.
-            var node = nodeMap.computeIfAbsent(identifier, Node::new);
+            var node = nodeMap.computeIfAbsent(identifier, FLCDNode::new);
 
             if (identifier == 1) {
                 // Root line: "<id> <name...>" — no parent to attach.
@@ -124,7 +123,7 @@ public class TreeFileParsingService implements FileParsingService {
             var name = remainder.substring(secondSpaceIndex + 1).trim();
 
             var parentId = Integer.parseInt(parentIdToken);
-            var parentNode = nodeMap.computeIfAbsent(parentId, Node::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, FLCDNode::new);
 
             node.setName(name);
             parentNode.addChild(node);

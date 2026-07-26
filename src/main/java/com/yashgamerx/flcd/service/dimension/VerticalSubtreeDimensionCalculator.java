@@ -1,22 +1,29 @@
 package com.yashgamerx.flcd.service.dimension;
 
-import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
+import com.yashgamerx.flcd.model.FLCDNode;
+import com.yashgamerx.flcd.model.NodeStatus;
 
-import static com.yashgamerx.flcd.model.AbstractNode.*;
+import static com.yashgamerx.flcd.model.FLCDNode.*;
 
+/// Used by `SECOND_CHILD`/`WIDTH_CHILD`-role nodes to size themselves
+/// against their `HEIGHT_CHILD` children, stacked vertically.
+///
+/// A manually-rootified child measures differently (its own width stands
+/// in for what would normally be its height contribution, since a
+/// rootified subtree spreads outward rather than downward) — this is a
+/// genuine behavioral difference from the original code, preserved here
+/// via a status check rather than a role/type check.
 public class VerticalSubtreeDimensionCalculator implements NodeDimensionCalculator {
     @Override
-    public void calculate(AbstractNode node) {
+    public void calculate(FLCDNode node) {
         double maxChildWidth = 0;
         double rawChildrenHeight = 0;
 
-        for (AbstractNode child : node.getChildren()) {
-            maxChildWidth = maxWidth(child, maxChildWidth);
-            rawChildrenHeight = accumulateHeight(child, rawChildrenHeight);
+        for (FLCDNode child : node.getChildren()) {
+            maxChildWidth = Math.max(maxChildWidth, rootifiedAwareWidth(child));
+            rawChildrenHeight += rootifiedAwareHeight(child);
         }
 
-        // Apply the spacer adjustments using your exact formulas
         int totalChildren = node.getChildren().size();
         double totalChildrenHeight = rawChildrenHeight + (HEIGHT_SPACER * (totalChildren - 1));
 
@@ -26,24 +33,15 @@ public class VerticalSubtreeDimensionCalculator implements NodeDimensionCalculat
         // Children Height + Height Spacing + Parent Height (10.0)
         var subtreeHeight = totalChildrenHeight + HEIGHT_SPACER + NODE_DIAMETER;
 
-        // Sets the dimensions
         node.setSubtreeWidth(subtreeWidth);
         node.setSubtreeHeight(subtreeHeight);
     }
 
-    private double maxWidth(AbstractNode node, double maxWidth) {
-        if (node.getPrecomputable() instanceof RootifiedPreCompute) {
-            return Math.max(maxWidth, node.getSubtreeHeight());
-        }
-
-        return Math.max(maxWidth, node.getSubtreeWidth());
+    private double rootifiedAwareWidth(FLCDNode child) {
+        return child.getStatus() == NodeStatus.ROOTIFIED ? child.getSubtreeHeight() : child.getSubtreeWidth();
     }
 
-    private double accumulateHeight(AbstractNode node, double accumulatedHeight) {
-        if (node.getPrecomputable() instanceof RootifiedPreCompute) {
-            return accumulatedHeight + node.getSubtreeWidth();
-        }
-
-        return accumulatedHeight + node.getSubtreeHeight();
+    private double rootifiedAwareHeight(FLCDNode child) {
+        return child.getStatus() == NodeStatus.ROOTIFIED ? child.getSubtreeWidth() : child.getSubtreeHeight();
     }
 }
