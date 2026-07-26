@@ -25,12 +25,12 @@ public class AlgorithmSelectorView extends BorderPane {
     @FXML private Button selectTextFileButton;
     @FXML private Label selectedFileNameLabel;
     @FXML private Button processAlgorithmButton;
-    private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
-
-    private File currentlySelectedTextFile;
-    private final MaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new MaximumEdgeLengthFileParsingService();
     @FXML
     private ComboBox<AlgorithmFamily> algorithmComboBox;
+
+    private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
+    private final MaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new MaximumEdgeLengthFileParsingService();
+    private File currentlySelectedTextFile;
 
     public AlgorithmSelectorView() {
         loadFXML();
