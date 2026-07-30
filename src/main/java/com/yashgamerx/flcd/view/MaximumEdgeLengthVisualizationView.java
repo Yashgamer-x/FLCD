@@ -9,6 +9,8 @@ import javafx.scene.Cursor;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -66,6 +68,7 @@ public class MaximumEdgeLengthVisualizationView extends BorderPane {
 
         attachMouseGestureListeners();
         attachZoomListeners();
+        attachKeyboardZoomListeners();
 
         Platform.runLater(this::renderTreeStructure);
     }
@@ -236,13 +239,47 @@ public class MaximumEdgeLengthVisualizationView extends BorderPane {
     private void attachZoomListeners() {
         drawingCanvas.setOnScroll(e -> {
             double zoomFactor = (e.getDeltaY() > 0) ? (1 + ZOOM_INTENSITY) : (1 - ZOOM_INTENSITY);
-            double newScale = drawingCanvas.getScaleX() * zoomFactor;
-            if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
-                drawingCanvas.setScaleX(newScale);
-                drawingCanvas.setScaleY(newScale);
-            }
+            zoomBy(zoomFactor);
             e.consume();
         });
+    }
+
+    /// Multiplies the current scale by `zoomFactor`, clamped to
+    /// `[MIN_SCALE, MAX_SCALE]`. Shared by scroll-wheel zoom and the
+    /// Ctrl+=/Ctrl+- keyboard shortcuts so both paths behave identically.
+    private void zoomBy(double zoomFactor) {
+        double newScale = drawingCanvas.getScaleX() * zoomFactor;
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            drawingCanvas.setScaleX(newScale);
+            drawingCanvas.setScaleY(newScale);
+        }
+    }
+
+    /// Keyboard-driven zoom for anyone who'd rather not rely on a mouse
+    /// wheel/trackpad: Ctrl+= (or Ctrl+Plus) zooms in, Ctrl+- (or
+    /// Ctrl+Minus) zooms out. Attached at the Scene level (once the view
+    /// is actually part of a Scene) rather than on drawingCanvas directly,
+    /// since key events need a focus owner and this view isn't guaranteed
+    /// to hold focus itself.
+    private void attachKeyboardZoomListeners() {
+        this.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.addEventFilter(KeyEvent.KEY_PRESSED, this::handleKeyboardZoom);
+            }
+        });
+    }
+
+    private void handleKeyboardZoom(KeyEvent e) {
+        if (!e.isControlDown()) return;
+
+        var code = e.getCode();
+        if (code == KeyCode.EQUALS || code == KeyCode.ADD || code == KeyCode.PLUS) {
+            zoomBy(1 + ZOOM_INTENSITY);
+            e.consume();
+        } else if (code == KeyCode.MINUS || code == KeyCode.SUBTRACT) {
+            zoomBy(1 - ZOOM_INTENSITY);
+            e.consume();
+        }
     }
 
     private void attachMouseGestureListeners() {
