@@ -3,6 +3,7 @@ package com.yashgamerx.flcd.view;
 import com.yashgamerx.flcd.service.algorithm.AlgorithmFamily;
 import com.yashgamerx.flcd.service.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
+import com.yashgamerx.flcd.service.algorithm.TopMaximumEdgeLengthPlanarAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.MaximumEdgeLengthFileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
@@ -128,7 +129,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new FLCDMaximumEdgeLengthVisualizationView(map, new PlanarGridAlgorithm());
+            var visualizationView = new FLCDMaximumEdgeLengthVisualizationView(map, new TopMaximumEdgeLengthPlanarAlgorithm());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
