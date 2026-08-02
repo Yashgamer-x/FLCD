@@ -11,7 +11,7 @@ import java.util.Map;
 /// is FLCD's contract over [com.yashgamerx.flcd.model.FLCDNode], and this
 /// algorithm operates on a different node type with a different
 /// placement strategy entirely.
-public class MaximumEdgeLengthAlgorithm {
+public class CircleMaximumEdgeLengthAlgorithm {
 
     private static final double RADIUS_STEP = 500.0;
     private static final double TWO_PI = 2.0 * Math.PI;

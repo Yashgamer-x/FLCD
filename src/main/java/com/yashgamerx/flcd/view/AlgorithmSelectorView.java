@@ -1,7 +1,7 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.service.algorithm.AlgorithmFamily;
-import com.yashgamerx.flcd.service.algorithm.MaximumEdgeLengthAlgorithm;
+import com.yashgamerx.flcd.service.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.MaximumEdgeLengthFileParsingService;
@@ -101,7 +101,7 @@ public class AlgorithmSelectorView extends BorderPane {
 
         switch (algorithmComboBox.getValue()) {
             case FLCD -> runFlcdPipeline();
-            case MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
+            case CIRCLE_MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
         }
     }
 
@@ -120,15 +120,15 @@ public class AlgorithmSelectorView extends BorderPane {
     }
 
     /// Parses the selected file into a `MaximumEdgeLengthNode` tree and
-    /// transitions to [MaximumEdgeLengthVisualizationView] using
-    /// [MaximumEdgeLengthAlgorithm]. A distinct pipeline from
+    /// transitions to [CircleMaximumEdgeLengthVisualizationView] using
+    /// [CircleMaximumEdgeLengthAlgorithm]. A distinct pipeline from
     /// [#runFlcdPipeline] — different node type, different algorithm,
     /// different (button-free) view.
     private void runMaximumEdgeLengthPipeline() {
         var parsingResult = maximumEdgeLengthFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new MaximumEdgeLengthVisualizationView(map, new MaximumEdgeLengthAlgorithm());
+            var visualizationView = new CircleMaximumEdgeLengthVisualizationView(map, new CircleMaximumEdgeLengthAlgorithm());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);

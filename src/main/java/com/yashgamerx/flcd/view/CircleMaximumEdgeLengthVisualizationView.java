@@ -1,7 +1,7 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.MaximumEdgeLengthNode;
-import com.yashgamerx.flcd.service.algorithm.MaximumEdgeLengthAlgorithm;
+import com.yashgamerx.flcd.service.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -33,10 +33,10 @@ import static com.yashgamerx.flcd.model.MaximumEdgeLengthNode.NODE_RADIUS;
 /// stripped-down mode of the FLCD view, since it renders a different node
 /// type produced by a different algorithm.
 @Log
-public class MaximumEdgeLengthVisualizationView extends BorderPane {
+public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
     private final Map<Integer, MaximumEdgeLengthNode> nodeMap;
-    private final MaximumEdgeLengthAlgorithm layoutAlgorithm;
+    private final CircleMaximumEdgeLengthAlgorithm layoutAlgorithm;
 
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
@@ -50,8 +50,8 @@ public class MaximumEdgeLengthVisualizationView extends BorderPane {
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
 
-    public MaximumEdgeLengthVisualizationView(final Map<Integer, MaximumEdgeLengthNode> nodeMap,
-                                              final MaximumEdgeLengthAlgorithm algorithm) {
+    public CircleMaximumEdgeLengthVisualizationView(final Map<Integer, MaximumEdgeLengthNode> nodeMap,
+                                                    final CircleMaximumEdgeLengthAlgorithm algorithm) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();

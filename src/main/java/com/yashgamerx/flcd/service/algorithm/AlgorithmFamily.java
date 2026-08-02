@@ -11,7 +11,7 @@ package com.yashgamerx.flcd.service.algorithm;
 /// abstraction that would only fit one side comfortably.
 public enum AlgorithmFamily {
     FLCD("FLCD (Planar Grid)"),
-    MAXIMUM_EDGE_LENGTH("Maximum Edge Length");
+    CIRCLE_MAXIMUM_EDGE_LENGTH("Circle Maximum Edge Length");
 
     private final String displayName;
 
