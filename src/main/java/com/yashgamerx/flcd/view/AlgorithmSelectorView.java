@@ -101,6 +101,7 @@ public class AlgorithmSelectorView extends BorderPane {
 
         switch (algorithmComboBox.getValue()) {
             case FLCD -> runFlcdPipeline();
+            case FLCD_MAXIMUM_EDGE_LENGTH -> runFlcdMaximumEdgeLengthPipeline();
             case CIRCLE_MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
         }
     }
@@ -116,6 +117,22 @@ public class AlgorithmSelectorView extends BorderPane {
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
             log.info("Transitioned to FLCDTreeVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
+    }
+
+    /// Parses the selected file into an `FLCDNode` tree using the exact same
+    /// [TreeFileParsingService] and [PlanarGridAlgorithm] as [#runFlcdPipeline],
+    /// but transitions to [FLCDMaximumEdgeLengthVisualizationView] instead —
+    /// a variant that never permits rootification or readjustment.
+    private void runFlcdMaximumEdgeLengthPipeline() {
+        var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(map -> {
+            var visualizationView = new FLCDMaximumEdgeLengthVisualizationView(map, new PlanarGridAlgorithm());
+
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to FLCDMaximumEdgeLengthVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 
