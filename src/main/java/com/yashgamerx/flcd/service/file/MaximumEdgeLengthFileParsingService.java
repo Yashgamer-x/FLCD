@@ -1,6 +1,6 @@
 package com.yashgamerx.flcd.service.file;
 
-import com.yashgamerx.flcd.model.FLCDNode;
+import com.yashgamerx.flcd.model.MaximumEdgeLengthNode;
 import lombok.extern.java.Log;
 
 import java.io.File;
@@ -11,19 +11,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+/// Parses the same source text formats as [TreeFileParsingService], but
+/// builds a [MaximumEdgeLengthNode] tree instead of an [com.yashgamerx.flcd.model.FLCDNode]
+/// one — kept as its own class rather than a generic parser so each node
+/// type's construction stays simple and type-specific.
 @Log
-public class TreeFileParsingService implements FileParsingService {
+public class MaximumEdgeLengthFileParsingService {
 
-    /// Marker header line that switches parsing into "Named" mode.
-    /// In this mode the root line is `<id> <name...>` and every other
-    /// line is `<id> <parentId> <name...>`.
     private static final String NAMED_FORMAT_HEADER = "Named";
 
-    @Override
-    public Optional<Map<Integer, FLCDNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
-        // PRINCIPLE: Local State Isolation
-        // We keep the map local so the service remains stateless and thread-safe.
-        var nodeLookupMap = new HashMap<Integer, FLCDNode>();
+    public Optional<Map<Integer, MaximumEdgeLengthNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
+        var nodeLookupMap = new HashMap<Integer, MaximumEdgeLengthNode>();
 
         try (Stream<String> lineStream = Files.lines(textFileToProcess.toPath())) {
             List<String> lines = lineStream.filter(line -> !line.isBlank()).toList();
@@ -33,9 +31,6 @@ public class TreeFileParsingService implements FileParsingService {
                 return Optional.of(nodeLookupMap);
             }
 
-            // Logic: A file that opens with the "Named" header uses the
-            // <id> <parentId> <n> format (root is just <id> <n>).
-            // Otherwise fall back to the legacy adjacency-list format.
             boolean isNamedFormat = lines.getFirst().trim().equalsIgnoreCase(NAMED_FORMAT_HEADER);
             List<String> dataLines = isNamedFormat ? lines.subList(1, lines.size()) : lines;
 
@@ -47,10 +42,7 @@ public class TreeFileParsingService implements FileParsingService {
                 }
             });
 
-            // Logic: Your requirement stated 1 is always the root.
-            var rootNode = nodeLookupMap.get(1);
-
-            if (rootNode == null) {
+            if (nodeLookupMap.get(1) == null) {
                 log.warning("Parsing completed, but Root (ID 1) was not found in the dataset.");
             }
 
@@ -62,20 +54,17 @@ public class TreeFileParsingService implements FileParsingService {
         }
     }
 
-    /// Legacy adjacency-list format: `<parentId> <childId1> <childId2> ...`
-    private void parseLineIntoTree(String line, HashMap<Integer, FLCDNode> nodeMap) {
+    private void parseLineIntoTree(String line, HashMap<Integer, MaximumEdgeLengthNode> nodeMap) {
         var parts = line.trim().split("\\s+");
         if (parts.length < 1) return;
 
         try {
-            // PRINCIPLE: Identity Map Pattern
-            // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = nodeMap.computeIfAbsent(parentId, FLCDNode::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, MaximumEdgeLengthNode::new);
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, FLCDNode::new);
+                var childNode = nodeMap.computeIfAbsent(childId, MaximumEdgeLengthNode::new);
                 parentNode.addChild(childNode);
             }
         } catch (NumberFormatException e) {
@@ -83,11 +72,7 @@ public class TreeFileParsingService implements FileParsingService {
         }
     }
 
-    /// "Named" format: root line is `<id> <name...>`, every other line is
-    /// `<id> <parentId> <name...>`. Names may contain spaces (e.g. file paths
-    /// like `C:\Program Files (x86)`), so once the numeric prefix is consumed
-    /// the remainder of the line is taken verbatim as the name.
-    private void parseNamedLineIntoTree(String line, HashMap<Integer, FLCDNode> nodeMap) {
+    private void parseNamedLineIntoTree(String line, HashMap<Integer, MaximumEdgeLengthNode> nodeMap) {
         var trimmedLine = line.trim();
         var firstSpaceIndex = trimmedLine.indexOf(' ');
 
@@ -101,18 +86,13 @@ public class TreeFileParsingService implements FileParsingService {
 
         try {
             var identifier = Integer.parseInt(idToken);
-
-            // PRINCIPLE: Identity Map Pattern
-            // Ensuring every ID points to exactly one object instance.
-            var node = nodeMap.computeIfAbsent(identifier, FLCDNode::new);
+            var node = nodeMap.computeIfAbsent(identifier, MaximumEdgeLengthNode::new);
 
             if (identifier == 1) {
-                // Root line: "<id> <name...>" — no parent to attach.
                 node.setName(remainder);
                 return;
             }
 
-            // Child line: "<id> <parentId> <name...>"
             var secondSpaceIndex = remainder.indexOf(' ');
             if (secondSpaceIndex < 0) {
                 log.warning("Skipping malformed named line (missing parent id or name): " + line);
@@ -123,7 +103,7 @@ public class TreeFileParsingService implements FileParsingService {
             var name = remainder.substring(secondSpaceIndex + 1).trim();
 
             var parentId = Integer.parseInt(parentIdToken);
-            var parentNode = nodeMap.computeIfAbsent(parentId, FLCDNode::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, MaximumEdgeLengthNode::new);
 
             node.setName(name);
             parentNode.addChild(node);

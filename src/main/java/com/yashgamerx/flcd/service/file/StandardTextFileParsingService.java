@@ -1,6 +1,6 @@
 package com.yashgamerx.flcd.service.file;
 
-import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.FLCDNode;
 import lombok.extern.java.Log;
 
 import java.io.File;
@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 public class StandardTextFileParsingService implements FileParsingService {
 
     @Override
-    public Optional<Map<Integer, AbstractNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
+    public Optional<Map<Integer, FLCDNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
         log.info("Executing standard parsing logic...");
         var path = textFileToProcess.toPath();
 

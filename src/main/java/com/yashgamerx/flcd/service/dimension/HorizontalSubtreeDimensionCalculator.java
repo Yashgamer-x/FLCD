@@ -1,22 +1,27 @@
 package com.yashgamerx.flcd.service.dimension;
 
-import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
+import com.yashgamerx.flcd.model.FLCDNode;
 
-import static com.yashgamerx.flcd.model.AbstractNode.*;
+import static com.yashgamerx.flcd.model.FLCDNode.*;
 
+/// Used by `HEIGHT_CHILD`-role nodes to size themselves against their
+/// `WIDTH_CHILD` children, laid out side-by-side.
+///
+/// Note: the rootified/non-rootified formulas here are identical (this
+/// mirrors the original `HorizontalSubtreeDimensionCalculator`, whose
+/// rootified branch was dead code — both branches computed the same
+/// value), so no status check is needed.
 public class HorizontalSubtreeDimensionCalculator implements NodeDimensionCalculator {
     @Override
-    public void calculate(AbstractNode node) {
+    public void calculate(FLCDNode node) {
         double maxChildHeight = 0;
         double rawChildrenWidth = 0;
 
-        for (AbstractNode child : node.getChildren()) {
-            maxChildHeight = maxHeight(child, maxChildHeight);
-            rawChildrenWidth = accumulateWidth(child, rawChildrenWidth);
+        for (FLCDNode child : node.getChildren()) {
+            maxChildHeight = Math.max(maxChildHeight, child.getSubtreeHeight());
+            rawChildrenWidth += child.getSubtreeWidth();
         }
 
-        // Apply the spacer adjustments using your exact formulas
         int totalChildren = node.getChildren().size();
         double totalChildrenWidth = rawChildrenWidth + (WIDTH_SPACER * (totalChildren - 1));
 
@@ -26,24 +31,7 @@ public class HorizontalSubtreeDimensionCalculator implements NodeDimensionCalcul
         // Maximum Child Height + Height Spacing + Parent Height (10.0)
         var subtreeHeight = Math.max(NODE_DIAMETER, maxChildHeight) + HEIGHT_SPACER + NODE_DIAMETER;
 
-        // Sets the dimensions
         node.setSubtreeWidth(subtreeWidth);
         node.setSubtreeHeight(subtreeHeight);
-    }
-
-    private double maxHeight(AbstractNode node, double maxHeight) {
-        if (node.getPrecomputable() instanceof RootifiedPreCompute) {
-            return Math.max(maxHeight, node.getSubtreeHeight());
-        }
-
-        return Math.max(maxHeight, node.getSubtreeHeight());
-    }
-
-    private double accumulateWidth(AbstractNode node, double accumulatedWidth) {
-        if (node.getPrecomputable() instanceof RootifiedPreCompute) {
-            return accumulatedWidth + node.getSubtreeWidth();
-        }
-
-        return accumulatedWidth + node.getSubtreeWidth();
     }
 }

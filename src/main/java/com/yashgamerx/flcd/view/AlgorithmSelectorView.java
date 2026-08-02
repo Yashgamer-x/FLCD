@@ -1,11 +1,15 @@
 package com.yashgamerx.flcd.view;
 
+import com.yashgamerx.flcd.service.algorithm.AlgorithmFamily;
+import com.yashgamerx.flcd.service.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
+import com.yashgamerx.flcd.service.file.MaximumEdgeLengthFileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
@@ -21,10 +25,12 @@ public class AlgorithmSelectorView extends BorderPane {
     @FXML private Button selectTextFileButton;
     @FXML private Label selectedFileNameLabel;
     @FXML private Button processAlgorithmButton;
+    @FXML
+    private ComboBox<AlgorithmFamily> algorithmComboBox;
 
+    private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
+    private final MaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new MaximumEdgeLengthFileParsingService();
     private File currentlySelectedTextFile;
-
-    private final FileParsingService textFileParsingService = new TreeFileParsingService();
 
     public AlgorithmSelectorView() {
         loadFXML();
@@ -49,6 +55,9 @@ public class AlgorithmSelectorView extends BorderPane {
     private void initialize(){
         selectTextFileButton.setOnAction(_->onSelectFileButtonClicked());
         processAlgorithmButton.setOnAction(_->onProcessAlgorithmButtonClicked());
+
+        algorithmComboBox.getItems().setAll(AlgorithmFamily.values());
+        algorithmComboBox.getSelectionModel().selectFirst();
     }
 
     /// When the [selectTextFileButton] is clicked, this method will be invoked.
@@ -84,30 +93,46 @@ public class AlgorithmSelectorView extends BorderPane {
 
 
     /// When the button is clicked, it ensures that the [AlgorithmSelectorView#currentlySelectedTextFile] is not null
-    /// and invokes [AlgorithmSelectorView#executeFileProcessingAlgorithm] if the file still exists.
+    /// and dispatches to the parsing/view pipeline matching the selected [AlgorithmFamily].
     private void onProcessAlgorithmButtonClicked() {
-        if (currentlySelectedTextFile != null) {
-            log.info("Initiating submission logic for: " + currentlySelectedTextFile.getName());
-            executeFileProcessingAlgorithm();
+        if (currentlySelectedTextFile == null) return;
+
+        log.info("Initiating submission logic for: " + currentlySelectedTextFile.getName());
+
+        switch (algorithmComboBox.getValue()) {
+            case FLCD -> runFlcdPipeline();
+            case CIRCLE_MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
         }
     }
 
-    /// Invokes the [FileParsingService] to process the selected file.
-    private void executeFileProcessingAlgorithm() {
-        log.info("Algorithm execution started.");
-
-        // Get the parsed result
-        var parsingResult = textFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+    /// Parses the selected file into an `FLCDNode` tree and transitions to
+    /// [FLCDTreeVisualizationView] using [PlanarGridAlgorithm].
+    private void runFlcdPipeline() {
+        var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            // Create the new View
-            var visualizationView = new TreeVisualizationView(map, new PlanarGridAlgorithm());
+            var visualizationView = new FLCDTreeVisualizationView(map, new PlanarGridAlgorithm());
 
-            // Swap the Root of the Scene
-            // Since this class is currently the root of the Scene, we replace it.
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
-            log.info("Transitioned to TreeVisualizationView.");
+            log.info("Transitioned to FLCDTreeVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
+    }
+
+    /// Parses the selected file into a `MaximumEdgeLengthNode` tree and
+    /// transitions to [CircleMaximumEdgeLengthVisualizationView] using
+    /// [CircleMaximumEdgeLengthAlgorithm]. A distinct pipeline from
+    /// [#runFlcdPipeline] — different node type, different algorithm,
+    /// different (button-free) view.
+    private void runMaximumEdgeLengthPipeline() {
+        var parsingResult = maximumEdgeLengthFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(map -> {
+            var visualizationView = new CircleMaximumEdgeLengthVisualizationView(map, new CircleMaximumEdgeLengthAlgorithm());
+
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to MaximumEdgeLengthVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }

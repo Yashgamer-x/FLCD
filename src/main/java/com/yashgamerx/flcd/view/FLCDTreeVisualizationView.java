@@ -1,18 +1,17 @@
 package com.yashgamerx.flcd.view;
 
-import com.yashgamerx.flcd.model.AbstractNode;
+import com.yashgamerx.flcd.model.FLCDNode;
+import com.yashgamerx.flcd.model.NodeRole;
 import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
-import com.yashgamerx.flcd.service.compute.RootifiedCompute;
-import com.yashgamerx.flcd.service.precompute.FirstChildPreCompute;
-import com.yashgamerx.flcd.service.precompute.Precomputable;
-import com.yashgamerx.flcd.service.precompute.RootPreCompute;
-import com.yashgamerx.flcd.service.precompute.RootifiedPreCompute;
+import com.yashgamerx.flcd.service.engine.FLCDNodeEngine;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -23,10 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.yashgamerx.flcd.model.AbstractNode.NODE_DIAMETER;
+import static com.yashgamerx.flcd.model.FLCDNode.NODE_DIAMETER;
 
 @Log
-public class TreeVisualizationView extends BorderPane {
+public class FLCDTreeVisualizationView extends BorderPane {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Mode enum — tracks what a node click should do
@@ -35,12 +34,14 @@ public class TreeVisualizationView extends BorderPane {
     /// Current interaction mode — determines what happens when a node is clicked.
     private ActiveMode activeMode = ActiveMode.NONE;
 
-    private final Map<Integer, AbstractNode> abstractNodeMap;
+    /// Matches the diameter of 5.0 established in the preCompute phase.
+    private static final double NODE_RADIUS = FLCDNode.NODE_RADIUS;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
-
-    /// Matches the diameter of 5.0 established in the preCompute phase.
-    private static final double NODE_RADIUS = AbstractNode.NODE_RADIUS;
+    private final Map<Integer, FLCDNode> nodeMap;
+    /// Single behavioral engine shared by all layout/interaction actions —
+    /// replaces the old per-node Precomputable/Computable Strategy objects.
+    private final FLCDNodeEngine engine = new FLCDNodeEngine();
 
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
@@ -72,8 +73,8 @@ public class TreeVisualizationView extends BorderPane {
         // Info panels are intentionally left open — they only close via their ✕ button.
     }
 
-    public TreeVisualizationView(final Map<Integer, AbstractNode> abstractNodeMap, final TreeLayoutAlgorithm algorithm) {
-        this.abstractNodeMap = abstractNodeMap;
+    public FLCDTreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
+        this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
@@ -86,6 +87,7 @@ public class TreeVisualizationView extends BorderPane {
         initializeComponentLayout();
         attachMouseGestureListeners();
         attachZoomListeners();
+        attachKeyboardZoomListeners();
 
         Platform.runLater(this::handlePanelAction);
     }
@@ -111,7 +113,7 @@ public class TreeVisualizationView extends BorderPane {
         }
     }
 
-    private void renderNodeVisuals(AbstractNode node, double x, double y) {
+    private void renderNodeVisuals(FLCDNode node, double x, double y) {
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
         circle.setStrokeWidth(1);
@@ -151,14 +153,14 @@ public class TreeVisualizationView extends BorderPane {
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear(); // Panel references are cleared with the canvas
-        var rootNode = abstractNodeMap.get(1);
+        var rootNode = nodeMap.get(1);
         if (rootNode != null) {
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
             drawCalculatedTree(rootNode);
         }
     }
 
-    private void drawCalculatedTree(AbstractNode node) {
+    private void drawCalculatedTree(FLCDNode node) {
         // Render edges first so they sit visually behind the circles
         for (var child : node.getChildren()) {
             drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
@@ -169,16 +171,16 @@ public class TreeVisualizationView extends BorderPane {
         renderNodeVisuals(node, node.getGridX(), node.getGridY());
     }
 
-    private void handleReadjustOnNode(AbstractNode node) {
+    private void handleReadjustOnNode(FLCDNode node) {
         try {
             if (node.getStatus() == NodeStatus.READJUSTED)
                 throw new IllegalStateException("Node is already readjusted.");
             if (!node.getChildren().isEmpty())
                 throw new IllegalStateException("Node cannot be readjusted because it has children.");
-            if (isNotReadjustable(node.getPrecomputable()))
+            if (isNotReadjustable(node))
                 throw new IllegalStateException("Node cannot be readjusted because it is not readjustable.");
 
-            node.readjust();
+            engine.readjust(node);
 //            clearMode();
             renderTreeStructure();
         } catch (IllegalStateException e) {
@@ -245,10 +247,12 @@ public class TreeVisualizationView extends BorderPane {
         return toolbar;
     }
 
-    private boolean isNotReadjustable(Precomputable precomputable) {
-        return precomputable instanceof RootPreCompute ||
-                precomputable instanceof FirstChildPreCompute ||
-                precomputable instanceof RootifiedPreCompute;
+    /// A node cannot be readjusted if it sits at the ROOT, FIRST_CHILD level,
+    /// or is itself manually rootified.
+    private boolean isNotReadjustable(FLCDNode node) {
+        return node.getRole() == NodeRole.ROOT
+                || node.getRole() == NodeRole.FIRST_CHILD
+                || node.getStatus() == NodeStatus.ROOTIFIED;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -257,7 +261,7 @@ public class TreeVisualizationView extends BorderPane {
 
     /// Builds and positions a floating info panel on the canvas anchored to the
     /// clicked node. Any previously shown panel is removed first.
-    private void showNodeInfoPanel(AbstractNode node, double nodeX, double nodeY) {
+    private void showNodeInfoPanel(FLCDNode node, double nodeX, double nodeY) {
         // If this node's panel is already open, leave it as-is instead of
         // duplicating it — panels only close via their own ✕ button.
         if (openInfoPanels.containsKey(node.getIdentifier())) return;
@@ -323,15 +327,9 @@ public class TreeVisualizationView extends BorderPane {
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
-        // Services — show the simple class name, fall back to "none" if null
-        String precomputeName = node.getPrecomputable() != null
-                ? node.getPrecomputable().getClass().getSimpleName()
-                : "none";
-        String computeName = node.getComputable() != null
-                ? node.getComputable().getClass().getSimpleName()
-                : "none";
-        addInfoRow(grid, row++, "Precomputable", precomputeName);
-        addInfoRow(grid, row++, "Computable", computeName);
+        // Structural state
+        addInfoRow(grid, row++, "Role", node.getRole() != null ? node.getRole().toString() : "none");
+        addInfoRow(grid, row++, "Side", node.getSide().toString());
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
@@ -402,13 +400,47 @@ public class TreeVisualizationView extends BorderPane {
     private void attachZoomListeners() {
         drawingCanvas.setOnScroll(e -> {
             double zoomFactor = (e.getDeltaY() > 0) ? (1 + ZOOM_INTENSITY) : (1 - ZOOM_INTENSITY);
-            double newScale = drawingCanvas.getScaleX() * zoomFactor;
-            if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
-                drawingCanvas.setScaleX(newScale);
-                drawingCanvas.setScaleY(newScale);
-            }
+            zoomBy(zoomFactor);
             e.consume();
         });
+    }
+
+    /// Multiplies the current scale by `zoomFactor`, clamped to
+    /// `[MIN_SCALE, MAX_SCALE]`. Shared by scroll-wheel zoom and the
+    /// Ctrl+=/Ctrl+- keyboard shortcuts so both paths behave identically.
+    private void zoomBy(double zoomFactor) {
+        double newScale = drawingCanvas.getScaleX() * zoomFactor;
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            drawingCanvas.setScaleX(newScale);
+            drawingCanvas.setScaleY(newScale);
+        }
+    }
+
+    /// Keyboard-driven zoom for anyone who'd rather not rely on a mouse
+    /// wheel/trackpad: Ctrl+= (or Ctrl+Plus) zooms in, Ctrl+- (or
+    /// Ctrl+Minus) zooms out. Attached at the Scene level (once the view
+    /// is actually part of a Scene) rather than on drawingCanvas directly,
+    /// since key events need a focus owner and this view isn't guaranteed
+    /// to hold focus itself.
+    private void attachKeyboardZoomListeners() {
+        this.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.addEventFilter(KeyEvent.KEY_PRESSED, this::handleKeyboardZoom);
+            }
+        });
+    }
+
+    private void handleKeyboardZoom(KeyEvent e) {
+        if (!e.isControlDown()) return;
+
+        var code = e.getCode();
+        if (code == KeyCode.EQUALS || code == KeyCode.ADD || code == KeyCode.PLUS) {
+            zoomBy(1 + ZOOM_INTENSITY);
+            e.consume();
+        } else if (code == KeyCode.MINUS || code == KeyCode.SUBTRACT) {
+            zoomBy(1 - ZOOM_INTENSITY);
+            e.consume();
+        }
     }
 
     private void attachMouseGestureListeners() {
@@ -431,12 +463,12 @@ public class TreeVisualizationView extends BorderPane {
     // Toolbar
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void handleRootifyOnNode(AbstractNode node) {
+    private void handleRootifyOnNode(FLCDNode node) {
         try {
             if (node.getChildren().isEmpty())
                 throw new IllegalStateException("Node has no children.");
 
-            rootifyNode(node);
+            engine.rootify(node);
 //            clearMode();
             renderTreeStructure();
         } catch (IllegalStateException e) {
@@ -451,12 +483,6 @@ public class TreeVisualizationView extends BorderPane {
 
     private enum ActiveMode {NONE, READJUST, ROOTIFY}
 
-    private void rootifyNode(AbstractNode node) {
-        node.setStatus(NodeStatus.ROOTIFIED);
-        node.setPrecomputable(new RootifiedPreCompute());
-        node.setComputable(new RootifiedCompute());
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // Calculate Area action
     // ─────────────────────────────────────────────────────────────────────────
@@ -465,7 +491,7 @@ public class TreeVisualizationView extends BorderPane {
     /// accounting for NODE_RADIUS so the box encloses the full node circles
     /// (not just their center points), then displays the resulting area.
     private void handleCalculateArea() {
-        if (abstractNodeMap.isEmpty()) {
+        if (nodeMap.isEmpty()) {
             showErrorAlert("Calculate Area Error", "There are no nodes to measure.");
             return;
         }
@@ -475,9 +501,9 @@ public class TreeVisualizationView extends BorderPane {
         double minY = Double.POSITIVE_INFINITY;
         double maxY = Double.NEGATIVE_INFINITY;
 
-        AbstractNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
+        FLCDNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
 
-        for (var node : abstractNodeMap.values()) {
+        for (var node : nodeMap.values()) {
             double x = node.getGridX();
             double y = node.getGridY();
 
@@ -510,8 +536,8 @@ public class TreeVisualizationView extends BorderPane {
     /// Displays the calculated bounding-box area in a popup dialog, including
     /// which nodes defined each extreme edge.
     private void showAreaResultAlert(double width, double height, double area,
-                                     AbstractNode leftMost, AbstractNode rightMost,
-                                     AbstractNode topMost, AbstractNode bottomMost) {
+                                     FLCDNode leftMost, FLCDNode rightMost,
+                                     FLCDNode topMost, FLCDNode bottomMost) {
         var alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Bounding Area");
         alert.setHeaderText("Tree Bounding Box Area");

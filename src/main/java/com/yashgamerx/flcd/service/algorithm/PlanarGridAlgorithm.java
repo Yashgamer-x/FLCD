@@ -1,37 +1,23 @@
 package com.yashgamerx.flcd.service.algorithm;
 
-import com.yashgamerx.flcd.model.AbstractNode;
-import com.yashgamerx.flcd.service.compute.RootCompute;
-import com.yashgamerx.flcd.service.precompute.RootPreCompute;
+import com.yashgamerx.flcd.model.FLCDNode;
+import com.yashgamerx.flcd.model.NodeRole;
+import com.yashgamerx.flcd.service.engine.FLCDNodeEngine;
 
 public class PlanarGridAlgorithm implements TreeLayoutAlgorithm {
 
+    private final FLCDNodeEngine engine = new FLCDNodeEngine();
+
     @Override
-    public void calculate(AbstractNode root, double originX, double originY) {
+    public void calculate(FLCDNode root, double originX, double originY) {
         if (root == null) return;
 
-        injectRootPrecomputeAndCompute(root);
+        root.setRole(NodeRole.ROOT);
 
-        root.precompute();
+        engine.precompute(root);
         root.setGridX(originX);
         root.setGridY(originY);
 
-        root.compute();
+        engine.compute(root);
     }
-
-    private void injectRootPrecomputeAndCompute(AbstractNode root) {
-        injectPrecompute(root);
-        injectCompute(root);
-    }
-
-    /// Injects [RootPreCompute]
-    private void injectPrecompute(AbstractNode root) {
-        root.setPrecomputable(new RootPreCompute());
-    }
-
-    /// Injects [RootCompute]
-    private void injectCompute(AbstractNode root) {
-        root.setComputable(new RootCompute());
-    }
-
 }
