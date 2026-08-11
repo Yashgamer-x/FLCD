@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.tmel.engine;
 
 import com.yashgamerx.flcd.common.NodeRole;
+import com.yashgamerx.flcd.common.angular.Angle180Calculator;
 import com.yashgamerx.flcd.common.angular.Angle360Calculator;
 import com.yashgamerx.flcd.common.angular.AngularCalculator;
 import com.yashgamerx.flcd.tmel.dimension.TMELHorizontalSubtreeDimensionCalculator;
@@ -30,6 +31,7 @@ import static com.yashgamerx.flcd.tmel.model.TMELNode.*;
 public class TMELPlanarNodeEngine {
 
     private final AngularCalculator angle360Calculator = new Angle360Calculator();
+    private final AngularCalculator angle180Calculator = new Angle180Calculator();
     private final TMELVerticalSubtreeDimensionCalculator verticalDimensionCalculator = new TMELVerticalSubtreeDimensionCalculator();
     private final TMELHorizontalSubtreeDimensionCalculator horizontalDimensionCalculator = new TMELHorizontalSubtreeDimensionCalculator();
 
@@ -116,19 +118,23 @@ public class TMELPlanarNodeEngine {
         firstChild.getChildren()
                 .forEach(secondChild -> {
                     double nodeArea = calculateArea(secondChild);
-
-                    if (metrics.leftAccumulatedArea <= metrics.rightAccumulatedArea) {
-                        secondChild.setSide(TMELSide.LEFT);
-                        metrics.leftAccumulatedArea += nodeArea;
-                        metrics.leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                        metrics.maxLeftHeight = Math.max(metrics.maxLeftHeight, secondChild.getSubtreeHeight());
+                    if (metrics.leftAccumulatedArea < metrics.topRadius &&
+                            metrics.rightAccumulatedArea < metrics.topRadius) {
+                        if (metrics.leftAccumulatedArea <= metrics.rightAccumulatedArea) {
+                            secondChild.setSide(TMELSide.LEFT);
+                            metrics.leftAccumulatedArea += nodeArea;
+                            metrics.leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                            metrics.maxLeftHeight = Math.max(metrics.maxLeftHeight, secondChild.getSubtreeHeight());
+                        } else {
+                            secondChild.setSide(TMELSide.RIGHT);
+                            metrics.rightAccumulatedArea += nodeArea;
+                            metrics.rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                            metrics.maxRightHeight = Math.max(metrics.maxRightHeight, secondChild.getSubtreeHeight());
+                        }
                     } else {
-                        secondChild.setSide(TMELSide.RIGHT);
-                        metrics.rightAccumulatedArea += nodeArea;
-                        metrics.rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                        metrics.maxRightHeight = Math.max(metrics.maxRightHeight, secondChild.getSubtreeHeight());
+                        secondChild.setSide(TMELSide.TOP);
+                        metrics.topAccumulatedChildren++;
                     }
-
                     metrics.maxDepth = Math.max(metrics.maxDepth, secondChild.getDepth());
                 });
 
@@ -371,5 +377,7 @@ public class TMELPlanarNodeEngine {
         double maxLeftHeight;
         double maxRightHeight;
         int maxDepth;
+        double topAccumulatedChildren;
+        double topRadius;
     }
 }
