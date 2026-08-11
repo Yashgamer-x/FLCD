@@ -40,7 +40,7 @@ public class TMELNode {
 
     // Structural/behavioral markers (read by FLCDNodeEngine)
     private NodeRole role;
-    private Side side = Side.NONE;
+    private TMELSide side = TMELSide.NONE;
 
     public TMELNode(int identifier, String name, TMELNode parent) {
         this.identifier = identifier;

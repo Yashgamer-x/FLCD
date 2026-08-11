@@ -5,7 +5,7 @@ package com.yashgamerx.flcd.model;
 /// during `FIRST_CHILD` precompute) on `SECOND_CHILD`-level nodes, then
 /// propagated unchanged down through their `HEIGHT_CHILD`/`WIDTH_CHILD`
 /// descendants during compute.
-public enum Side {
+public enum FLCDSide {
     NONE,
     LEFT,
     RIGHT

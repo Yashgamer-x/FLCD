@@ -41,7 +41,7 @@ public class FLCDNode {
 
     // Structural/behavioral markers (read by FLCDNodeEngine)
     private NodeRole role;
-    private Side side = Side.NONE;
+    private FLCDSide side = FLCDSide.NONE;
     private NodeStatus status;
 
     public FLCDNode(int identifier, String name, FLCDNode parent) {

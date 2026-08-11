@@ -1,9 +1,6 @@
 package com.yashgamerx.flcd.service.engine;
 
-import com.yashgamerx.flcd.model.NodeRole;
-import com.yashgamerx.flcd.model.NodeStatus;
-import com.yashgamerx.flcd.model.Side;
-import com.yashgamerx.flcd.model.TMELNode;
+import com.yashgamerx.flcd.model.*;
 import com.yashgamerx.flcd.service.angular.Angle360Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
 import com.yashgamerx.flcd.service.dimension.TMELHorizontalSubtreeDimensionCalculator;
@@ -19,7 +16,7 @@ import static com.yashgamerx.flcd.model.FLCDNode.*;
 /// This replaces the previous `Precomputable`/`Computable` Strategy
 /// hierarchy and its matching Injector classes (~30 files). A node no
 /// longer carries a per-instance behavioral object for each phase —
-/// instead it carries plain state ([NodeRole], [Side], [NodeStatus]),
+/// instead it carries plain state ([NodeRole], [FLCDSide], [NodeStatus]),
 /// and this engine dispatches on that state. Since `NodeRole` is assigned
 /// once during precompute and read again unchanged during compute, one
 /// role enum serves both phases (there is no separate "compute role").
@@ -65,7 +62,7 @@ public class TMELPlanarNodeEngine {
     private void precomputeRoot(TMELNode root) {
         root.getChildren().forEach(this::assignFirstChildRoleAndPrecompute);
         root.incrementDepth();
-        calculateCircularSubtree(root, angle360Calculator, false);
+        calculateCircularSubtree(root, angle360Calculator);
     }
 
     private void assignFirstChildRoleAndPrecompute(TMELNode firstChild) {
@@ -75,7 +72,7 @@ public class TMELPlanarNodeEngine {
 
     /// Shared by ROOT and ROOTIFIED: children are spread circularly (ROOT)
     /// or semi-circularly (ROOTIFIED, `halfHeight = true`) around the node.
-    private void calculateCircularSubtree(TMELNode node, AngularCalculator angularCalculator, boolean halfHeight) {
+    private void calculateCircularSubtree(TMELNode node, AngularCalculator angularCalculator) {
         var firstChildren = node.getChildren();
         double angularStep = angularCalculator.calculate(firstChildren.size());
         double maxOffset = 0;
@@ -87,7 +84,7 @@ public class TMELPlanarNodeEngine {
         }
 
         node.setSubtreeWidth(maxOffset + maxOffset + NODE_DIAMETER);
-        node.setSubtreeHeight(halfHeight ? maxOffset + NODE_DIAMETER : maxOffset + maxOffset + NODE_DIAMETER);
+        node.setSubtreeHeight(maxOffset + maxOffset + NODE_DIAMETER);
     }
 
     private void precomputeFirstChild(TMELNode firstChild) {
@@ -107,7 +104,7 @@ public class TMELPlanarNodeEngine {
 
     /// Sorts children by descending area, greedily balances them across
     /// the left/right wings by accumulated area, and assigns each its
-    /// [Side] — replacing the old Left/RightSecondChildComputeInjector
+    /// [FLCDSide] — replacing the old Left/RightSecondChildComputeInjector
     /// pair, which did the same assignment via object substitution.
     private void calculateBalancedSubtreeDimensions(TMELNode firstChild) {
         firstChild.getChildren().sort(Comparator.comparingDouble(this::calculateArea).reversed());
@@ -119,12 +116,12 @@ public class TMELPlanarNodeEngine {
                     double nodeArea = calculateArea(secondChild);
 
                     if (metrics.leftAccumulatedArea <= metrics.rightAccumulatedArea) {
-                        secondChild.setSide(Side.LEFT);
+                        secondChild.setSide(TMELSide.LEFT);
                         metrics.leftAccumulatedArea += nodeArea;
                         metrics.leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
                         metrics.maxLeftHeight = Math.max(metrics.maxLeftHeight, secondChild.getSubtreeHeight());
                     } else {
-                        secondChild.setSide(Side.RIGHT);
+                        secondChild.setSide(TMELSide.RIGHT);
                         metrics.rightAccumulatedArea += nodeArea;
                         metrics.rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
                         metrics.maxRightHeight = Math.max(metrics.maxRightHeight, secondChild.getSubtreeHeight());
@@ -252,7 +249,7 @@ public class TMELPlanarNodeEngine {
 
         firstChild.getChildren()
                 .forEach(child -> {
-                    boolean isRight = child.getSide() == Side.RIGHT;
+                    boolean isRight = child.getSide() == TMELSide.RIGHT;
                     double baselineAngle = isRight ? rightAngle : leftAngle;
                     int slot = isRight ? 0 : 1;
                     accumulatedDistances[slot] = projectSecondChildAlongVector(
@@ -278,8 +275,8 @@ public class TMELPlanarNodeEngine {
     private void computeSecondChild(TMELNode secondChild) {
         if (secondChild.getChildren().isEmpty()) return;
 
-        Side side = secondChild.getSide();
-        double turnSign = side == Side.LEFT ? 1.0 : -1.0;
+        TMELSide side = secondChild.getSide();
+        double turnSign = side == TMELSide.LEFT ? 1.0 : -1.0;
         double myAngle = secondChild.getLocalRadianAngle();
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
@@ -302,8 +299,8 @@ public class TMELPlanarNodeEngine {
     private void computeHeightChild(TMELNode heightChild) {
         if (heightChild.getChildren().isEmpty()) return;
 
-        Side side = heightChild.getSide();
-        double turnSign = side == Side.LEFT ? 1.0 : -1.0;
+        TMELSide side = heightChild.getSide();
+        double turnSign = side == TMELSide.LEFT ? 1.0 : -1.0;
         double myAngle = heightChild.getLocalRadianAngle();
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
@@ -335,8 +332,8 @@ public class TMELPlanarNodeEngine {
     private void computeWidthChild(TMELNode widthNode) {
         if (widthNode.getChildren().isEmpty()) return;
 
-        Side side = widthNode.getSide();
-        double turnSign = side == Side.LEFT ? -1.0 : 1.0;
+        TMELSide side = widthNode.getSide();
+        double turnSign = side == TMELSide.LEFT ? -1.0 : 1.0;
         double myAngle = widthNode.getLocalRadianAngle();
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 

@@ -1,9 +1,9 @@
 package com.yashgamerx.flcd.service.engine;
 
 import com.yashgamerx.flcd.model.FLCDNode;
+import com.yashgamerx.flcd.model.FLCDSide;
 import com.yashgamerx.flcd.model.NodeRole;
 import com.yashgamerx.flcd.model.NodeStatus;
-import com.yashgamerx.flcd.model.Side;
 import com.yashgamerx.flcd.service.angular.Angle180Calculator;
 import com.yashgamerx.flcd.service.angular.Angle360Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
@@ -23,7 +23,7 @@ import static com.yashgamerx.flcd.model.FLCDNode.*;
 /// This replaces the previous `Precomputable`/`Computable` Strategy
 /// hierarchy and its matching Injector classes (~30 files). A node no
 /// longer carries a per-instance behavioral object for each phase —
-/// instead it carries plain state ([NodeRole], [Side], [NodeStatus]),
+/// instead it carries plain state ([NodeRole], [FLCDSide], [NodeStatus]),
 /// and this engine dispatches on that state. Since `NodeRole` is assigned
 /// once during precompute and read again unchanged during compute, one
 /// role enum serves both phases (there is no separate "compute role").
@@ -155,7 +155,7 @@ public class FLCDNodeEngine {
 
     /// Sorts children by descending area, greedily balances them across
     /// the left/right wings by accumulated area, and assigns each its
-    /// [Side] — replacing the old Left/RightSecondChildComputeInjector
+    /// [FLCDSide] — replacing the old Left/RightSecondChildComputeInjector
     /// pair, which did the same assignment via object substitution.
     private void calculateBalancedSubtreeDimensions(FLCDNode firstChild) {
         firstChild.getChildren().sort(Comparator.comparingDouble(this::calculateArea).reversed());
@@ -176,12 +176,12 @@ public class FLCDNodeEngine {
                     double nodeArea = calculateArea(secondChild);
 
                     if (metrics[0] <= metrics[1]) {
-                        secondChild.setSide(Side.LEFT);
+                        secondChild.setSide(FLCDSide.LEFT);
                         metrics[0] += nodeArea;
                         metrics[2] += secondChild.getSubtreeWidth() + WIDTH_SPACER;
                         metrics[4] = Math.max(metrics[4], secondChild.getSubtreeHeight());
                     } else {
-                        secondChild.setSide(Side.RIGHT);
+                        secondChild.setSide(FLCDSide.RIGHT);
                         metrics[1] += nodeArea;
                         metrics[3] += secondChild.getSubtreeWidth() + WIDTH_SPACER;
                         metrics[5] = Math.max(metrics[5], secondChild.getSubtreeHeight());
@@ -330,7 +330,7 @@ public class FLCDNodeEngine {
         Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
                 .flatMap(Arrays::stream)
                 .forEach(child -> {
-                    boolean isRight = child.getSide() == Side.RIGHT;
+                    boolean isRight = child.getSide() == FLCDSide.RIGHT;
                     double baselineAngle = isRight ? rightAngle : leftAngle;
                     int slot = isRight ? 0 : 1;
 
@@ -381,8 +381,8 @@ public class FLCDNodeEngine {
     private void computeSecondChild(FLCDNode secondChild) {
         if (secondChild.getChildren().isEmpty()) return;
 
-        Side side = secondChild.getSide();
-        double turnSign = side == Side.LEFT ? 1.0 : -1.0;
+        FLCDSide side = secondChild.getSide();
+        double turnSign = side == FLCDSide.LEFT ? 1.0 : -1.0;
         double myAngle = secondChild.getLocalRadianAngle();
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
@@ -421,8 +421,8 @@ public class FLCDNodeEngine {
     private void computeHeightChild(FLCDNode heightChild) {
         if (heightChild.getChildren().isEmpty()) return;
 
-        Side side = heightChild.getSide();
-        double turnSign = side == Side.LEFT ? 1.0 : -1.0;
+        FLCDSide side = heightChild.getSide();
+        double turnSign = side == FLCDSide.LEFT ? 1.0 : -1.0;
         double myAngle = heightChild.getLocalRadianAngle();
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
@@ -469,8 +469,8 @@ public class FLCDNodeEngine {
     private void computeWidthChild(FLCDNode widthNode) {
         if (widthNode.getChildren().isEmpty()) return;
 
-        Side side = widthNode.getSide();
-        double turnSign = side == Side.LEFT ? -1.0 : 1.0;
+        FLCDSide side = widthNode.getSide();
+        double turnSign = side == FLCDSide.LEFT ? -1.0 : 1.0;
         double myAngle = widthNode.getLocalRadianAngle();
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
@@ -587,7 +587,7 @@ public class FLCDNodeEngine {
         double opposite = Math.hypot(ax - px, ay - py);
 
         double halfAngularStep = angularStep / 2.0;
-        double sign = readjustableNode.getSide() == Side.RIGHT ? -1.0 : 1.0;
+        double sign = readjustableNode.getSide() == FLCDSide.RIGHT ? -1.0 : 1.0;
         double newAngle = firstChild.getLocalRadianAngle() + sign * halfAngularStep;
 
         double radius = opposite / Math.sin(halfAngularStep);
