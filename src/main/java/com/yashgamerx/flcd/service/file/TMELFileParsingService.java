@@ -1,6 +1,6 @@
 package com.yashgamerx.flcd.service.file;
 
-import com.yashgamerx.flcd.model.CircleMaximumEdgeLengthNode;
+import com.yashgamerx.flcd.model.TMELNode;
 import lombok.extern.java.Log;
 
 import java.io.File;
@@ -11,17 +11,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-/// Parses the same source text formats as [TreeFileParsingService], but
-/// builds a [CircleMaximumEdgeLengthNode] tree instead of an [com.yashgamerx.flcd.model.FLCDNode]
-/// one — kept as its own class rather than a generic parser so each node
-/// type's construction stays simple and type-specific.
 @Log
-public class MaximumEdgeLengthFileParsingService {
+public class TMELFileParsingService {
 
+    /// Marker header line that switches parsing into "Named" mode.
+    /// In this mode the root line is `<id> <name...>` and every other
+    /// line is `<id> <parentId> <name...>`.
     private static final String NAMED_FORMAT_HEADER = "Named";
 
-    public Optional<Map<Integer, CircleMaximumEdgeLengthNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
-        var nodeLookupMap = new HashMap<Integer, CircleMaximumEdgeLengthNode>();
+    public Optional<Map<Integer, TMELNode>> readAndParseIdentifiedTextFile(final File textFileToProcess) {
+        // PRINCIPLE: Local State Isolation
+        // We keep the map local so the service remains stateless and thread-safe.
+        var nodeLookupMap = new HashMap<Integer, TMELNode>();
 
         try (Stream<String> lineStream = Files.lines(textFileToProcess.toPath())) {
             List<String> lines = lineStream.filter(line -> !line.isBlank()).toList();
@@ -31,6 +32,9 @@ public class MaximumEdgeLengthFileParsingService {
                 return Optional.of(nodeLookupMap);
             }
 
+            // Logic: A file that opens with the "Named" header uses the
+            // <id> <parentId> <n> format (root is just <id> <n>).
+            // Otherwise fall back to the legacy adjacency-list format.
             boolean isNamedFormat = lines.getFirst().trim().equalsIgnoreCase(NAMED_FORMAT_HEADER);
             List<String> dataLines = isNamedFormat ? lines.subList(1, lines.size()) : lines;
 
@@ -42,7 +46,10 @@ public class MaximumEdgeLengthFileParsingService {
                 }
             });
 
-            if (nodeLookupMap.get(1) == null) {
+            // Logic: Your requirement stated 1 is always the root.
+            var rootNode = nodeLookupMap.get(1);
+
+            if (rootNode == null) {
                 log.warning("Parsing completed, but Root (ID 1) was not found in the dataset.");
             }
 
@@ -54,17 +61,20 @@ public class MaximumEdgeLengthFileParsingService {
         }
     }
 
-    private void parseLineIntoTree(String line, HashMap<Integer, CircleMaximumEdgeLengthNode> nodeMap) {
+    /// Legacy adjacency-list format: `<parentId> <childId1> <childId2> ...`
+    private void parseLineIntoTree(String line, HashMap<Integer, TMELNode> nodeMap) {
         var parts = line.trim().split("\\s+");
         if (parts.length < 1) return;
 
         try {
+            // PRINCIPLE: Identity Map Pattern
+            // Ensuring every ID points to exactly one object instance.
             var parentId = Integer.parseInt(parts[0]);
-            var parentNode = nodeMap.computeIfAbsent(parentId, CircleMaximumEdgeLengthNode::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, TMELNode::new);
 
             for (int i = 1; i < parts.length; i++) {
                 var childId = Integer.parseInt(parts[i]);
-                var childNode = nodeMap.computeIfAbsent(childId, CircleMaximumEdgeLengthNode::new);
+                var childNode = nodeMap.computeIfAbsent(childId, TMELNode::new);
                 parentNode.addChild(childNode);
             }
         } catch (NumberFormatException e) {
@@ -72,7 +82,11 @@ public class MaximumEdgeLengthFileParsingService {
         }
     }
 
-    private void parseNamedLineIntoTree(String line, HashMap<Integer, CircleMaximumEdgeLengthNode> nodeMap) {
+    /// "Named" format: root line is `<id> <name...>`, every other line is
+    /// `<id> <parentId> <name...>`. Names may contain spaces (e.g. file paths
+    /// like `C:\Program Files (x86)`), so once the numeric prefix is consumed
+    /// the remainder of the line is taken verbatim as the name.
+    private void parseNamedLineIntoTree(String line, HashMap<Integer, TMELNode> nodeMap) {
         var trimmedLine = line.trim();
         var firstSpaceIndex = trimmedLine.indexOf(' ');
 
@@ -86,13 +100,18 @@ public class MaximumEdgeLengthFileParsingService {
 
         try {
             var identifier = Integer.parseInt(idToken);
-            var node = nodeMap.computeIfAbsent(identifier, CircleMaximumEdgeLengthNode::new);
+
+            // PRINCIPLE: Identity Map Pattern
+            // Ensuring every ID points to exactly one object instance.
+            var node = nodeMap.computeIfAbsent(identifier, TMELNode::new);
 
             if (identifier == 1) {
+                // Root line: "<id> <name...>" — no parent to attach.
                 node.setName(remainder);
                 return;
             }
 
+            // Child line: "<id> <parentId> <name...>"
             var secondSpaceIndex = remainder.indexOf(' ');
             if (secondSpaceIndex < 0) {
                 log.warning("Skipping malformed named line (missing parent id or name): " + line);
@@ -103,7 +122,7 @@ public class MaximumEdgeLengthFileParsingService {
             var name = remainder.substring(secondSpaceIndex + 1).trim();
 
             var parentId = Integer.parseInt(parentIdToken);
-            var parentNode = nodeMap.computeIfAbsent(parentId, CircleMaximumEdgeLengthNode::new);
+            var parentNode = nodeMap.computeIfAbsent(parentId, TMELNode::new);
 
             node.setName(name);
             parentNode.addChild(node);
@@ -112,3 +131,4 @@ public class MaximumEdgeLengthFileParsingService {
         }
     }
 }
+

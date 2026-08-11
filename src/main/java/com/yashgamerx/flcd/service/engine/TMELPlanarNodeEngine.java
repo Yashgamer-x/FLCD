@@ -1,20 +1,16 @@
 package com.yashgamerx.flcd.service.engine;
 
-import com.yashgamerx.flcd.model.FLCDNode;
 import com.yashgamerx.flcd.model.NodeRole;
 import com.yashgamerx.flcd.model.NodeStatus;
 import com.yashgamerx.flcd.model.Side;
-import com.yashgamerx.flcd.service.angular.Angle180Calculator;
+import com.yashgamerx.flcd.model.TMELNode;
 import com.yashgamerx.flcd.service.angular.Angle360Calculator;
 import com.yashgamerx.flcd.service.angular.AngularCalculator;
-import com.yashgamerx.flcd.service.dimension.HorizontalSubtreeDimensionCalculator;
-import com.yashgamerx.flcd.service.dimension.NodeDimensionCalculator;
-import com.yashgamerx.flcd.service.dimension.VerticalSubtreeDimensionCalculator;
+import com.yashgamerx.flcd.service.dimension.TMELHorizontalSubtreeDimensionCalculator;
+import com.yashgamerx.flcd.service.dimension.TMELVerticalSubtreeDimensionCalculator;
 import lombok.extern.java.Log;
 
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.stream.Stream;
 
 import static com.yashgamerx.flcd.model.FLCDNode.*;
 
@@ -35,20 +31,14 @@ import static com.yashgamerx.flcd.model.FLCDNode.*;
 public class TMELPlanarNodeEngine {
 
     private final AngularCalculator angle360Calculator = new Angle360Calculator();
-    private final AngularCalculator angle180Calculator = new Angle180Calculator();
-    private final NodeDimensionCalculator verticalDimensionCalculator = new VerticalSubtreeDimensionCalculator();
-    private final NodeDimensionCalculator horizontalDimensionCalculator = new HorizontalSubtreeDimensionCalculator();
+    private final TMELVerticalSubtreeDimensionCalculator verticalDimensionCalculator = new TMELVerticalSubtreeDimensionCalculator();
+    private final TMELHorizontalSubtreeDimensionCalculator horizontalDimensionCalculator = new TMELHorizontalSubtreeDimensionCalculator();
 
     // ─────────────────────────────────────────────────────────────────
     // Public entry points
     // ─────────────────────────────────────────────────────────────────
 
-    public void precompute(FLCDNode node) {
-        if (node.getStatus() == NodeStatus.ROOTIFIED) {
-            precomputeRootified(node);
-            return;
-        }
-
+    public void precompute(TMELNode node) {
         switch (node.getRole()) {
             case ROOT -> precomputeRoot(node);
             case FIRST_CHILD -> precomputeFirstChild(node);
@@ -58,12 +48,7 @@ public class TMELPlanarNodeEngine {
         }
     }
 
-    public void compute(FLCDNode node) {
-        if (node.getStatus() == NodeStatus.ROOTIFIED) {
-            computeRootified(node);
-            return;
-        }
-
+    public void compute(TMELNode node) {
         switch (node.getRole()) {
             case ROOT -> computeRoot(node);
             case FIRST_CHILD -> computeFirstChild(node);
@@ -77,26 +62,20 @@ public class TMELPlanarNodeEngine {
     // Precompute phase
     // ─────────────────────────────────────────────────────────────────
 
-    private void precomputeRoot(FLCDNode root) {
+    private void precomputeRoot(TMELNode root) {
         root.getChildren().forEach(this::assignFirstChildRoleAndPrecompute);
         root.incrementDepth();
         calculateCircularSubtree(root, angle360Calculator, false);
     }
 
-    private void precomputeRootified(FLCDNode node) {
-        node.getChildren().forEach(this::assignFirstChildRoleAndPrecompute);
-        node.incrementDepth();
-        calculateCircularSubtree(node, angle180Calculator, true);
-    }
-
-    private void assignFirstChildRoleAndPrecompute(FLCDNode firstChild) {
+    private void assignFirstChildRoleAndPrecompute(TMELNode firstChild) {
         firstChild.setRole(NodeRole.FIRST_CHILD);
         precompute(firstChild);
     }
 
     /// Shared by ROOT and ROOTIFIED: children are spread circularly (ROOT)
     /// or semi-circularly (ROOTIFIED, `halfHeight = true`) around the node.
-    private void calculateCircularSubtree(FLCDNode node, AngularCalculator angularCalculator, boolean halfHeight) {
+    private void calculateCircularSubtree(TMELNode node, AngularCalculator angularCalculator, boolean halfHeight) {
         var firstChildren = node.getChildren();
         double angularStep = angularCalculator.calculate(firstChildren.size());
         double maxOffset = 0;
@@ -111,7 +90,7 @@ public class TMELPlanarNodeEngine {
         node.setSubtreeHeight(halfHeight ? maxOffset + NODE_DIAMETER : maxOffset + maxOffset + NODE_DIAMETER);
     }
 
-    private void precomputeFirstChild(FLCDNode firstChild) {
+    private void precomputeFirstChild(TMELNode firstChild) {
         if (firstChild.getChildren().isEmpty()) {
             initializeLeafDimensions(firstChild);
             return;
@@ -130,17 +109,12 @@ public class TMELPlanarNodeEngine {
     /// the left/right wings by accumulated area, and assigns each its
     /// [Side] — replacing the old Left/RightSecondChildComputeInjector
     /// pair, which did the same assignment via object substitution.
-    private void calculateBalancedSubtreeDimensions(FLCDNode firstChild) {
+    private void calculateBalancedSubtreeDimensions(TMELNode firstChild) {
         firstChild.getChildren().sort(Comparator.comparingDouble(this::calculateArea).reversed());
 
         var metrics = new WingMetrics();
 
-        var readjustedNodes = bucket(firstChild, NodeStatus.READJUSTED, false);
-        var normalNodes = bucket(firstChild, NodeStatus.NORMAL, false);
-        var rootifiedNodes = bucket(firstChild, NodeStatus.ROOTIFIED, false);
-
-        Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
-                .flatMap(Arrays::stream)
+        firstChild.getChildren()
                 .forEach(secondChild -> {
                     double nodeArea = calculateArea(secondChild);
 
@@ -178,7 +152,7 @@ public class TMELPlanarNodeEngine {
         int maxDepth;
     }
 
-    private void precomputeSecondChild(FLCDNode secondChild) {
+    private void precomputeSecondChild(TMELNode secondChild) {
         if (secondChild.getChildren().isEmpty()) {
             initializeLeafDimensions(secondChild);
             return;
@@ -193,7 +167,7 @@ public class TMELPlanarNodeEngine {
         verticalDimensionCalculator.calculate(secondChild);
     }
 
-    private void precomputeHeightChild(FLCDNode heightNode) {
+    private void precomputeHeightChild(TMELNode heightNode) {
         if (heightNode.getChildren().isEmpty()) {
             initializeLeafDimensions(heightNode);
             return;
@@ -208,7 +182,7 @@ public class TMELPlanarNodeEngine {
         horizontalDimensionCalculator.calculate(heightNode);
     }
 
-    private void precomputeWidthChild(FLCDNode widthNode) {
+    private void precomputeWidthChild(TMELNode widthNode) {
         if (widthNode.getChildren().isEmpty()) {
             initializeLeafDimensions(widthNode);
             return;
@@ -223,13 +197,13 @@ public class TMELPlanarNodeEngine {
         verticalDimensionCalculator.calculate(widthNode);
     }
 
-    private void initializeLeafDimensions(FLCDNode node) {
+    private void initializeLeafDimensions(TMELNode node) {
         node.setSubtreeWidth(NODE_DIAMETER);
         node.setSubtreeHeight(NODE_DIAMETER);
         node.setDepth(0);
     }
 
-    private double calculateArea(FLCDNode node) {
+    private double calculateArea(TMELNode node) {
         return node.getSubtreeHeight() * node.getSubtreeWidth();
     }
 
@@ -237,7 +211,7 @@ public class TMELPlanarNodeEngine {
     // Compute phase
     // ─────────────────────────────────────────────────────────────────
 
-    private void computeRoot(FLCDNode rootNode) {
+    private void computeRoot(TMELNode rootNode) {
         if (rootNode.getChildren().isEmpty()) return;
 
         var children = rootNode.getChildren();
@@ -261,34 +235,7 @@ public class TMELPlanarNodeEngine {
         }
     }
 
-    private void computeRootified(FLCDNode rootNode) {
-        if (rootNode.getChildren().isEmpty()) return;
-
-        log.info("Rootified Computation");
-
-        var children = rootNode.getChildren();
-        int totalChildren = children.size();
-        double angularStep = angle180Calculator.calculate(totalChildren);
-        double beginningAngle = rootNode.getLocalRadianAngle() - Math.PI / 2;
-
-        for (int i = 0; i < totalChildren; i++) {
-            var firstChild = children.get(i);
-            double currentAngle = beginningAngle + i * angularStep + (angularStep / 2);
-            double clearanceHeight = firstChild.getSubtreeWidth() / (2.0 * Math.tan(angularStep / 2.0));
-
-            double nodeCenter = firstChild.getStatus() == NodeStatus.ROOTIFIED
-                    ? clearanceHeight
-                    : clearanceHeight + firstChild.getSubtreeHeight() - NODE_DIAMETER;
-
-            firstChild.setLocalRadianAngle(currentAngle);
-            firstChild.setGridX(rootNode.getGridX() + (nodeCenter * Math.cos(currentAngle)));
-            firstChild.setGridY(rootNode.getGridY() - (nodeCenter * Math.sin(currentAngle)));
-
-            compute(firstChild);
-        }
-    }
-
-    private void computeFirstChild(FLCDNode firstChild) {
+    private void computeFirstChild(TMELNode firstChild) {
         if (firstChild.getChildren().isEmpty()) return;
 
         double parentAngle = firstChild.getLocalRadianAngle();
@@ -303,34 +250,17 @@ public class TMELPlanarNodeEngine {
         // [0] accumulatedRightDistance, [1] accumulatedLeftDistance
         double[] accumulatedDistances = {0.0, 0.0};
 
-        var readjustedNodes = bucket(firstChild, NodeStatus.READJUSTED, true);
-        var normalNodes = bucket(firstChild, NodeStatus.NORMAL, false);
-        var rootifiedNodes = bucket(firstChild, NodeStatus.ROOTIFIED, false);
-
-        Stream.of(readjustedNodes, normalNodes, rootifiedNodes)
-                .flatMap(Arrays::stream)
+        firstChild.getChildren()
                 .forEach(child -> {
                     boolean isRight = child.getSide() == Side.RIGHT;
                     double baselineAngle = isRight ? rightAngle : leftAngle;
                     int slot = isRight ? 0 : 1;
-
-                    if (child.getStatus() != NodeStatus.ROOTIFIED) {
-                        accumulatedDistances[slot] = projectSecondChildAlongVector(
-                                child, anchorX, anchorY, baselineAngle, accumulatedDistances[slot]);
-
-                        if (isReadjustable(child)) {
-                            log.info("Readjusted Node: " + child.getIdentifier());
-                            readjustNode(child);
-                        }
-                    } else {
-                        double extra = isRight ? -additionalAngle : additionalAngle;
-                        accumulatedDistances[slot] = projectRootifiedSecondChildAlongVector(
-                                child, anchorX, anchorY, baselineAngle, extra, accumulatedDistances[slot]);
-                    }
+                    accumulatedDistances[slot] = projectSecondChildAlongVector(
+                            child, anchorX, anchorY, baselineAngle, accumulatedDistances[slot]);
                 });
     }
 
-    private double projectSecondChildAlongVector(FLCDNode child, double anchorX, double anchorY,
+    private double projectSecondChildAlongVector(TMELNode child, double anchorX, double anchorY,
                                                  double baselineAngle, double currentDistance) {
         double newDistance = currentDistance + WIDTH_SPACER + child.getSubtreeWidth();
         double centerPoint = newDistance - NODE_RADIUS;
@@ -343,22 +273,9 @@ public class TMELPlanarNodeEngine {
         return newDistance;
     }
 
-    private double projectRootifiedSecondChildAlongVector(FLCDNode child, double anchorX, double anchorY,
-                                                          double baselineAngle, double additionalAngle,
-                                                          double currentDistance) {
-        double centerPoint = currentDistance + WIDTH_SPACER + child.getSubtreeWidth() / 2;
-
-        child.setGridX(anchorX + (centerPoint * Math.cos(baselineAngle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(baselineAngle)));
-        child.setLocalRadianAngle(baselineAngle + additionalAngle);
-
-        compute(child);
-        return centerPoint + child.getSubtreeWidth() / 2;
-    }
-
     /// SECOND_CHILD level: children become HEIGHT_CHILD, spaced using
     /// each child's own subtree HEIGHT.
-    private void computeSecondChild(FLCDNode secondChild) {
+    private void computeSecondChild(TMELNode secondChild) {
         if (secondChild.getChildren().isEmpty()) return;
 
         Side side = secondChild.getSide();
@@ -372,33 +289,17 @@ public class TMELPlanarNodeEngine {
 
         double[] offset = {NODE_RADIUS + HEIGHT_SPACER};
 
-        var rootifiedChildren = bucket(secondChild, NodeStatus.ROOTIFIED, false);
-        var normalChildren = bucket(secondChild, NodeStatus.NORMAL, false);
-        var readjustedNodes = bucket(secondChild, NodeStatus.READJUSTED, false);
-
-        Stream.of(rootifiedChildren, normalChildren, readjustedNodes)
-                .flatMap(Arrays::stream)
+        secondChild.getChildren()
                 .forEach(heightChild -> {
                     heightChild.setRole(NodeRole.HEIGHT_CHILD);
                     heightChild.setSide(side);
-
-                    if (heightChild.getStatus() != NodeStatus.ROOTIFIED) {
-                        offset[0] = projectAlongVector(heightChild, anchorX, anchorY, childAngleTrajectory, offset[0], true);
-                    } else {
-                        double extra = turnSign * (Math.PI / 2.0);
-                        offset[0] = projectRootifiedAlongVector(heightChild, anchorX, anchorY, childAngleTrajectory, extra, offset[0], HEIGHT_SPACER);
-                    }
-
-                    if (isReadjustable(heightChild)) {
-                        log.info("Readjusted Node: " + heightChild.getIdentifier());
-                        readjustNode(heightChild);
-                    }
+                    offset[0] = projectAlongVector(heightChild, anchorX, anchorY, childAngleTrajectory, offset[0], true);
                 });
     }
 
     /// HEIGHT_CHILD level: children become WIDTH_CHILD, spaced using
     /// each child's own subtree WIDTH.
-    private void computeHeightChild(FLCDNode heightChild) {
+    private void computeHeightChild(TMELNode heightChild) {
         if (heightChild.getChildren().isEmpty()) return;
 
         Side side = heightChild.getSide();
@@ -412,26 +313,11 @@ public class TMELPlanarNodeEngine {
 
         double[] offset = {NODE_RADIUS + WIDTH_SPACER};
 
-        var readjustedNodes = bucket(heightChild, NodeStatus.READJUSTED, true);
-        var rootifiedChildren = bucket(heightChild, NodeStatus.ROOTIFIED, false);
-        var normalChildren = bucket(heightChild, NodeStatus.NORMAL, false);
-
-        Stream.of(readjustedNodes, rootifiedChildren, normalChildren)
-                .flatMap(Arrays::stream)
+        heightChild.getChildren()
                 .forEach(widthChild -> {
                     widthChild.setRole(NodeRole.WIDTH_CHILD);
                     widthChild.setSide(side);
-
-                    if (widthChild.getStatus() != NodeStatus.ROOTIFIED) {
-                        offset[0] = projectAlongVector(widthChild, anchorX, anchorY, childAngleTrajectory, offset[0], false);
-                    } else {
-                        double extra = -turnSign * (Math.PI / 2.0);
-                        offset[0] = projectRootifiedAlongVector(widthChild, anchorX, anchorY, childAngleTrajectory, extra, offset[0], WIDTH_SPACER);
-                    }
-
-                    if (isReadjustable(widthChild)) {
-                        readjustNode(widthChild);
-                    }
+                    offset[0] = projectAlongVector(widthChild, anchorX, anchorY, childAngleTrajectory, offset[0], false);
                 });
     }
 
@@ -446,7 +332,7 @@ public class TMELPlanarNodeEngine {
     /// pre-existing inconsistencies rather than intentional asymmetries —
     /// worth a second look, but left as-is here since this pass is a
     /// structural refactor, not an algorithm change.
-    private void computeWidthChild(FLCDNode widthNode) {
+    private void computeWidthChild(TMELNode widthNode) {
         if (widthNode.getChildren().isEmpty()) return;
 
         Side side = widthNode.getSide();
@@ -460,26 +346,12 @@ public class TMELPlanarNodeEngine {
 
         double[] offset = {NODE_RADIUS + HEIGHT_SPACER};
 
-        var rootifiedChildren = bucket(widthNode, NodeStatus.ROOTIFIED, false);
-        var normalChildren = bucket(widthNode, NodeStatus.NORMAL, false);
-        var readjustedNodes = bucket(widthNode, NodeStatus.READJUSTED, false);
-
-        Stream.of(rootifiedChildren, normalChildren, readjustedNodes)
-                .flatMap(Arrays::stream)
+        widthNode.getChildren()
                 .forEach(heightChild -> {
                     heightChild.setRole(NodeRole.HEIGHT_CHILD);
                     heightChild.setSide(side);
 
-                    if (heightChild.getStatus() != NodeStatus.ROOTIFIED) {
-                        offset[0] = projectAlongVector(heightChild, anchorX, anchorY, childAngleTrajectory, offset[0], true);
-                    } else {
-                        double extra = Math.PI / 2.0;
-                        offset[0] = projectRootifiedAlongVector(heightChild, anchorX, anchorY, childAngleTrajectory, extra, offset[0], WIDTH_SPACER);
-                    }
-
-                    if (isReadjustable(heightChild)) {
-                        readjustNode(heightChild);
-                    }
+                    offset[0] = projectAlongVector(heightChild, anchorX, anchorY, childAngleTrajectory, offset[0], true);
                 });
     }
 
@@ -487,7 +359,7 @@ public class TMELPlanarNodeEngine {
     /// WIDTH_CHILD levels. `useHeightDimension` picks which of the
     /// child's own subtree dimensions (and matching spacer) governs
     /// stepping to the next sibling.
-    private double projectAlongVector(FLCDNode child, double anchorX, double anchorY,
+    private double projectAlongVector(TMELNode child, double anchorX, double anchorY,
                                       double angle, double currentOffset, boolean useHeightDimension) {
         double centerPoint = currentOffset + NODE_RADIUS;
 
@@ -500,95 +372,5 @@ public class TMELPlanarNodeEngine {
         double childSpan = useHeightDimension ? child.getSubtreeHeight() : child.getSubtreeWidth();
         double spacer = useHeightDimension ? HEIGHT_SPACER : WIDTH_SPACER;
         return currentOffset + childSpan + spacer;
-    }
-
-    /// Shared rootified projection step for SECOND_CHILD/HEIGHT_CHILD/
-    /// WIDTH_CHILD levels.
-    private double projectRootifiedAlongVector(FLCDNode child, double anchorX, double anchorY, double angle,
-                                               double extraAngle, double currentOffset, double returnSpacer) {
-        double centerPoint = currentOffset + (child.getSubtreeWidth() / 2);
-
-        child.setGridX(anchorX + (centerPoint * Math.cos(angle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(angle)));
-        child.setLocalRadianAngle(angle + extraAngle);
-
-        compute(child);
-        return centerPoint + (child.getSubtreeWidth() / 2) + returnSpacer;
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // Readjust support (shared by FirstChild/SecondChild/HeightChild/
-    // WidthChild compute — all four levels use identical geometry, the
-    // only per-level differences already collapsed into `Side`)
-    // ─────────────────────────────────────────────────────────────────
-
-    private boolean isReadjustable(FLCDNode node) {
-        return node.getChildren().isEmpty() && node.getStatus() == NodeStatus.READJUSTED;
-    }
-
-    private FLCDNode findGoverningFirstChild(FLCDNode node) {
-        var firstChild = node.getParent();
-        while (firstChild.getRole() != NodeRole.FIRST_CHILD) {
-            firstChild = firstChild.getParent();
-        }
-        return firstChild;
-    }
-
-    private void readjustNode(FLCDNode readjustableNode) {
-        double ax = readjustableNode.getGridX();
-        double ay = readjustableNode.getGridY();
-
-        var firstChild = findGoverningFirstChild(readjustableNode);
-        double cx = firstChild.getGridX();
-        double cy = firstChild.getGridY();
-
-        var rootNode = firstChild.getParent();
-        double bx = rootNode.getGridX();
-        double by = rootNode.getGridY();
-
-        int totalChildren = rootNode.getChildren().size();
-        double angularStep = rootNode.getStatus() == NodeStatus.ROOTIFIED
-                ? angle180Calculator.calculate(totalChildren)
-                : angle360Calculator.calculate(totalChildren);
-
-        // Perpendicular distance from A (readjustable node) to line BC (root -> firstChild)
-        double bcx = cx - bx;
-        double bcy = cy - by;
-        double bcLength = Math.hypot(bcx, bcy);
-        double ux = bcx / bcLength;
-        double uy = bcy / bcLength;
-
-        double bax = ax - bx;
-        double bay = ay - by;
-        double projection = bax * ux + bay * uy;
-
-        double px = bx + projection * ux;
-        double py = by + projection * uy;
-        double opposite = Math.hypot(ax - px, ay - py);
-
-        double halfAngularStep = angularStep / 2.0;
-        double sign = readjustableNode.getSide() == Side.RIGHT ? -1.0 : 1.0;
-        double newAngle = firstChild.getLocalRadianAngle() + sign * halfAngularStep;
-
-        double radius = opposite / Math.sin(halfAngularStep);
-        double newAx = bx + radius * Math.cos(newAngle);
-        double newAy = by - radius * Math.sin(newAngle);
-
-        double newNodeRadius = NODE_RADIUS / Math.sin(halfAngularStep);
-        readjustableNode.setGridX(newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle()));
-        readjustableNode.setGridY(newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle()));
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // Shared bucketing helper (replaces EmptyListChecker + the repeated
-    // per-status stream/filter/toArray blocks in every old Compute class)
-    // ─────────────────────────────────────────────────────────────────
-
-    private FLCDNode[] bucket(FLCDNode node, NodeStatus status, boolean sortByDepth) {
-        var stream = node.getChildren().stream().filter(child -> child.getStatus() == status);
-        if (sortByDepth) {
-            stream = stream.sorted(Comparator.comparingInt(FLCDNode::getDepth));
-        }
-        return stream.toArray(FLCDNode[]::new);
     }
 }

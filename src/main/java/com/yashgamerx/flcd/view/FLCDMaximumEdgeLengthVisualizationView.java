@@ -1,7 +1,8 @@
 package com.yashgamerx.flcd.view;
 
 import com.yashgamerx.flcd.model.FLCDNode;
-import com.yashgamerx.flcd.service.algorithm.TreeLayoutAlgorithm;
+import com.yashgamerx.flcd.model.TMELNode;
+import com.yashgamerx.flcd.service.algorithm.TopMaximumEdgeLengthPlanarAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -41,8 +42,8 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
     private static final double MAX_SCALE = 5.0;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
-    private final Map<Integer, FLCDNode> nodeMap;
-    private final TreeLayoutAlgorithm layoutAlgorithm;
+    private final Map<Integer, TMELNode> nodeMap;
+    private final TopMaximumEdgeLengthPlanarAlgorithm layoutAlgorithm;
     /// Tracks all currently visible node info panels, keyed by node identifier,
     /// so any number of them can stay open at once. A panel is only ever
     /// removed when its own ✕ button is clicked, or when the tree is redrawn.
@@ -50,7 +51,7 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
-    public FLCDMaximumEdgeLengthVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
+    public FLCDMaximumEdgeLengthVisualizationView(final Map<Integer, TMELNode> nodeMap, final TopMaximumEdgeLengthPlanarAlgorithm algorithm) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
         this.drawingCanvas = new Pane();
@@ -77,7 +78,7 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
         this.setCenter(scrollPaneContainer);
     }
 
-    private void renderNodeVisuals(FLCDNode node, double x, double y) {
+    private void renderNodeVisuals(TMELNode node, double x, double y) {
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
         circle.setStrokeWidth(1);
@@ -120,7 +121,7 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
         }
     }
 
-    private void drawCalculatedTree(FLCDNode node) {
+    private void drawCalculatedTree(TMELNode node) {
         // Render edges first so they sit visually behind the circles
         for (var child : node.getChildren()) {
             drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
@@ -173,7 +174,7 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
 
     /// Builds and positions a floating info panel on the canvas anchored to the
     /// clicked node. Any previously shown panel is removed first.
-    private void showNodeInfoPanel(FLCDNode node, double nodeX, double nodeY) {
+    private void showNodeInfoPanel(TMELNode node, double nodeX, double nodeY) {
         // If this node's panel is already open, leave it as-is instead of
         // duplicating it — panels only close via their own ✕ button.
         if (openInfoPanels.containsKey(node.getIdentifier())) return;
@@ -245,7 +246,6 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
-        addInfoRow(grid, row++, "Status", node.getStatus().toString());
         addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
 
         // ── Assemble ─────────────────────────────────────────────────────────
@@ -389,7 +389,7 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
         double minY = Double.POSITIVE_INFINITY;
         double maxY = Double.NEGATIVE_INFINITY;
 
-        FLCDNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
+        TMELNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
 
         for (var node : nodeMap.values()) {
             double x = node.getGridX();
@@ -424,8 +424,8 @@ public class FLCDMaximumEdgeLengthVisualizationView extends BorderPane {
     /// Displays the calculated bounding-box area in a popup dialog, including
     /// which nodes defined each extreme edge.
     private void showAreaResultAlert(double width, double height, double area,
-                                     FLCDNode leftMost, FLCDNode rightMost,
-                                     FLCDNode topMost, FLCDNode bottomMost) {
+                                     TMELNode leftMost, TMELNode rightMost,
+                                     TMELNode topMost, TMELNode bottomMost) {
         var alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Bounding Area");
         alert.setHeaderText("Tree Bounding Box Area");

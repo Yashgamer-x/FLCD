@@ -1,11 +1,11 @@
 package com.yashgamerx.flcd.service.algorithm;
 
-import com.yashgamerx.flcd.model.MaximumEdgeLengthNode;
+import com.yashgamerx.flcd.model.CircleMaximumEdgeLengthNode;
 
 import java.util.HashMap;
 import java.util.Map;
 
-/// Standalone layout algorithm for [MaximumEdgeLengthNode] trees.
+/// Standalone layout algorithm for [CircleMaximumEdgeLengthNode] trees.
 ///
 /// Intentionally does not implement [TreeLayoutAlgorithm] — that interface
 /// is FLCD's contract over [com.yashgamerx.flcd.model.FLCDNode], and this
@@ -47,7 +47,7 @@ public class CircleMaximumEdgeLengthAlgorithm {
     /// from overlapping — a plain per-depth radius increment doesn't
     /// account for how narrow the angle gets in a heavily branching
     /// subtree.
-    public void calculate(MaximumEdgeLengthNode root, double originX, double originY) {
+    public void calculate(CircleMaximumEdgeLengthNode root, double originX, double originY) {
         if (root == null) return;
 
         root.setDepth(0);
@@ -66,7 +66,7 @@ public class CircleMaximumEdgeLengthAlgorithm {
     /// placement pass, but only to record — for every depth — the
     /// smallest step angle any node's children get squeezed into
     /// anywhere in the tree at that depth.
-    private void collectMinStepAngles(MaximumEdgeLengthNode node, double startAngle, double endAngle,
+    private void collectMinStepAngles(CircleMaximumEdgeLengthNode node, double startAngle, double endAngle,
                                       int depth, Map<Integer, Double> minStepAngleByDepth) {
         var children = node.getChildren();
         if (children.isEmpty()) return;
@@ -119,7 +119,7 @@ public class CircleMaximumEdgeLengthAlgorithm {
     /// the shared circle for `node.getDepth() + 1` (from `radiusByDepth`),
     /// then recurses so that child's children continue subdividing *that*
     /// step the same way.
-    private void placeChildrenInArc(MaximumEdgeLengthNode node, double startAngle, double endAngle,
+    private void placeChildrenInArc(CircleMaximumEdgeLengthNode node, double startAngle, double endAngle,
                                     double originX, double originY,
                                     Map<Integer, Double> radiusByDepth) {
         var children = node.getChildren();

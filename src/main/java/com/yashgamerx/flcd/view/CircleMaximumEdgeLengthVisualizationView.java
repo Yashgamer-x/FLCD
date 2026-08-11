@@ -1,6 +1,6 @@
 package com.yashgamerx.flcd.view;
 
-import com.yashgamerx.flcd.model.MaximumEdgeLengthNode;
+import com.yashgamerx.flcd.model.CircleMaximumEdgeLengthNode;
 import com.yashgamerx.flcd.service.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -21,10 +21,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.yashgamerx.flcd.model.MaximumEdgeLengthNode.NODE_DIAMETER;
-import static com.yashgamerx.flcd.model.MaximumEdgeLengthNode.NODE_RADIUS;
+import static com.yashgamerx.flcd.model.CircleMaximumEdgeLengthNode.NODE_DIAMETER;
+import static com.yashgamerx.flcd.model.CircleMaximumEdgeLengthNode.NODE_RADIUS;
 
-/// Read-only visualization for [MaximumEdgeLengthNode] trees.
+/// Read-only visualization for [CircleMaximumEdgeLengthNode] trees.
 ///
 /// Unlike [FLCDTreeVisualizationView], there is no toolbar and no
 /// interaction modes — no Rootify, Readjust, or Calculate Area. This view
@@ -35,7 +35,7 @@ import static com.yashgamerx.flcd.model.MaximumEdgeLengthNode.NODE_RADIUS;
 @Log
 public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
-    private final Map<Integer, MaximumEdgeLengthNode> nodeMap;
+    private final Map<Integer, CircleMaximumEdgeLengthNode> nodeMap;
     private final CircleMaximumEdgeLengthAlgorithm layoutAlgorithm;
 
     private final Pane drawingCanvas;
@@ -50,7 +50,7 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
 
-    public CircleMaximumEdgeLengthVisualizationView(final Map<Integer, MaximumEdgeLengthNode> nodeMap,
+    public CircleMaximumEdgeLengthVisualizationView(final Map<Integer, CircleMaximumEdgeLengthNode> nodeMap,
                                                     final CircleMaximumEdgeLengthAlgorithm algorithm) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
@@ -96,7 +96,7 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         scrollPaneContainer.setVvalue(0.5);
     }
 
-    private void drawCalculatedTree(MaximumEdgeLengthNode node) {
+    private void drawCalculatedTree(CircleMaximumEdgeLengthNode node) {
         for (var child : node.getChildren()) {
             drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
             drawCalculatedTree(child);
@@ -111,7 +111,7 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         drawingCanvas.getChildren().addFirst(line);
     }
 
-    private void renderNodeVisuals(MaximumEdgeLengthNode node, double x, double y) {
+    private void renderNodeVisuals(CircleMaximumEdgeLengthNode node, double x, double y) {
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
         circle.setStrokeWidth(1);
@@ -138,7 +138,7 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     // Node info panel
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void showNodeInfoPanel(MaximumEdgeLengthNode node, double nodeX, double nodeY) {
+    private void showNodeInfoPanel(CircleMaximumEdgeLengthNode node, double nodeX, double nodeY) {
         if (openInfoPanels.containsKey(node.getIdentifier())) return;
 
         var titleLabel = new Label("Node #" + node.getIdentifier());

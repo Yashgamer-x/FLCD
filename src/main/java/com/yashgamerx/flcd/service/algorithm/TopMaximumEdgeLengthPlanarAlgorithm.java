@@ -1,14 +1,13 @@
 package com.yashgamerx.flcd.service.algorithm;
 
-import com.yashgamerx.flcd.model.FLCDNode;
 import com.yashgamerx.flcd.model.NodeRole;
+import com.yashgamerx.flcd.model.TMELNode;
 import com.yashgamerx.flcd.service.engine.TMELPlanarNodeEngine;
 
-public class TopMaximumEdgeLengthPlanarAlgorithm implements TreeLayoutAlgorithm {
+public class TopMaximumEdgeLengthPlanarAlgorithm {
     private final TMELPlanarNodeEngine engine = new TMELPlanarNodeEngine();
 
-    @Override
-    public void calculate(FLCDNode root, double originX, double originY) {
+    public void calculate(TMELNode root, double originX, double originY) {
         if (root == null) return;
 
         root.setRole(NodeRole.ROOT);
@@ -16,7 +15,6 @@ public class TopMaximumEdgeLengthPlanarAlgorithm implements TreeLayoutAlgorithm 
         engine.precompute(root);
         root.setGridX(originX);
         root.setGridY(originY);
-
         engine.compute(root);
     }
 }

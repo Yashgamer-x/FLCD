@@ -17,30 +17,30 @@ import java.util.List;
 /// needs.
 @Getter
 @Setter
-public class MaximumEdgeLengthNode {
+public class CircleMaximumEdgeLengthNode {
     public static final double NODE_DIAMETER = 10.0;
     public static final double NODE_RADIUS = NODE_DIAMETER / 2.0;
 
     private final int identifier;
     private String name;
-    private List<MaximumEdgeLengthNode> children = new ArrayList<>();
-    private MaximumEdgeLengthNode parent;
+    private List<CircleMaximumEdgeLengthNode> children = new ArrayList<>();
+    private CircleMaximumEdgeLengthNode parent;
 
     private double gridX;
     private double gridY;
     private int depth;
 
-    public MaximumEdgeLengthNode(int identifier, String name, MaximumEdgeLengthNode parent) {
+    public CircleMaximumEdgeLengthNode(int identifier, String name, CircleMaximumEdgeLengthNode parent) {
         this.identifier = identifier;
         this.name = name;
         this.parent = parent;
     }
 
-    public MaximumEdgeLengthNode(int identifier) {
+    public CircleMaximumEdgeLengthNode(int identifier) {
         this(identifier, "", null);
     }
 
-    public void addChild(MaximumEdgeLengthNode child) {
+    public void addChild(CircleMaximumEdgeLengthNode child) {
         this.children.add(child);
         child.setParent(this);
     }

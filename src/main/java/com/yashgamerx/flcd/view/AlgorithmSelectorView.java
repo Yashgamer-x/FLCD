@@ -6,6 +6,7 @@ import com.yashgamerx.flcd.service.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.service.algorithm.TopMaximumEdgeLengthPlanarAlgorithm;
 import com.yashgamerx.flcd.service.file.FileParsingService;
 import com.yashgamerx.flcd.service.file.MaximumEdgeLengthFileParsingService;
+import com.yashgamerx.flcd.service.file.TMELFileParsingService;
 import com.yashgamerx.flcd.service.file.TreeFileParsingService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -30,6 +31,7 @@ public class AlgorithmSelectorView extends BorderPane {
     private ComboBox<AlgorithmFamily> algorithmComboBox;
 
     private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
+    private final TMELFileParsingService tmelFileParsingService = new TMELFileParsingService();
     private final MaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new MaximumEdgeLengthFileParsingService();
     private File currentlySelectedTextFile;
 
@@ -126,7 +128,7 @@ public class AlgorithmSelectorView extends BorderPane {
     /// but transitions to [FLCDMaximumEdgeLengthVisualizationView] instead —
     /// a variant that never permits rootification or readjustment.
     private void runFlcdMaximumEdgeLengthPipeline() {
-        var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+        var parsingResult = tmelFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
             var visualizationView = new FLCDMaximumEdgeLengthVisualizationView(map, new TopMaximumEdgeLengthPlanarAlgorithm());
