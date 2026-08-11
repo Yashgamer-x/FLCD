@@ -73,33 +73,6 @@ public class TMELPlanarNodeEngine {
         }
     }
 
-    /// Marks a node as manually rootified. Its structural `role` is left
-    /// untouched — dispatch always checks `status` first, so the role
-    /// underneath is simply ignored while the node stays rootified.
-    public void rootify(FLCDNode node) {
-        node.setStatus(NodeStatus.ROOTIFIED);
-    }
-
-    /// Walks a readjustable leaf's ancestry upward, marking each node
-    /// READJUSTED until (but not including) its governing FIRST_CHILD.
-    public void readjust(FLCDNode node) {
-        var parent = node.getParent();
-        if (parent == null) throw new IllegalStateException("Parent cannot be null.");
-
-        if (node.getRole() == NodeRole.FIRST_CHILD) return;
-
-        if (node.getRole() == NodeRole.HEIGHT_CHILD) {
-            boolean siblingAlreadyReadjusted = parent.getChildren().stream()
-                    .anyMatch(sibling -> sibling.getStatus() == NodeStatus.READJUSTED && sibling != node);
-            if (siblingAlreadyReadjusted) {
-                throw new IllegalStateException("A READJUSTED child node already exists.");
-            }
-        }
-
-        readjust(parent);
-        node.setStatus(NodeStatus.READJUSTED);
-    }
-
     // ─────────────────────────────────────────────────────────────────
     // Precompute phase
     // ─────────────────────────────────────────────────────────────────
@@ -160,11 +133,7 @@ public class TMELPlanarNodeEngine {
     private void calculateBalancedSubtreeDimensions(FLCDNode firstChild) {
         firstChild.getChildren().sort(Comparator.comparingDouble(this::calculateArea).reversed());
 
-        // [0] leftAccumulatedArea, [1] rightAccumulatedArea
-        // [2] leftWidth,           [3] rightWidth
-        // [4] maxLeftHeight,       [5] maxRightHeight
-        // [6] maxDepth
-        double[] metrics = new double[7];
+        var metrics = new WingMetrics();
 
         var readjustedNodes = bucket(firstChild, NodeStatus.READJUSTED, false);
         var normalNodes = bucket(firstChild, NodeStatus.NORMAL, false);
@@ -175,27 +144,38 @@ public class TMELPlanarNodeEngine {
                 .forEach(secondChild -> {
                     double nodeArea = calculateArea(secondChild);
 
-                    if (metrics[0] <= metrics[1]) {
+                    if (metrics.leftAccumulatedArea <= metrics.rightAccumulatedArea) {
                         secondChild.setSide(Side.LEFT);
-                        metrics[0] += nodeArea;
-                        metrics[2] += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                        metrics[4] = Math.max(metrics[4], secondChild.getSubtreeHeight());
+                        metrics.leftAccumulatedArea += nodeArea;
+                        metrics.leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                        metrics.maxLeftHeight = Math.max(metrics.maxLeftHeight, secondChild.getSubtreeHeight());
                     } else {
                         secondChild.setSide(Side.RIGHT);
-                        metrics[1] += nodeArea;
-                        metrics[3] += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                        metrics[5] = Math.max(metrics[5], secondChild.getSubtreeHeight());
+                        metrics.rightAccumulatedArea += nodeArea;
+                        metrics.rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                        metrics.maxRightHeight = Math.max(metrics.maxRightHeight, secondChild.getSubtreeHeight());
                     }
 
-                    metrics[6] = Math.max(metrics[6], secondChild.getDepth());
+                    metrics.maxDepth = Math.max(metrics.maxDepth, secondChild.getDepth());
                 });
 
-        double maxSideWidth = Math.max(metrics[2], metrics[3]);
+        double maxSideWidth = Math.max(metrics.leftWidth, metrics.rightWidth);
         double totalWidth = (maxSideWidth * 2) + NODE_DIAMETER;
 
         firstChild.setSubtreeWidth(Math.max(NODE_DIAMETER, totalWidth));
-        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(metrics[4], metrics[5]));
-        firstChild.setDepth((int) (metrics[6] + 1));
+        firstChild.setSubtreeHeight(NODE_DIAMETER + HEIGHT_SPACER + Math.max(metrics.maxLeftHeight, metrics.maxRightHeight));
+        firstChild.setDepth(metrics.maxDepth + 1);
+    }
+
+    /// Mutable per-wing accumulator for [#calculateBalancedSubtreeDimensions].
+    private static final class WingMetrics {
+        double leftAccumulatedArea;
+        double rightAccumulatedArea;
+        double leftWidth;
+        double rightWidth;
+        double maxLeftHeight;
+        double maxRightHeight;
+        int maxDepth;
     }
 
     private void precomputeSecondChild(FLCDNode secondChild) {
