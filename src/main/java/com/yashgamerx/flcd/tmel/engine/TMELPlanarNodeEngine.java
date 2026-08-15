@@ -11,6 +11,9 @@ import com.yashgamerx.flcd.tmel.model.TMELSide;
 import lombok.extern.java.Log;
 
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.yashgamerx.flcd.tmel.model.TMELNode.*;
 
@@ -106,6 +109,20 @@ public class TMELPlanarNodeEngine {
         calculateBalancedSubtreeDimensions(firstChild);
     }
 
+    private double calculateTopRadius(double width, int children) {
+        //  Why children+1 ??
+        // We assume that this calculation is happening in an assumption that another node has a potential to be
+        // on the top side.
+        var stepAngle = angle180Calculator.calculate(children + 1);
+        return width / (2.0 * Math.tan(stepAngle / 2.0));
+    }
+
+    /// ![Fully Occupied Width Calculation](calculate_fully_occupied_width.png)
+    private double calculateActualOccupiedWidth(double width, double height, double angle) {
+        double extraWidth = height / Math.tan(angle);
+        return width + extraWidth;
+    }
+
     /// Sorts children by descending area, greedily balances them across
     /// the left/right wings by accumulated area, and assigns each its
     /// [TMELSide] — replacing the old Left/RightSecondChildComputeInjector
@@ -113,27 +130,41 @@ public class TMELPlanarNodeEngine {
     private void calculateBalancedSubtreeDimensions(TMELNode firstChild) {
         firstChild.getChildren().sort(Comparator.comparingDouble(this::calculateArea).reversed());
 
+        var childrenCount = firstChild.getChildren().size();
+        var stepAngle = angle360Calculator.calculate(childrenCount);
+
         var metrics = new WingMetrics();
+
 
         firstChild.getChildren()
                 .forEach(secondChild -> {
                     double nodeArea = calculateArea(secondChild);
-                    if (metrics.leftAccumulatedArea < metrics.topRadius &&
-                            metrics.rightAccumulatedArea < metrics.topRadius) {
-                        if (metrics.leftAccumulatedArea <= metrics.rightAccumulatedArea) {
-                            secondChild.setSide(TMELSide.LEFT);
-                            metrics.leftAccumulatedArea += nodeArea;
-                            metrics.leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                            metrics.maxLeftHeight = Math.max(metrics.maxLeftHeight, secondChild.getSubtreeHeight());
-                        } else {
-                            secondChild.setSide(TMELSide.RIGHT);
-                            metrics.rightAccumulatedArea += nodeArea;
-                            metrics.rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
-                            metrics.maxRightHeight = Math.max(metrics.maxRightHeight, secondChild.getSubtreeHeight());
-                        }
+
+                    double topMaximumWidth = Math.max(metrics.topMaximumWidth, secondChild.getSubtreeWidth());
+                    double calculatedTopRadius = calculateTopRadius(topMaximumWidth, metrics.topAccumulatedChildren);
+                    double topRadius = Math.max(metrics.topMaximumRadius, calculatedTopRadius);
+
+                    double leftOccupiedWidth = calculateActualOccupiedWidth(metrics.leftWidth, metrics.maxLeftHeight, stepAngle);
+                    double rightOccupiedWidth = calculateActualOccupiedWidth(metrics.rightWidth, metrics.maxRightHeight, stepAngle);
+
+                    boolean leftFits = leftOccupiedWidth <= topRadius;
+                    boolean rightFits = rightOccupiedWidth <= topRadius;
+
+                    if (leftFits && (!rightFits || leftOccupiedWidth <= rightOccupiedWidth)) {
+                        secondChild.setSide(TMELSide.LEFT);
+                        metrics.leftAccumulatedArea += nodeArea;
+                        metrics.leftWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                        metrics.maxLeftHeight = Math.max(metrics.maxLeftHeight, secondChild.getSubtreeHeight());
+                    } else if (rightFits) {
+                        secondChild.setSide(TMELSide.RIGHT);
+                        metrics.rightAccumulatedArea += nodeArea;
+                        metrics.rightWidth += secondChild.getSubtreeWidth() + WIDTH_SPACER;
+                        metrics.maxRightHeight = Math.max(metrics.maxRightHeight, secondChild.getSubtreeHeight());
                     } else {
                         secondChild.setSide(TMELSide.TOP);
                         metrics.topAccumulatedChildren++;
+                        metrics.topMaximumWidth = Math.max(metrics.topMaximumWidth, topMaximumWidth);
+                        metrics.topMaximumRadius = Math.max(metrics.topMaximumRadius, topRadius);
                     }
                     metrics.maxDepth = Math.max(metrics.maxDepth, secondChild.getDepth());
                 });
@@ -235,7 +266,6 @@ public class TMELPlanarNodeEngine {
         double parentAngle = firstChild.getLocalRadianAngle();
         double rightAngle = parentAngle - (Math.PI / 2.0);
         double leftAngle = parentAngle + (Math.PI / 2.0);
-        double additionalAngle = Math.PI / 2.0;
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
         double anchorX = firstChild.getGridX() - (forwardStepLength * Math.cos(parentAngle));
@@ -244,14 +274,48 @@ public class TMELPlanarNodeEngine {
         // [0] accumulatedRightDistance, [1] accumulatedLeftDistance
         double[] accumulatedDistances = {0.0, 0.0};
 
-        firstChild.getChildren()
-                .forEach(child -> {
-                    boolean isRight = child.getSide() == TMELSide.RIGHT;
-                    double baselineAngle = isRight ? rightAngle : leftAngle;
-                    int slot = isRight ? 0 : 1;
-                    accumulatedDistances[slot] = projectSecondChildAlongVector(
-                            child, anchorX, anchorY, baselineAngle, accumulatedDistances[slot]);
-                });
+        var secondChildren = firstChild.getChildren();
+
+        Map<TMELSide, List<TMELNode>> childrenBySide =
+                secondChildren.stream()
+                        .collect(Collectors.groupingBy(TMELNode::getSide));
+
+        List<TMELNode> left = childrenBySide.getOrDefault(TMELSide.LEFT, List.of());
+        List<TMELNode> right = childrenBySide.getOrDefault(TMELSide.RIGHT, List.of());
+        List<TMELNode> top = childrenBySide.getOrDefault(TMELSide.TOP, List.of());
+        List<TMELNode> none = childrenBySide.getOrDefault(TMELSide.NONE, List.of());
+
+        if (!none.isEmpty()) {
+            throw new IllegalStateException("None side should not be present");
+        }
+
+        right.forEach(child -> {
+            final int slot = 0;
+            accumulatedDistances[slot] = projectSecondChildAlongVector(
+                    child, anchorX, anchorY, rightAngle, accumulatedDistances[slot]);
+        });
+
+        left.forEach(child -> {
+            final int slot = 1;
+            accumulatedDistances[slot] = projectSecondChildAlongVector(
+                    child, anchorX, anchorY, leftAngle, accumulatedDistances[slot]);
+        });
+
+        var root = firstChild.getParent();
+        var stepAngle = angle360Calculator.calculate(root.getChildren().size());
+        var currentAngle = stepAngle / 2;
+        top.forEach(child -> {
+            System.out.println("Top side is not supported for id: " + child.getIdentifier());
+
+            projectSecondTopChildAlongVector(child, firstChild.getGridX(), firstChild.getGridY(), currentAngle, top.size());
+        });
+    }
+
+    private void projectSecondTopChildAlongVector(TMELNode child, double anchorX, double anchorY,
+                                                  double currentAngle, int size) {
+        double radius = calculateTopRadius(child.getSubtreeWidth(), size);
+        double centerPoint = radius - NODE_RADIUS;
+        // TODO:
     }
 
     private double projectSecondChildAlongVector(TMELNode child, double anchorX, double anchorY,
@@ -377,7 +441,8 @@ public class TMELPlanarNodeEngine {
         double maxLeftHeight;
         double maxRightHeight;
         int maxDepth;
-        double topAccumulatedChildren;
-        double topRadius;
+        int topAccumulatedChildren;
+        double topMaximumWidth;
+        double topMaximumRadius;
     }
 }
