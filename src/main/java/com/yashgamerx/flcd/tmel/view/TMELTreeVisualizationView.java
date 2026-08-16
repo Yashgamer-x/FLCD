@@ -15,14 +15,16 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import lombok.extern.java.Log;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.yashgamerx.flcd.tmel.model.TMELNode.NODE_DIAMETER;
 
 /// Runs the exact same `TMELNode` / `TopMaximumEdgeLengthPlanarAlgorithm` pipeline as
-/// [FLCDTreeVisualizationView], but deliberately strips out the Rootify
+/// [com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView], but deliberately strips out the Rootify
 /// and Readjust toolbar actions and their node-click dispatch — this
 /// variant of the algorithm family never allows a node to be rootified
 /// or readjusted. Node clicks always just open the info panel.
@@ -47,6 +49,16 @@ public class TMELTreeVisualizationView extends BorderPane {
     /// so any number of them can stay open at once. A panel is only ever
     /// removed when its own ✕ button is clicked, or when the tree is redrawn.
     private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    /// Circle references keyed by node identifier, so edge-length selection
+    /// can highlight/reset a node's circle without re-scanning the canvas.
+    private final Map<Integer, Circle> nodeCircles = new HashMap<>();
+    /// Nodes picked so far for the "Calculate Edge Length" click-to-select flow.
+    /// Holds 0, 1 (waiting on second pick), or transiently 2 nodes before the
+    /// result is shown and the selection is reset.
+    private final List<TMELNode> edgeLengthSelection = new ArrayList<>();
+    private boolean edgeLengthSelectionMode = false;
+    private Button btnCalculateEdgeLength;
+    private Label edgeLengthHintLabel;
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
@@ -95,13 +107,18 @@ public class TMELTreeVisualizationView extends BorderPane {
         text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
         text.setMouseTransparent(true);
 
-        // No Rootify/Readjust modes exist in this view — a click always
-        // just opens the node info panel.
+        // Normal clicks open the info panel; while edge-length selection mode
+        // is active, clicks instead pick nodes for the edge-length measurement.
         circle.setOnMouseClicked(e -> {
-            showNodeInfoPanel(node, x, y);
+            if (edgeLengthSelectionMode) {
+                handleNodeSelectedForEdgeLength(node, circle);
+            } else {
+                showNodeInfoPanel(node, x, y);
+            }
             e.consume();
         });
 
+        nodeCircles.put(node.getIdentifier(), circle);
         drawingCanvas.getChildren().addAll(circle, text);
     }
 
@@ -113,6 +130,8 @@ public class TMELTreeVisualizationView extends BorderPane {
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear(); // Panel references are cleared with the canvas
+        nodeCircles.clear();
+        resetEdgeLengthSelection();
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
@@ -161,7 +180,13 @@ public class TMELTreeVisualizationView extends BorderPane {
         var btnCalculateArea = new Button("Calculate Area");
         btnCalculateArea.setOnAction(_ -> handleCalculateArea());
 
-        var toolbar = new HBox(15, btnAdd, btnCalculateArea);
+        btnCalculateEdgeLength = new Button("Calculate Edge Length");
+        btnCalculateEdgeLength.setOnAction(_ -> handleCalculateEdgeLength());
+
+        edgeLengthHintLabel = new Label();
+        edgeLengthHintLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 10px; -fx-font-style: italic;");
+
+        var toolbar = new HBox(15, btnAdd, btnCalculateArea, btnCalculateEdgeLength, edgeLengthHintLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -452,6 +477,113 @@ public class TMELTreeVisualizationView extends BorderPane {
         textArea.setWrapText(true);
         textArea.setPrefWidth(360);
         textArea.setPrefHeight(220);
+        textArea.setStyle("-fx-font-family: monospace;");
+
+        alert.getDialogPane().setContent(textArea);
+        alert.showAndWait();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Calculate Edge Length action
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Arms/disarms click-to-select mode for measuring the distance between
+    /// two nodes. While armed, node clicks are intercepted by
+    /// [#handleNodeSelectedForEdgeLength] instead of opening the info panel
+    /// (see [#renderNodeVisuals]). Clicking the toolbar button again while
+    /// already armed cancels the pending selection.
+    private void handleCalculateEdgeLength() {
+        if (edgeLengthSelectionMode) {
+            resetEdgeLengthSelection();
+            return;
+        }
+
+        if (nodeMap.size() < 2) {
+            showErrorAlert("Calculate Edge Length Error", "Need at least two nodes to measure an edge.");
+            return;
+        }
+
+        edgeLengthSelectionMode = true;
+        btnCalculateEdgeLength.setText("Cancel Selection");
+        edgeLengthHintLabel.setText("Click a node on the canvas, then click a second node.");
+    }
+
+    /// Records a node click made while edge-length selection mode is armed.
+    /// The first click highlights that node and waits for a second; the
+    /// second click completes the pair, shows the result, and resets state.
+    private void handleNodeSelectedForEdgeLength(TMELNode node, Circle circle) {
+        if (edgeLengthSelection.contains(node)) return; // ignore re-clicking the same node
+
+        circle.setStroke(Color.ORANGERED);
+        circle.setStrokeWidth(2);
+        edgeLengthSelection.add(node);
+
+        if (edgeLengthSelection.size() == 1) {
+            edgeLengthHintLabel.setText("Node #" + node.getIdentifier() + " selected — click a second node.");
+            return;
+        }
+
+        var nodeA = edgeLengthSelection.get(0);
+        var nodeB = edgeLengthSelection.get(1);
+        resetEdgeLengthSelection();
+        showEdgeLengthResultAlert(nodeA, nodeB);
+    }
+
+    /// Clears any in-progress edge-length selection: un-highlights picked
+    /// circles, drops the pending nodes, and restores the toolbar button/hint
+    /// to their idle state. Safe to call whether or not a selection is active.
+    private void resetEdgeLengthSelection() {
+        for (var node : edgeLengthSelection) {
+            var circle = nodeCircles.get(node.getIdentifier());
+            if (circle != null) {
+                circle.setStroke(Color.DARKSLATEGRAY);
+                circle.setStrokeWidth(1);
+            }
+        }
+        edgeLengthSelection.clear();
+        edgeLengthSelectionMode = false;
+        if (btnCalculateEdgeLength != null) {
+            btnCalculateEdgeLength.setText("Calculate Edge Length");
+        }
+        if (edgeLengthHintLabel != null) {
+            edgeLengthHintLabel.setText("");
+        }
+    }
+
+    /// Displays the straight-line (Euclidean) distance between the two
+    /// selected nodes' grid centers — i.e. the length of the line
+    /// [#drawConnectionEdge] would draw between them, regardless of whether
+    /// the two nodes are actually parent/child.
+    private void showEdgeLengthResultAlert(TMELNode nodeA, TMELNode nodeB) {
+        double dx = nodeB.getGridX() - nodeA.getGridX();
+        double dy = nodeB.getGridY() - nodeA.getGridY();
+        double centerDistance = Math.sqrt((dx * dx) + (dy * dy));
+        double surfaceDistance = Math.max(0.0, centerDistance - (2 * NODE_RADIUS));
+        boolean directlyConnected = nodeA.getParent() == nodeB || nodeB.getParent() == nodeA;
+
+        var alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Edge Length");
+        alert.setHeaderText("Distance Between Node #" + nodeA.getIdentifier() + " and Node #" + nodeB.getIdentifier());
+
+        String content = String.format(
+                "Center-to-center distance: %.4f%n" +
+                        "Surface-to-surface gap:    %.4f%n" +
+                        "\u0394X: %.4f%n" +
+                        "\u0394Y: %.4f%n%n" +
+                        "Node #%d  (x=%.2f, y=%.2f)%n" +
+                        "Node #%d  (x=%.2f, y=%.2f)%n%n" +
+                        "Directly connected in tree: %s",
+                centerDistance, surfaceDistance, dx, dy,
+                nodeA.getIdentifier(), nodeA.getGridX(), nodeA.getGridY(),
+                nodeB.getIdentifier(), nodeB.getGridX(), nodeB.getGridY(),
+                directlyConnected ? "yes" : "no"
+        );
+
+        var textArea = new TextArea(content);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefWidth(360);
+        textArea.setPrefHeight(200);
         textArea.setStyle("-fx-font-family: monospace;");
 
         alert.getDialogPane().setContent(textArea);
