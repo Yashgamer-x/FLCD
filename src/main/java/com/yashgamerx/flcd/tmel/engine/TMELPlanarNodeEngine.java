@@ -110,12 +110,12 @@ public class TMELPlanarNodeEngine {
         calculateBalancedSubtreeDimensions(firstChild);
     }
 
-    private double calculateTopRadius(double width, int children) {
+    private double calculateTopRadius(double width, int children, double stepAngle) {
         //  Why children+1 ??
         // We assume that this calculation is happening in an assumption that another node has a potential to be
         // on the top side.
-        var stepAngle = angle180Calculator.calculate(children + 1);
-        return width / (2.0 * Math.tan(stepAngle / 2.0));
+        var angle = stepAngle / (children + 1);
+        return width / (2.0 * Math.tan(angle / 2.0));
     }
 
     /// ![Fully Occupied Width Calculation](calculate_fully_occupied_width.png)
@@ -142,7 +142,7 @@ public class TMELPlanarNodeEngine {
                     double nodeArea = calculateArea(secondChild);
 
                     double topMaximumWidth = Math.max(metrics.topMaximumWidth, secondChild.getSubtreeWidth());
-                    double calculatedTopRadius = calculateTopRadius(topMaximumWidth, metrics.topAccumulatedChildren);
+                    double calculatedTopRadius = calculateTopRadius(topMaximumWidth, metrics.topAccumulatedChildren, stepAngle);
                     double topRadius = Math.max(metrics.topMaximumRadius, calculatedTopRadius);
 
                     double leftOccupiedWidth = calculateActualOccupiedWidth(metrics.leftWidth, metrics.maxLeftHeight, stepAngle);
@@ -302,20 +302,22 @@ public class TMELPlanarNodeEngine {
                     child, anchorX, anchorY, leftAngle, accumulatedDistances[slot]);
         });
 
-        var stepAngle = angle180Calculator.calculate(top.size());
-        AtomicReference<Double> currentAngle = new AtomicReference<>(parentAngle - (Math.PI / 2) + (stepAngle / 2));
+        var stepAngle360 = angle360Calculator.calculate(firstChild.getParent().getChildren().size());
+        var topStepAngle = stepAngle360 / top.size();
+        AtomicReference<Double> currentAngle = new AtomicReference<>(parentAngle - (stepAngle360 / 2) + (topStepAngle / 2));
 
         top.forEach(child -> {
             double topAnchorX = firstChild.getGridX() + (forwardStepLength * Math.cos(currentAngle.get()));
             double topAnchorY = firstChild.getGridY() - (forwardStepLength * Math.sin(currentAngle.get()));
-            projectSecondTopChildAlongVector(child, topAnchorX, topAnchorY, currentAngle.get(), top.size());
-            currentAngle.updateAndGet(v -> v + stepAngle);
+            projectSecondTopChildAlongVector(child, topAnchorX, topAnchorY, currentAngle.get(), top.size(), stepAngle360);
+            currentAngle.updateAndGet(v -> v + topStepAngle);
         });
     }
 
     private void projectSecondTopChildAlongVector(TMELNode secondChild, double anchorX, double anchorY,
-                                                  double currentAngle, int size) {
-        double radius = calculateTopRadius(secondChild.getSubtreeWidth(), size);
+                                                  double currentAngle, int size, double stepAngle) {
+        var angle = stepAngle / size;
+        var radius = secondChild.getSubtreeWidth() / (2.0 * Math.tan(angle / 2.0));
         double centerX = anchorX + (radius * Math.cos(currentAngle));
         double centerY = anchorY - (radius * Math.sin(currentAngle));
         secondChild.setGridX(centerX);
@@ -323,7 +325,6 @@ public class TMELPlanarNodeEngine {
         secondChild.setLocalRadianAngle(currentAngle + (Math.PI / 2.0));
 
         compute(secondChild);
-        // TODO: Requires Fix
     }
 
     private double projectSecondChildAlongVector(TMELNode child, double anchorX, double anchorY,
