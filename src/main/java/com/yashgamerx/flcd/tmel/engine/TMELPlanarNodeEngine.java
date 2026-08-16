@@ -13,6 +13,7 @@ import lombok.extern.java.Log;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static com.yashgamerx.flcd.tmel.model.TMELNode.*;
@@ -301,21 +302,28 @@ public class TMELPlanarNodeEngine {
                     child, anchorX, anchorY, leftAngle, accumulatedDistances[slot]);
         });
 
-        var root = firstChild.getParent();
-        var stepAngle = angle360Calculator.calculate(root.getChildren().size());
-        var currentAngle = stepAngle / 2;
+        var stepAngle = angle180Calculator.calculate(top.size());
+        AtomicReference<Double> currentAngle = new AtomicReference<>(parentAngle - (Math.PI / 2) + (stepAngle / 2));
+
         top.forEach(child -> {
             System.out.println("Top side is not supported for id: " + child.getIdentifier());
 
-            projectSecondTopChildAlongVector(child, firstChild.getGridX(), firstChild.getGridY(), currentAngle, top.size());
+            double topAnchorX = firstChild.getGridX() + (forwardStepLength * Math.cos(currentAngle.get()));
+            double topAnchorY = firstChild.getGridY() - (forwardStepLength * Math.sin(currentAngle.get()));
+            projectSecondTopChildAlongVector(child, topAnchorX, topAnchorY, currentAngle.get(), top.size());
+            currentAngle.updateAndGet(v -> v + stepAngle);
         });
     }
 
     private void projectSecondTopChildAlongVector(TMELNode child, double anchorX, double anchorY,
                                                   double currentAngle, int size) {
         double radius = calculateTopRadius(child.getSubtreeWidth(), size);
-        double centerPoint = radius - NODE_RADIUS;
-        // TODO:
+        double centerX = anchorX + (radius * Math.cos(currentAngle));
+        double centerY = anchorY - (radius * Math.sin(currentAngle));
+        child.setGridX(centerX);
+        child.setGridY(centerY);
+        child.setLocalRadianAngle(currentAngle + Math.PI / 2);
+        compute(child);
     }
 
     private double projectSecondChildAlongVector(TMELNode child, double anchorX, double anchorY,
