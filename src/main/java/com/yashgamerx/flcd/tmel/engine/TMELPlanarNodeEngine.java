@@ -306,8 +306,6 @@ public class TMELPlanarNodeEngine {
         AtomicReference<Double> currentAngle = new AtomicReference<>(parentAngle - (Math.PI / 2) + (stepAngle / 2));
 
         top.forEach(child -> {
-            System.out.println("Top side is not supported for id: " + child.getIdentifier());
-
             double topAnchorX = firstChild.getGridX() + (forwardStepLength * Math.cos(currentAngle.get()));
             double topAnchorY = firstChild.getGridY() - (forwardStepLength * Math.sin(currentAngle.get()));
             projectSecondTopChildAlongVector(child, topAnchorX, topAnchorY, currentAngle.get(), top.size());
@@ -315,15 +313,17 @@ public class TMELPlanarNodeEngine {
         });
     }
 
-    private void projectSecondTopChildAlongVector(TMELNode child, double anchorX, double anchorY,
+    private void projectSecondTopChildAlongVector(TMELNode secondChild, double anchorX, double anchorY,
                                                   double currentAngle, int size) {
-        double radius = calculateTopRadius(child.getSubtreeWidth(), size);
+        double radius = calculateTopRadius(secondChild.getSubtreeWidth(), size);
         double centerX = anchorX + (radius * Math.cos(currentAngle));
         double centerY = anchorY - (radius * Math.sin(currentAngle));
-        child.setGridX(centerX);
-        child.setGridY(centerY);
-        child.setLocalRadianAngle(currentAngle + Math.PI / 2);
-        compute(child);
+        secondChild.setGridX(centerX);
+        secondChild.setGridY(centerY);
+        secondChild.setLocalRadianAngle(currentAngle + (Math.PI / 2.0));
+
+        compute(secondChild);
+        // TODO: Requires Fix
     }
 
     private double projectSecondChildAlongVector(TMELNode child, double anchorX, double anchorY,
