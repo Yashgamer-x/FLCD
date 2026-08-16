@@ -6,9 +6,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Separator;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
@@ -17,21 +15,24 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import lombok.extern.java.Log;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.yashgamerx.flcd.cmel.model.CircleMaximumEdgeLengthNode.NODE_DIAMETER;
 import static com.yashgamerx.flcd.cmel.model.CircleMaximumEdgeLengthNode.NODE_RADIUS;
 
-/// Read-only visualization for [CircleMaximumEdgeLengthNode] trees.
+/// Visualization for [CircleMaximumEdgeLengthNode] trees.
 ///
-/// Unlike [FLCDTreeVisualizationView], there is no toolbar and no
-/// interaction modes — no Rootify, Readjust, or Calculate Area. This view
-/// only draws the computed layout and lets the user click a node to see
-/// its info panel. It is intentionally its own class rather than a
-/// stripped-down mode of the FLCD view, since it renders a different node
-/// type produced by a different algorithm.
+/// Unlike [com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView], there is no Rootify, Readjust, or
+/// Calculate Area toolbar action — the only interaction mode is
+/// Calculate Edge Length (click two nodes to measure the distance between
+/// them). This view only draws the computed layout and otherwise lets the
+/// user click a node to see its info panel. It is intentionally its own
+/// class rather than a stripped-down mode of the FLCD view, since it
+/// renders a different node type produced by a different algorithm.
 @Log
 public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
@@ -44,6 +45,20 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
     private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    /// Circle references keyed by node identifier, so edge-length selection
+    /// can highlight/reset a node's circle without re-scanning the canvas.
+    private final Map<Integer, Circle> nodeCircles = new HashMap<>();
+    /// Nodes picked so far for the EDGE_LENGTH click-to-select flow. Holds
+    /// 0 or 1 nodes between clicks; a second click completes the pair,
+    /// shows the result, and the list is cleared for the next pair.
+    private final List<CircleMaximumEdgeLengthNode> edgeLengthSelection = new ArrayList<>();
+    /// Current interaction mode — mirrors FLCDTreeVisualizationView's pattern,
+    /// even though EDGE_LENGTH is the only mode here (no Rootify/Readjust/
+    /// Calculate Area in this view — see class javadoc).
+    private ActiveMode activeMode = ActiveMode.NONE;
+    /// Reference to the active toggle button so it can be deselected after an action.
+    private ToggleButton activeModeButton = null;
+    private Label hintLabel;
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
@@ -61,6 +76,7 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         this.scrollPaneContainer.setPannable(false);
         this.scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
 
+        this.setTop(createActionToolbar());
         this.setCenter(scrollPaneContainer);
 
         attachMouseGestureListeners();
@@ -68,6 +84,35 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         attachKeyboardZoomListeners();
 
         Platform.runLater(this::renderTreeStructure);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mode management
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Sets the active mode when a toolbar toggle button is pressed.
+    /// Pressing the same button again returns to NONE. Clears any
+    /// in-progress edge-length selection on every mode transition.
+    private void setMode(ActiveMode mode, ToggleButton source) {
+        clearEdgeLengthSelectionHighlights();
+        if (activeMode == mode) {
+            // Same button toggled off — return to idle
+            activeMode = ActiveMode.NONE;
+            activeModeButton = null;
+        } else {
+            activeMode = mode;
+            activeModeButton = source;
+        }
+    }
+
+    /// Resets mode to NONE and deselects the toolbar toggle button.
+    private void clearMode() {
+        clearEdgeLengthSelectionHighlights();
+        activeMode = ActiveMode.NONE;
+        if (activeModeButton != null) {
+            activeModeButton.setSelected(false);
+            activeModeButton = null;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -82,6 +127,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear();
+        nodeCircles.clear();
+        edgeLengthSelection.clear(); // Underlying circles are gone; no need to un-highlight them
 
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
@@ -122,12 +169,17 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
         text.setMouseTransparent(true);
 
-        // Only interaction here is inspecting the node — no modes to dispatch on.
+        // Normal clicks open the info panel; in EDGE_LENGTH mode, clicks
+        // instead pick nodes for the edge-length measurement.
         circle.setOnMouseClicked(e -> {
-            showNodeInfoPanel(node, x, y);
+            switch (activeMode) {
+                case EDGE_LENGTH -> handleNodeSelectedForEdgeLength(node, circle);
+                default -> showNodeInfoPanel(node, x, y);
+            }
             e.consume();
         });
 
+        nodeCircles.put(node.getIdentifier(), circle);
         drawingCanvas.getChildren().addAll(circle, text);
     }
 
@@ -228,6 +280,131 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         sep.setPadding(new Insets(2, 0, 2, 0));
         return sep;
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Toolbar — EDGE_LENGTH is the only toggle mode in this view (see class javadoc).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private HBox createActionToolbar() {
+        var modeGroup = new ToggleGroup();
+
+        var btnEdgeLength = new ToggleButton("Calculate Edge Length");
+        btnEdgeLength.setToggleGroup(modeGroup);
+        btnEdgeLength.setOnAction(_ -> {
+            if (activeMode != ActiveMode.EDGE_LENGTH && nodeMap.size() < 2) {
+                btnEdgeLength.setSelected(false);
+                showErrorAlert("Calculate Edge Length Error", "Need at least two nodes to measure an edge.");
+                return;
+            }
+            setMode(ActiveMode.EDGE_LENGTH, btnEdgeLength);
+        });
+
+        hintLabel = new Label();
+        hintLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 10px; -fx-font-style: italic;");
+
+        modeGroup.selectedToggleProperty().addListener((_, _, newToggle) -> {
+            if (newToggle == btnEdgeLength)
+                hintLabel.setText("Click a node, then click a second node to measure the edge between them");
+            else hintLabel.setText("");
+        });
+
+        var toolbar = new HBox(15, btnEdgeLength, hintLabel);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
+        return toolbar;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Edge Length action — triggered by clicking two nodes in EDGE_LENGTH mode
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Records a node click made while EDGE_LENGTH mode is active. The first
+    /// click highlights that node and waits for a second; the second click
+    /// completes the pair, shows the result, and clears the pair so the mode
+    /// stays armed for measuring another pair.
+    private void handleNodeSelectedForEdgeLength(CircleMaximumEdgeLengthNode node, Circle circle) {
+        if (edgeLengthSelection.contains(node)) return; // ignore re-clicking the same node
+
+        circle.setStroke(Color.ORANGERED);
+        circle.setStrokeWidth(2);
+        edgeLengthSelection.add(node);
+
+        if (edgeLengthSelection.size() == 1) {
+            hintLabel.setText("Node #" + node.getIdentifier() + " selected — click a second node.");
+            return;
+        }
+
+        var nodeA = edgeLengthSelection.get(0);
+        var nodeB = edgeLengthSelection.get(1);
+        clearEdgeLengthSelectionHighlights();
+        hintLabel.setText("Click a node, then click a second node to measure the edge between them");
+        showEdgeLengthResultAlert(nodeA, nodeB);
+    }
+
+    /// Un-highlights any circles picked so far for the edge-length pair and
+    /// clears the pending selection. Safe to call whether or not a selection
+    /// is in progress — used both mid-flow (after a completed pair) and
+    /// whenever the active mode changes away from EDGE_LENGTH.
+    private void clearEdgeLengthSelectionHighlights() {
+        for (var node : edgeLengthSelection) {
+            var circle = nodeCircles.get(node.getIdentifier());
+            if (circle != null) {
+                circle.setStroke(Color.DARKSLATEGRAY);
+                circle.setStrokeWidth(1);
+            }
+        }
+        edgeLengthSelection.clear();
+    }
+
+    /// Displays the straight-line (Euclidean) distance between the two
+    /// selected nodes' grid centers — i.e. the length of the line
+    /// [#drawConnectionEdge] would draw between them, regardless of whether
+    /// the two nodes are actually parent/child.
+    private void showEdgeLengthResultAlert(CircleMaximumEdgeLengthNode nodeA, CircleMaximumEdgeLengthNode nodeB) {
+        double dx = nodeB.getGridX() - nodeA.getGridX();
+        double dy = nodeB.getGridY() - nodeA.getGridY();
+        double centerDistance = Math.sqrt((dx * dx) + (dy * dy));
+        double surfaceDistance = Math.max(0.0, centerDistance - (2 * NODE_RADIUS));
+        boolean directlyConnected = nodeA.getParent() == nodeB || nodeB.getParent() == nodeA;
+
+        var alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Edge Length");
+        alert.setHeaderText("Distance Between Node #" + nodeA.getIdentifier() + " and Node #" + nodeB.getIdentifier());
+
+        String content = String.format(
+                "Center-to-center distance: %.4f%n" +
+                        "Surface-to-surface gap:    %.4f%n" +
+                        "\u0394X: %.4f%n" +
+                        "\u0394Y: %.4f%n%n" +
+                        "Node #%d  (x=%.2f, y=%.2f)%n" +
+                        "Node #%d  (x=%.2f, y=%.2f)%n%n" +
+                        "Directly connected in tree: %s",
+                centerDistance, surfaceDistance, dx, dy,
+                nodeA.getIdentifier(), nodeA.getGridX(), nodeA.getGridY(),
+                nodeB.getIdentifier(), nodeB.getGridX(), nodeB.getGridY(),
+                directlyConnected ? "yes" : "no"
+        );
+
+        var textArea = new TextArea(content);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefWidth(360);
+        textArea.setPrefHeight(200);
+        textArea.setStyle("-fx-font-family: monospace;");
+
+        alert.getDialogPane().setContent(textArea);
+        alert.showAndWait();
+    }
+
+    private void showErrorAlert(String header, String content) {
+        var alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    private enum ActiveMode {NONE, EDGE_LENGTH}
 
     // ─────────────────────────────────────────────────────────────────────────
     // Pan / zoom (same behavior as FLCDTreeVisualizationView)
