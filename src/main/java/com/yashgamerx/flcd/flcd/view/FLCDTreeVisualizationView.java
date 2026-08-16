@@ -18,7 +18,9 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import lombok.extern.java.Log;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -48,12 +50,23 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// so any number of them can stay open at once. A panel is only ever
     /// removed when its own ✕ button is clicked, or when the tree is redrawn.
     private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    /// Circle references keyed by node identifier, so edge-length selection
+    /// can highlight/reset a node's circle without re-scanning the canvas.
+    private final Map<Integer, Circle> nodeCircles = new HashMap<>();
+    /// Nodes picked so far for the EDGE_LENGTH click-to-select flow. Holds
+    /// 0 or 1 nodes between clicks; a second click completes the pair,
+    /// shows the result, and the list is cleared for the next pair.
+    private final List<FLCDNode> edgeLengthSelection = new ArrayList<>();
     /// Current interaction mode — determines what happens when a node is clicked.
     private ActiveMode activeMode = ActiveMode.NONE;
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
     /// Reference to the active toggle button so it can be deselected after an action.
     private ToggleButton activeModeButton = null;
+    /// Toolbar hint label — kept as a field so the EDGE_LENGTH flow can update
+    /// it mid-selection ("Node #3 selected — click a second node"), not just
+    /// on mode switch.
+    private Label hintLabel;
 
     public FLCDTreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
         this.nodeMap = nodeMap;
@@ -77,6 +90,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// Sets the active mode when a toolbar toggle button is pressed.
     /// Pressing the same button again (or pressing Escape) returns to NONE.
     private void setMode(ActiveMode mode, ToggleButton source) {
+        clearEdgeLengthSelectionHighlights();
         if (activeMode == mode) {
             // Same button toggled off — return to idle
             activeMode = ActiveMode.NONE;
@@ -133,11 +147,13 @@ public class FLCDTreeVisualizationView extends BorderPane {
             switch (activeMode) {
                 case READJUST -> handleReadjustOnNode(node);
                 case ROOTIFY -> handleRootifyOnNode(node);
+                case EDGE_LENGTH -> handleNodeSelectedForEdgeLength(node, circle);
                 default -> showNodeInfoPanel(node, x, y);
             }
             e.consume();
         });
 
+        nodeCircles.put(node.getIdentifier(), circle);
         drawingCanvas.getChildren().addAll(circle, text);
     }
 
@@ -149,6 +165,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear(); // Panel references are cleared with the canvas
+        nodeCircles.clear();
+        edgeLengthSelection.clear(); // Underlying circles are gone; no need to un-highlight them
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
@@ -223,21 +241,27 @@ public class FLCDTreeVisualizationView extends BorderPane {
         btnReadjust.setToggleGroup(modeGroup);
         btnReadjust.setOnAction(_ -> setMode(ActiveMode.READJUST, btnReadjust));
 
+        var btnEdgeLength = new ToggleButton("Edge Length");
+        btnEdgeLength.setToggleGroup(modeGroup);
+        btnEdgeLength.setOnAction(_ -> setMode(ActiveMode.EDGE_LENGTH, btnEdgeLength));
+
         // Hint label shown while a mode is active
-        var hintLabel = new Label();
+        hintLabel = new Label();
         hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
 
         // Update hint text whenever the selected toggle changes
         modeGroup.selectedToggleProperty().addListener((_, _, newToggle) -> {
             if (newToggle == btnRootify) hintLabel.setText("Click a node to rootify it");
             else if (newToggle == btnReadjust) hintLabel.setText("Click a node to readjust it");
+            else if (newToggle == btnEdgeLength)
+                hintLabel.setText("Click a node, then click a second node to measure the edge between them");
             else hintLabel.setText("");
         });
 
         var btnCalculateArea = new Button("Calculate Area");
         btnCalculateArea.setOnAction(_ -> handleCalculateArea());
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnCalculateArea, hintLabel);
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnCalculateArea, hintLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -573,5 +597,88 @@ public class FLCDTreeVisualizationView extends BorderPane {
         alert.showAndWait();
     }
 
-    private enum ActiveMode {NONE, READJUST, ROOTIFY}
+    // ─────────────────────────────────────────────────────────────────────────
+    // Edge Length action — triggered by clicking two nodes in EDGE_LENGTH mode
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Records a node click made while EDGE_LENGTH mode is active. The first
+    /// click highlights that node and waits for a second; the second click
+    /// completes the pair, shows the result, and clears the pair so the mode
+    /// stays armed for measuring another pair (mirrors Rootify/Readjust,
+    /// which also stay armed after a single action).
+    private void handleNodeSelectedForEdgeLength(FLCDNode node, Circle circle) {
+        if (edgeLengthSelection.contains(node)) return; // ignore re-clicking the same node
+
+        circle.setStroke(Color.ORANGERED);
+        circle.setStrokeWidth(2);
+        edgeLengthSelection.add(node);
+
+        if (edgeLengthSelection.size() == 1) {
+            hintLabel.setText("Node #" + node.getIdentifier() + " selected — click a second node.");
+            return;
+        }
+
+        var nodeA = edgeLengthSelection.get(0);
+        var nodeB = edgeLengthSelection.get(1);
+        clearEdgeLengthSelectionHighlights();
+        hintLabel.setText("Click a node, then click a second node to measure the edge between them");
+        showEdgeLengthResultAlert(nodeA, nodeB);
+    }
+
+    /// Un-highlights any circles picked so far for the edge-length pair and
+    /// clears the pending selection. Safe to call whether or not a selection
+    /// is in progress — used both mid-flow (after a completed pair) and
+    /// whenever the active mode changes away from EDGE_LENGTH.
+    private void clearEdgeLengthSelectionHighlights() {
+        for (var node : edgeLengthSelection) {
+            var circle = nodeCircles.get(node.getIdentifier());
+            if (circle != null) {
+                circle.setStroke(Color.DARKSLATEGRAY);
+                circle.setStrokeWidth(1);
+            }
+        }
+        edgeLengthSelection.clear();
+    }
+
+    /// Displays the straight-line (Euclidean) distance between the two
+    /// selected nodes' grid centers — i.e. the length of the line
+    /// [#drawConnectionEdge] would draw between them, regardless of whether
+    /// the two nodes are actually parent/child.
+    private void showEdgeLengthResultAlert(FLCDNode nodeA, FLCDNode nodeB) {
+        double dx = nodeB.getGridX() - nodeA.getGridX();
+        double dy = nodeB.getGridY() - nodeA.getGridY();
+        double centerDistance = Math.sqrt((dx * dx) + (dy * dy));
+        double surfaceDistance = Math.max(0.0, centerDistance - (2 * NODE_RADIUS));
+        boolean directlyConnected = nodeA.getParent() == nodeB || nodeB.getParent() == nodeA;
+
+        var alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Edge Length");
+        alert.setHeaderText("Distance Between Node #" + nodeA.getIdentifier() + " and Node #" + nodeB.getIdentifier());
+
+        String content = String.format(
+                "Center-to-center distance: %.4f%n" +
+                        "Surface-to-surface gap:    %.4f%n" +
+                        "\u0394X: %.4f%n" +
+                        "\u0394Y: %.4f%n%n" +
+                        "Node #%d  (x=%.2f, y=%.2f)%n" +
+                        "Node #%d  (x=%.2f, y=%.2f)%n%n" +
+                        "Directly connected in tree: %s",
+                centerDistance, surfaceDistance, dx, dy,
+                nodeA.getIdentifier(), nodeA.getGridX(), nodeA.getGridY(),
+                nodeB.getIdentifier(), nodeB.getGridX(), nodeB.getGridY(),
+                directlyConnected ? "yes" : "no"
+        );
+
+        var textArea = new TextArea(content);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefWidth(360);
+        textArea.setPrefHeight(200);
+        textArea.setStyle("-fx-font-family: monospace;");
+
+        alert.getDialogPane().setContent(textArea);
+        alert.showAndWait();
+    }
+
+    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH}
 }
