@@ -1,6 +1,6 @@
 package com.yashgamerx.flcd;
 
-import com.yashgamerx.flcd.view.AlgorithmSelectorView;
+import com.yashgamerx.flcd.selector.AlgorithmSelectorView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
