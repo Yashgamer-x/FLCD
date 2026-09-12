@@ -12,7 +12,8 @@ package com.yashgamerx.flcd.selector;
 public enum AlgorithmFamily {
     FLCD("FLCD (Planar Grid)"),
     FLCD_MAXIMUM_EDGE_LENGTH("FLCD Maximum Edge Length"),
-    CIRCLE_MAXIMUM_EDGE_LENGTH("Circle Maximum Edge Length");
+    CIRCLE_MAXIMUM_EDGE_LENGTH("Circle Maximum Edge Length"),
+    REINGOLD_TILFORD("Reingold–Tilford (Classic Baseline)");
 
     private final String displayName;
 

@@ -7,6 +7,9 @@ import com.yashgamerx.flcd.flcd.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.flcd.file.FileParsingService;
 import com.yashgamerx.flcd.flcd.file.TreeFileParsingService;
 import com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView;
+import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
+import com.yashgamerx.flcd.rt.file.RTFileParsingService;
+import com.yashgamerx.flcd.rt.view.RTTreeVisualizationView;
 import com.yashgamerx.flcd.tmel.algorithm.TopMaximumEdgeLengthPlanarAlgorithm;
 import com.yashgamerx.flcd.tmel.file.TMELFileParsingService;
 import com.yashgamerx.flcd.tmel.view.TMELTreeVisualizationView;
@@ -29,6 +32,7 @@ public class AlgorithmSelectorView extends BorderPane {
     private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
     private final TMELFileParsingService tmelFileParsingService = new TMELFileParsingService();
     private final CircleMaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new CircleMaximumEdgeLengthFileParsingService();
+    private final RTFileParsingService rtFileParsingService = new RTFileParsingService();
     @FXML
     private Button selectTextFileButton;
     @FXML
@@ -110,6 +114,7 @@ public class AlgorithmSelectorView extends BorderPane {
             case FLCD -> runFlcdPipeline();
             case FLCD_MAXIMUM_EDGE_LENGTH -> runFlcdMaximumEdgeLengthPipeline();
             case CIRCLE_MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
+            case REINGOLD_TILFORD -> runReingoldTilfordPipeline();
         }
     }
 
@@ -157,6 +162,23 @@ public class AlgorithmSelectorView extends BorderPane {
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
             log.info("Transitioned to MaximumEdgeLengthVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
+    }
+
+    /// Parses the selected file into an `RTNode` tree and transitions to
+    /// [RTTreeVisualizationView] using [ReingoldTilfordAlgorithm] — the
+    /// classic tree-drawing baseline (Reingold & Tilford 1981, linear-time
+    /// per Buchheim–Jünger–Leipert 2002) used as a comparison point against
+    /// the FLCD/TMEL/CMEL families.
+    private void runReingoldTilfordPipeline() {
+        var parsingResult = rtFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(map -> {
+            var visualizationView = new RTTreeVisualizationView(map, new ReingoldTilfordAlgorithm());
+
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to RTTreeVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }
