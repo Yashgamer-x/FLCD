@@ -7,6 +7,9 @@ import com.yashgamerx.flcd.flcd.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.flcd.file.FileParsingService;
 import com.yashgamerx.flcd.flcd.file.TreeFileParsingService;
 import com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView;
+import com.yashgamerx.flcd.rings.algorithm.RingedCircularLayoutAlgorithm;
+import com.yashgamerx.flcd.rings.file.RingFileParsingService;
+import com.yashgamerx.flcd.rings.view.RingedCircularLayoutVisualizationView;
 import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
 import com.yashgamerx.flcd.rt.file.RTFileParsingService;
 import com.yashgamerx.flcd.rt.view.RTTreeVisualizationView;
@@ -33,6 +36,7 @@ public class AlgorithmSelectorView extends BorderPane {
     private final TMELFileParsingService tmelFileParsingService = new TMELFileParsingService();
     private final CircleMaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new CircleMaximumEdgeLengthFileParsingService();
     private final RTFileParsingService rtFileParsingService = new RTFileParsingService();
+    private final RingFileParsingService ringFileParsingService = new RingFileParsingService();
     @FXML
     private Button selectTextFileButton;
     @FXML
@@ -115,6 +119,7 @@ public class AlgorithmSelectorView extends BorderPane {
             case FLCD_MAXIMUM_EDGE_LENGTH -> runFlcdMaximumEdgeLengthPipeline();
             case CIRCLE_MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
             case REINGOLD_TILFORD -> runReingoldTilfordPipeline();
+            case RINGED_CIRCULAR_LAYOUT -> runRingedCircularLayoutPipeline();
         }
     }
 
@@ -179,6 +184,23 @@ public class AlgorithmSelectorView extends BorderPane {
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
             log.info("Transitioned to RTTreeVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
+    }
+
+    /// Parses the selected file into a `RingNode` tree and transitions to
+    /// [RingedCircularLayoutVisualizationView] using
+    /// [RingedCircularLayoutAlgorithm] — the "Rings" radial comparison
+    /// baseline (Teoh & Ma [TM02], via Rusu §5.5/§5.8.2), used alongside
+    /// RT/FLCD/TMEL/CMEL in the comparison study.
+    private void runRingedCircularLayoutPipeline() {
+        var parsingResult = ringFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(map -> {
+            var visualizationView = new RingedCircularLayoutVisualizationView(map, new RingedCircularLayoutAlgorithm());
+
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to RingedCircularLayoutVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }

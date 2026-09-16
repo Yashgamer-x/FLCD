@@ -10,6 +10,7 @@ module com.yashgamerx.flcd {
     opens com.yashgamerx.flcd.tmel.view to javafx.fxml, javafx.graphics;
     opens com.yashgamerx.flcd.cmel.view to javafx.fxml, javafx.graphics;
     opens com.yashgamerx.flcd.rt.view to javafx.fxml, javafx.graphics;
+    opens com.yashgamerx.flcd.rings.view to javafx.fxml, javafx.graphics;
 
     exports com.yashgamerx.flcd;
     exports com.yashgamerx.flcd.common;
@@ -35,4 +36,8 @@ module com.yashgamerx.flcd {
     exports com.yashgamerx.flcd.rt.algorithm;
     exports com.yashgamerx.flcd.rt.file;
     exports com.yashgamerx.flcd.rt.view;
+    exports com.yashgamerx.flcd.rings.model;
+    exports com.yashgamerx.flcd.rings.algorithm;
+    exports com.yashgamerx.flcd.rings.file;
+    exports com.yashgamerx.flcd.rings.view;
 }
