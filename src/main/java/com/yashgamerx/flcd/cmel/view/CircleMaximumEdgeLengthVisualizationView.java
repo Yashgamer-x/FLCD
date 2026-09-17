@@ -142,10 +142,10 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
     private void drawCalculatedTree(CircleMaximumEdgeLengthNode node) {
         for (var child : node.getChildren()) {
-            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
             drawCalculatedTree(child);
         }
-        renderNodeVisuals(node, node.getGridX(), node.getGridY());
+        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -218,8 +218,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
-        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getGridX()));
-        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getGridY()));
+        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getLayoutX()));
+        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getLayoutY()));
         addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
@@ -361,8 +361,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     /// [#drawConnectionEdge] would draw between them, regardless of whether
     /// the two nodes are actually parent/child.
     private void showEdgeLengthResultAlert(CircleMaximumEdgeLengthNode nodeA, CircleMaximumEdgeLengthNode nodeB) {
-        double dx = nodeB.getGridX() - nodeA.getGridX();
-        double dy = nodeB.getGridY() - nodeA.getGridY();
+        double dx = nodeB.getLayoutX() - nodeA.getLayoutX();
+        double dy = nodeB.getLayoutY() - nodeA.getLayoutY();
         double centerDistance = Math.sqrt((dx * dx) + (dy * dy));
         double surfaceDistance = Math.max(0.0, centerDistance - (2 * NODE_RADIUS));
         boolean directlyConnected = nodeA.getParent() == nodeB || nodeB.getParent() == nodeA;
@@ -380,8 +380,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
                         "Node #%d  (x=%.2f, y=%.2f)%n%n" +
                         "Directly connected in tree: %s",
                 centerDistance, surfaceDistance, dx, dy,
-                nodeA.getIdentifier(), nodeA.getGridX(), nodeA.getGridY(),
-                nodeB.getIdentifier(), nodeB.getGridX(), nodeB.getGridY(),
+                nodeA.getIdentifier(), nodeA.getLayoutX(), nodeA.getLayoutY(),
+                nodeB.getIdentifier(), nodeB.getLayoutX(), nodeB.getLayoutY(),
                 directlyConnected ? "yes" : "no"
         );
 

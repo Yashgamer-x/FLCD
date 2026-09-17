@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.rt.algorithm;
 
+import com.yashgamerx.flcd.common.LayoutAlgorithm;
 import com.yashgamerx.flcd.rt.model.RTNode;
 
 /// Classic tree layout baseline used for comparison against FLCD/TMEL/CMEL.
@@ -30,11 +31,11 @@ import com.yashgamerx.flcd.rt.model.RTNode;
 /// "thread" bookkeeping becomes the [RTNode#getThread] contour pointer
 /// below, and its ROOTSEP/CURSEP two-pointer contour scan becomes
 /// `apportion`/`moveSubtree`.
-public class ReingoldTilfordAlgorithm {
+public class ReingoldTilfordAlgorithm implements LayoutAlgorithm<RTNode> {
 
     /// Runs the full three-pass layout (firstWalk, secondWalk, and a final
     /// normalizing shift so the whole tree's leftmost extent sits at
-    /// `originX`) and writes results into each node's gridX/gridY.
+    /// `originX`) and writes results into each node's layoutX/layoutY.
     public void calculate(RTNode root, double originX, double originY) {
         if (root == null) return;
 
@@ -190,8 +191,8 @@ public class ReingoldTilfordAlgorithm {
     // ─────────────────────────────────────────────────────────────────────
     private void secondWalk(RTNode v, double modSum, double[] minX) {
         double finalX = v.getPrelimX() + modSum;
-        v.setGridX(finalX);
-        v.setGridY(v.getDepth() * RTNode.LEVEL_DISTANCE);
+        v.setLayoutX(finalX);
+        v.setLayoutY(v.getDepth() * RTNode.LEVEL_DISTANCE);
         if (finalX < minX[0]) minX[0] = finalX;
 
         for (var child : v.getChildren()) {
@@ -204,8 +205,8 @@ public class ReingoldTilfordAlgorithm {
     /// caller expects (matching PlanarGridAlgorithm's origin-centered
     /// convention used by the other algorithm families).
     private void applyFinalShift(RTNode v, double shiftX, double originY) {
-        v.setGridX(v.getGridX() + shiftX);
-        v.setGridY(v.getGridY() + originY);
+        v.setLayoutX(v.getLayoutX() + shiftX);
+        v.setLayoutY(v.getLayoutY() + originY);
         for (var child : v.getChildren()) {
             applyFinalShift(child, shiftX, originY);
         }

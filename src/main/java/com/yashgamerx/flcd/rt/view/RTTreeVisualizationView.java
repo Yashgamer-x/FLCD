@@ -124,10 +124,10 @@ public class RTTreeVisualizationView extends BorderPane {
     private void drawCalculatedTree(RTNode node) {
         // Render edges first so they sit visually behind the circles
         for (var child : node.getChildren()) {
-            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
             drawCalculatedTree(child);
         }
-        renderNodeVisuals(node, node.getGridX(), node.getGridY());
+        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -194,8 +194,8 @@ public class RTTreeVisualizationView extends BorderPane {
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
-        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getGridX()));
-        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getGridY()));
+        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getLayoutX()));
+        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getLayoutY()));
         addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
@@ -287,8 +287,8 @@ public class RTTreeVisualizationView extends BorderPane {
         RTNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
 
         for (var node : nodeMap.values()) {
-            double x = node.getGridX();
-            double y = node.getGridY();
+            double x = node.getLayoutX();
+            double y = node.getLayoutY();
 
             if (x - NODE_RADIUS < minX) {
                 minX = x - NODE_RADIUS;

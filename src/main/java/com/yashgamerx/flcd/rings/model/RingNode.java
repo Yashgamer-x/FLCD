@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.rings.model;
 
+import com.yashgamerx.flcd.common.AlgorithmicNode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,7 +15,7 @@ import java.util.List;
 /// Field-for-field port of the standalone Ring app's `RingTreeNode`.
 @Getter
 @Setter
-public class RingNode {
+public class RingNode implements AlgorithmicNode<RingNode> {
 
     public static final double NODE_RADIUS = 5.0;
     public static final double NODE_DIAMETER = NODE_RADIUS * 2;

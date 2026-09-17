@@ -274,8 +274,8 @@ public class FLCDNodeEngine {
             firstChild.setLocalRadianAngle(currentAngle);
 
             double nodeCenter = safeScalarOffset - NODE_RADIUS;
-            firstChild.setGridX(rootNode.getGridX() + (nodeCenter * Math.cos(currentAngle)));
-            firstChild.setGridY(rootNode.getGridY() - (nodeCenter * Math.sin(currentAngle)));
+            firstChild.setLayoutX(rootNode.getLayoutX() + (nodeCenter * Math.cos(currentAngle)));
+            firstChild.setLayoutY(rootNode.getLayoutY() - (nodeCenter * Math.sin(currentAngle)));
 
             compute(firstChild);
         }
@@ -301,8 +301,8 @@ public class FLCDNodeEngine {
                     : clearanceHeight + firstChild.getSubtreeHeight() - NODE_DIAMETER;
 
             firstChild.setLocalRadianAngle(currentAngle);
-            firstChild.setGridX(rootNode.getGridX() + (nodeCenter * Math.cos(currentAngle)));
-            firstChild.setGridY(rootNode.getGridY() - (nodeCenter * Math.sin(currentAngle)));
+            firstChild.setLayoutX(rootNode.getLayoutX() + (nodeCenter * Math.cos(currentAngle)));
+            firstChild.setLayoutY(rootNode.getLayoutY() - (nodeCenter * Math.sin(currentAngle)));
 
             compute(firstChild);
         }
@@ -317,8 +317,8 @@ public class FLCDNodeEngine {
         double additionalAngle = Math.PI / 2.0;
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
-        double anchorX = firstChild.getGridX() - (forwardStepLength * Math.cos(parentAngle));
-        double anchorY = firstChild.getGridY() + (forwardStepLength * Math.sin(parentAngle));
+        double anchorX = firstChild.getLayoutX() - (forwardStepLength * Math.cos(parentAngle));
+        double anchorY = firstChild.getLayoutY() + (forwardStepLength * Math.sin(parentAngle));
 
         // [0] accumulatedRightDistance, [1] accumulatedLeftDistance
         double[] accumulatedDistances = {0.0, 0.0};
@@ -355,8 +355,8 @@ public class FLCDNodeEngine {
         double newDistance = currentDistance + WIDTH_SPACER + child.getSubtreeWidth();
         double centerPoint = newDistance - NODE_RADIUS;
 
-        child.setGridX(anchorX + (centerPoint * Math.cos(baselineAngle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(baselineAngle)));
+        child.setLayoutX(anchorX + (centerPoint * Math.cos(baselineAngle)));
+        child.setLayoutY(anchorY - (centerPoint * Math.sin(baselineAngle)));
         child.setLocalRadianAngle(baselineAngle);
 
         compute(child);
@@ -368,8 +368,8 @@ public class FLCDNodeEngine {
                                                           double currentDistance) {
         double centerPoint = currentDistance + WIDTH_SPACER + child.getSubtreeWidth() / 2;
 
-        child.setGridX(anchorX + (centerPoint * Math.cos(baselineAngle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(baselineAngle)));
+        child.setLayoutX(anchorX + (centerPoint * Math.cos(baselineAngle)));
+        child.setLayoutY(anchorY - (centerPoint * Math.sin(baselineAngle)));
         child.setLocalRadianAngle(baselineAngle + additionalAngle);
 
         compute(child);
@@ -387,8 +387,8 @@ public class FLCDNodeEngine {
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
         double forwardStepLength = NODE_RADIUS + WIDTH_SPACER + NODE_RADIUS;
-        double anchorX = secondChild.getGridX() - (forwardStepLength * Math.cos(myAngle));
-        double anchorY = secondChild.getGridY() + (forwardStepLength * Math.sin(myAngle));
+        double anchorX = secondChild.getLayoutX() - (forwardStepLength * Math.cos(myAngle));
+        double anchorY = secondChild.getLayoutY() + (forwardStepLength * Math.sin(myAngle));
 
         double[] offset = {NODE_RADIUS + HEIGHT_SPACER};
 
@@ -427,8 +427,8 @@ public class FLCDNodeEngine {
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
-        double anchorX = heightChild.getGridX() + (forwardStepLength * Math.cos(myAngle));
-        double anchorY = heightChild.getGridY() - (forwardStepLength * Math.sin(myAngle));
+        double anchorX = heightChild.getLayoutX() + (forwardStepLength * Math.cos(myAngle));
+        double anchorY = heightChild.getLayoutY() - (forwardStepLength * Math.sin(myAngle));
 
         double[] offset = {NODE_RADIUS + WIDTH_SPACER};
 
@@ -475,8 +475,8 @@ public class FLCDNodeEngine {
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
         double forwardStepLength = NODE_RADIUS + WIDTH_SPACER + NODE_RADIUS;
-        double anchorX = widthNode.getGridX() + (forwardStepLength * Math.cos(myAngle));
-        double anchorY = widthNode.getGridY() - (forwardStepLength * Math.sin(myAngle));
+        double anchorX = widthNode.getLayoutX() + (forwardStepLength * Math.cos(myAngle));
+        double anchorY = widthNode.getLayoutY() - (forwardStepLength * Math.sin(myAngle));
 
         double[] offset = {NODE_RADIUS + HEIGHT_SPACER};
 
@@ -511,8 +511,8 @@ public class FLCDNodeEngine {
                                       double angle, double currentOffset, boolean useHeightDimension) {
         double centerPoint = currentOffset + NODE_RADIUS;
 
-        child.setGridX(anchorX + (centerPoint * Math.cos(angle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(angle)));
+        child.setLayoutX(anchorX + (centerPoint * Math.cos(angle)));
+        child.setLayoutY(anchorY - (centerPoint * Math.sin(angle)));
         child.setLocalRadianAngle(angle);
 
         compute(child);
@@ -528,8 +528,8 @@ public class FLCDNodeEngine {
                                                double extraAngle, double currentOffset, double returnSpacer) {
         double centerPoint = currentOffset + (child.getSubtreeWidth() / 2);
 
-        child.setGridX(anchorX + (centerPoint * Math.cos(angle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(angle)));
+        child.setLayoutX(anchorX + (centerPoint * Math.cos(angle)));
+        child.setLayoutY(anchorY - (centerPoint * Math.sin(angle)));
         child.setLocalRadianAngle(angle + extraAngle);
 
         compute(child);
@@ -555,16 +555,16 @@ public class FLCDNodeEngine {
     }
 
     private void readjustNode(FLCDNode readjustableNode) {
-        double ax = readjustableNode.getGridX();
-        double ay = readjustableNode.getGridY();
+        double ax = readjustableNode.getLayoutX();
+        double ay = readjustableNode.getLayoutY();
 
         var firstChild = findGoverningFirstChild(readjustableNode);
-        double cx = firstChild.getGridX();
-        double cy = firstChild.getGridY();
+        double cx = firstChild.getLayoutX();
+        double cy = firstChild.getLayoutY();
 
         var rootNode = firstChild.getParent();
-        double bx = rootNode.getGridX();
-        double by = rootNode.getGridY();
+        double bx = rootNode.getLayoutX();
+        double by = rootNode.getLayoutY();
 
         int totalChildren = rootNode.getChildren().size();
         double angularStep = rootNode.getStatus() == NodeStatus.ROOTIFIED
@@ -595,8 +595,8 @@ public class FLCDNodeEngine {
         double newAy = by - radius * Math.sin(newAngle);
 
         double newNodeRadius = NODE_RADIUS / Math.sin(halfAngularStep);
-        readjustableNode.setGridX(newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle()));
-        readjustableNode.setGridY(newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle()));
+        readjustableNode.setLayoutX(newAx + newNodeRadius * Math.cos(firstChild.getLocalRadianAngle()));
+        readjustableNode.setLayoutY(newAy - newNodeRadius * Math.sin(firstChild.getLocalRadianAngle()));
     }
 
     // ─────────────────────────────────────────────────────────────────

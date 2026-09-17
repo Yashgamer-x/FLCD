@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.rings.algorithm;
 
+import com.yashgamerx.flcd.common.LayoutAlgorithm;
 import com.yashgamerx.flcd.rings.model.RingNode;
 
 /// Yash's Ring-based radial tree layout — a faithful port of the
@@ -26,7 +27,7 @@ import com.yashgamerx.flcd.rings.model.RingNode;
 /// 2. Top-down (`compute`): each node is translated from its parent's
 ///    already-known screen position by its own required radius, along
 ///    its own `theta`.
-public class RingedCircularLayoutAlgorithm {
+public class RingedCircularLayoutAlgorithm implements LayoutAlgorithm<RingNode> {
 
     public void calculate(RingNode root, double originX, double originY) {
         if (root == null) return;
