@@ -46,6 +46,9 @@ public class RTTreeVisualizationView extends BorderPane {
     /// redrawn.
     private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
 
+    /// and reset whenever the canvas scale is reset.
+    private Label zoomLabel;
+
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
@@ -81,6 +84,7 @@ public class RTTreeVisualizationView extends BorderPane {
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
         drawingCanvas.setScaleY(1.0);
+        updateZoomLabel(1.0);
         renderTreeStructure();
 
         scrollPaneContainer.setHvalue(0.5);
@@ -101,7 +105,10 @@ public class RTTreeVisualizationView extends BorderPane {
         var hintLabel = new Label("Click a node to inspect it · scroll or Ctrl +/- to zoom · drag to pan");
         hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
 
-        var toolbar = new HBox(15, titleLabel, btnCalculateArea, hintLabel);
+        zoomLabel = new Label("100%");
+        zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
+
+        var toolbar = new HBox(15, titleLabel, btnCalculateArea, hintLabel, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -373,6 +380,14 @@ public class RTTreeVisualizationView extends BorderPane {
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             drawingCanvas.setScaleX(newScale);
             drawingCanvas.setScaleY(newScale);
+            updateZoomLabel(newScale);
+        }
+    }
+
+    /// Reflects the current canvas scale in the toolbar's zoom percentage label.
+    private void updateZoomLabel(double scale) {
+        if (zoomLabel != null) {
+            zoomLabel.setText(Math.round(scale * 100) + "%");
         }
     }
 
