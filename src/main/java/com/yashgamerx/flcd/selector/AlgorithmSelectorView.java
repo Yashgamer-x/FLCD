@@ -129,7 +129,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new FLCDTreeVisualizationView(map, new PlanarGridAlgorithm());
+            var visualizationView = new FLCDTreeVisualizationView(map, new PlanarGridAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
@@ -145,7 +145,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = tmelFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new TMELTreeVisualizationView(map, new TopMaximumEdgeLengthPlanarAlgorithm());
+            var visualizationView = new TMELTreeVisualizationView(map, new TopMaximumEdgeLengthPlanarAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
@@ -162,7 +162,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = maximumEdgeLengthFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new CircleMaximumEdgeLengthVisualizationView(map, new CircleMaximumEdgeLengthAlgorithm());
+            var visualizationView = new CircleMaximumEdgeLengthVisualizationView(map, new CircleMaximumEdgeLengthAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
@@ -179,7 +179,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = rtFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new RTTreeVisualizationView(map, new ReingoldTilfordAlgorithm());
+            var visualizationView = new RTTreeVisualizationView(map, new ReingoldTilfordAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
@@ -196,7 +196,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = ringFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new RingedCircularLayoutVisualizationView(map, new RingedCircularLayoutAlgorithm());
+            var visualizationView = new RingedCircularLayoutVisualizationView(map, new RingedCircularLayoutAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);

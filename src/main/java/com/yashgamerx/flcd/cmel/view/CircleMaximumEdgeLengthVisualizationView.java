@@ -2,10 +2,7 @@ package com.yashgamerx.flcd.cmel.view;
 
 import com.yashgamerx.flcd.cmel.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import com.yashgamerx.flcd.cmel.model.CircleMaximumEdgeLengthNode;
-import com.yashgamerx.flcd.common.metrics.MetricsChartWindow;
-import com.yashgamerx.flcd.common.metrics.MetricsDialogUtil;
-import com.yashgamerx.flcd.common.metrics.MetricsHistory;
-import com.yashgamerx.flcd.common.metrics.TreeMetricsCalculator;
+import com.yashgamerx.flcd.common.metrics.*;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -17,8 +14,11 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.stage.FileChooser;
 import lombok.extern.java.Log;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,15 +64,25 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     private ToggleButton activeModeButton = null;
     private Label hintLabel;
     private Label zoomLabel;
-    private static final String ALGORITHM_NAME = "CMEL";
     private final MetricsHistory metricsHistory = new MetricsHistory();
+    private static final String ALGORITHM_NAME = "CMEL";
+    /// Name of the source `.txt` file the tree was parsed from, recorded
+    /// alongside each exported metrics row so a CSV built up across runs
+    /// still shows which input produced which numbers.
+    private final String sourceFileName;
+    /// File chosen for "Append to File", remembered so repeated clicks
+    /// keep appending rows to the same comparison-study CSV instead of
+    /// re-prompting every time.
+    private File metricsExportFile;
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
     public CircleMaximumEdgeLengthVisualizationView(final Map<Integer, CircleMaximumEdgeLengthNode> nodeMap,
-                                                    final CircleMaximumEdgeLengthAlgorithm algorithm) {
+                                                    final CircleMaximumEdgeLengthAlgorithm algorithm,
+                                                    final String sourceFileName) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
+        this.sourceFileName = sourceFileName;
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
@@ -336,11 +346,14 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         var btnCompletionGraph = new Button("Completion Time Graph");
         btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
 
+        var btnAppendMetrics = new Button("Append to File");
+        btnAppendMetrics.setOnAction(_ -> handleAppendMetrics());
+
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
         var toolbar = new HBox(15, btnEdgeLength, hintLabel,
-                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, zoomLabel);
+                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -391,6 +404,45 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
     private void handleCompletionGraph() {
         MetricsChartWindow.show(ALGORITHM_NAME, metricsHistory.getRuns());
+    }
+
+    /// Appends one row (algorithm, node count, timing, area/aspect ratio,
+    /// and root-to-leaf distance summary stats — no per-leaf detail) to a
+    /// comparison-study CSV. Prompts for the file on the first click of a
+    /// session and reuses it for every click after that.
+    private void handleAppendMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Append to File Error", "There are no nodes to measure.");
+            return;
+        }
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Append to File Error", "No timed run recorded yet.");
+            return;
+        }
+
+        if (metricsExportFile == null) {
+            var chooser = new FileChooser();
+            chooser.setTitle("Choose or Create Metrics CSV");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"));
+            chooser.setInitialFileName("metrics.csv");
+            var chosen = chooser.showSaveDialog(getScene().getWindow());
+            if (chosen == null) return;
+            metricsExportFile = chosen;
+        }
+
+        var rootNode = nodeMap.get(1);
+        var box = TreeMetricsCalculator.computeBoundingBox(
+                nodeMap.values(), NODE_RADIUS, CircleMaximumEdgeLengthNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(
+                rootNode, CircleMaximumEdgeLengthNode::getIdentifier);
+
+        try {
+            MetricsExportUtil.appendRecord(metricsExportFile, ALGORITHM_NAME, sourceFileName, run, box, leafDistances);
+        } catch (IOException e) {
+            log.warning("Failed to append metrics to " + metricsExportFile + ": " + e.getMessage());
+            showErrorAlert("Append to File Error", "Could not write to " + metricsExportFile.getName() + ": " + e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
