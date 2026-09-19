@@ -15,6 +15,7 @@ module com.yashgamerx.flcd {
     exports com.yashgamerx.flcd;
     exports com.yashgamerx.flcd.common;
     exports com.yashgamerx.flcd.common.angular;
+    exports com.yashgamerx.flcd.common.metrics;
     exports com.yashgamerx.flcd.selector;
     exports com.yashgamerx.flcd.flcd.model;
     exports com.yashgamerx.flcd.flcd.algorithm;

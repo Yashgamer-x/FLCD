@@ -1,6 +1,10 @@
 package com.yashgamerx.flcd.flcd.view;
 
 import com.yashgamerx.flcd.common.NodeRole;
+import com.yashgamerx.flcd.common.metrics.MetricsChartWindow;
+import com.yashgamerx.flcd.common.metrics.MetricsDialogUtil;
+import com.yashgamerx.flcd.common.metrics.MetricsHistory;
+import com.yashgamerx.flcd.common.metrics.TreeMetricsCalculator;
 import com.yashgamerx.flcd.flcd.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.flcd.engine.FLCDNodeEngine;
 import com.yashgamerx.flcd.flcd.model.FLCDNode;
@@ -69,6 +73,11 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private Label hintLabel;
 
     private Label zoomLabel;
+
+    private static final String ALGORITHM_NAME = "FLCD";
+    /// Records calculation-only and calculation+draw timings for every
+    /// redraw, feeding the "Completion Time Graph" button.
+    private final MetricsHistory metricsHistory = new MetricsHistory();
 
     public FLCDTreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
         this.nodeMap = nodeMap;
@@ -171,8 +180,16 @@ public class FLCDTreeVisualizationView extends BorderPane {
         edgeLengthSelection.clear(); // Underlying circles are gone; no need to un-highlight them
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
+            long calcStart = System.nanoTime();
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
+            long calcEnd = System.nanoTime();
+
             drawCalculatedTree(rootNode);
+            long drawEnd = System.nanoTime();
+
+            double calcMillis = (calcEnd - calcStart) / 1_000_000.0;
+            double totalMillis = (drawEnd - calcStart) / 1_000_000.0;
+            metricsHistory.record(nodeMap.size(), calcMillis, totalMillis);
         }
     }
 
@@ -264,10 +281,23 @@ public class FLCDTreeVisualizationView extends BorderPane {
         var btnCalculateArea = new Button("Calculate Area");
         btnCalculateArea.setOnAction(_ -> handleCalculateArea());
 
+        var btnAspectRatio = new Button("Aspect Ratio");
+        btnAspectRatio.setOnAction(_ -> handleAspectRatio());
+
+        var btnMetrics = new Button("Metrics");
+        btnMetrics.setOnAction(_ -> handleMetrics());
+
+        var btnLeafDistances = new Button("Root→Leaf Distances");
+        btnLeafDistances.setOnAction(_ -> handleLeafDistances());
+
+        var btnCompletionGraph = new Button("Completion Time Graph");
+        btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
+
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnCalculateArea, hintLabel, zoomLabel);
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnCalculateArea,
+                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, hintLabel, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -559,6 +589,49 @@ public class FLCDTreeVisualizationView extends BorderPane {
         double area = width * height;
 
         showAreaResultAlert(width, height, area, leftMost, rightMost, topMost, bottomMost);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aspect Ratio / Metrics / Root→Leaf Distances / Completion Graph actions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void handleAspectRatio() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Aspect Ratio Error", "There are no nodes to measure.");
+            return;
+        }
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
+        MetricsDialogUtil.showAspectRatioDialog(box);
+    }
+
+    private void handleMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Metrics Error", "There are no nodes to measure.");
+            return;
+        }
+        var rootNode = nodeMap.get(1);
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, FLCDNode::getIdentifier);
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Metrics Error", "No timed run recorded yet.");
+            return;
+        }
+        MetricsDialogUtil.showMetricsDialog(ALGORITHM_NAME, run, box, leafDistances);
+    }
+
+    private void handleLeafDistances() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Root→Leaf Distances Error", "There are no nodes to measure.");
+            return;
+        }
+        var rootNode = nodeMap.get(1);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, FLCDNode::getIdentifier);
+        MetricsDialogUtil.showLeafDistancesDialog(leafDistances);
+    }
+
+    private void handleCompletionGraph() {
+        MetricsChartWindow.show(ALGORITHM_NAME, metricsHistory.getRuns());
     }
 
     // ─────────────────────────────────────────────────────────────────────────

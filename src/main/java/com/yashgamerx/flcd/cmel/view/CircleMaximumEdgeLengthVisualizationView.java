@@ -2,6 +2,10 @@ package com.yashgamerx.flcd.cmel.view;
 
 import com.yashgamerx.flcd.cmel.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import com.yashgamerx.flcd.cmel.model.CircleMaximumEdgeLengthNode;
+import com.yashgamerx.flcd.common.metrics.MetricsChartWindow;
+import com.yashgamerx.flcd.common.metrics.MetricsDialogUtil;
+import com.yashgamerx.flcd.common.metrics.MetricsHistory;
+import com.yashgamerx.flcd.common.metrics.TreeMetricsCalculator;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -60,6 +64,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     private ToggleButton activeModeButton = null;
     private Label hintLabel;
     private Label zoomLabel;
+    private static final String ALGORITHM_NAME = "CMEL";
+    private final MetricsHistory metricsHistory = new MetricsHistory();
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
@@ -134,8 +140,16 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
+            long calcStart = System.nanoTime();
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
+            long calcEnd = System.nanoTime();
+
             drawCalculatedTree(rootNode);
+            long drawEnd = System.nanoTime();
+
+            double calcMillis = (calcEnd - calcStart) / 1_000_000.0;
+            double totalMillis = (drawEnd - calcStart) / 1_000_000.0;
+            metricsHistory.record(nodeMap.size(), calcMillis, totalMillis);
         }
 
         scrollPaneContainer.setHvalue(0.5);
@@ -310,13 +324,73 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
             else hintLabel.setText("");
         });
 
+        var btnAspectRatio = new Button("Aspect Ratio");
+        btnAspectRatio.setOnAction(_ -> handleAspectRatio());
+
+        var btnMetrics = new Button("Metrics");
+        btnMetrics.setOnAction(_ -> handleMetrics());
+
+        var btnLeafDistances = new Button("Root→Leaf Distances");
+        btnLeafDistances.setOnAction(_ -> handleLeafDistances());
+
+        var btnCompletionGraph = new Button("Completion Time Graph");
+        btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
+
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
-        var toolbar = new HBox(15, btnEdgeLength, hintLabel, zoomLabel);
+        var toolbar = new HBox(15, btnEdgeLength, hintLabel,
+                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aspect Ratio / Metrics / Root→Leaf Distances / Completion Graph actions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void handleAspectRatio() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Aspect Ratio Error", "There are no nodes to measure.");
+            return;
+        }
+        var box = TreeMetricsCalculator.computeBoundingBox(
+                nodeMap.values(), NODE_RADIUS, CircleMaximumEdgeLengthNode::getIdentifier);
+        MetricsDialogUtil.showAspectRatioDialog(box);
+    }
+
+    private void handleMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Metrics Error", "There are no nodes to measure.");
+            return;
+        }
+        var rootNode = nodeMap.get(1);
+        var box = TreeMetricsCalculator.computeBoundingBox(
+                nodeMap.values(), NODE_RADIUS, CircleMaximumEdgeLengthNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(
+                rootNode, CircleMaximumEdgeLengthNode::getIdentifier);
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Metrics Error", "No timed run recorded yet.");
+            return;
+        }
+        MetricsDialogUtil.showMetricsDialog(ALGORITHM_NAME, run, box, leafDistances);
+    }
+
+    private void handleLeafDistances() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Root→Leaf Distances Error", "There are no nodes to measure.");
+            return;
+        }
+        var rootNode = nodeMap.get(1);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(
+                rootNode, CircleMaximumEdgeLengthNode::getIdentifier);
+        MetricsDialogUtil.showLeafDistancesDialog(leafDistances);
+    }
+
+    private void handleCompletionGraph() {
+        MetricsChartWindow.show(ALGORITHM_NAME, metricsHistory.getRuns());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
