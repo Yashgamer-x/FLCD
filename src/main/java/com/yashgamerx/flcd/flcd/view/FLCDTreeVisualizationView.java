@@ -622,9 +622,9 @@ public class FLCDTreeVisualizationView extends BorderPane {
             showErrorAlert("Metrics Error", "There are no nodes to measure.");
             return;
         }
-        var rootNode = nodeMap.get(1);
         var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
-        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, FLCDNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeLeafToRootDistances(
+                nodeMap.values(), FLCDNode::getParent, n -> n.getStatus() == NodeStatus.ROOTIFIED, FLCDNode::getIdentifier);
         var run = metricsHistory.latest();
         if (run == null) {
             showErrorAlert("Metrics Error", "No timed run recorded yet.");
@@ -638,8 +638,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
             showErrorAlert("Root→Leaf Distances Error", "There are no nodes to measure.");
             return;
         }
-        var rootNode = nodeMap.get(1);
-        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, FLCDNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeLeafToRootDistances(
+                nodeMap.values(), FLCDNode::getParent, n -> n.getStatus() == NodeStatus.ROOTIFIED, FLCDNode::getIdentifier);
         MetricsDialogUtil.showLeafDistancesDialog(leafDistances);
     }
 
@@ -672,9 +672,9 @@ public class FLCDTreeVisualizationView extends BorderPane {
             metricsExportFile = chosen;
         }
 
-        var rootNode = nodeMap.get(1);
         var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
-        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, FLCDNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeLeafToRootDistances(
+                nodeMap.values(), FLCDNode::getParent, n -> n.getStatus() == NodeStatus.ROOTIFIED, FLCDNode::getIdentifier);
 
         try {
             MetricsExportUtil.appendRecord(metricsExportFile, ALGORITHM_NAME, sourceFileName, run, box, leafDistances);

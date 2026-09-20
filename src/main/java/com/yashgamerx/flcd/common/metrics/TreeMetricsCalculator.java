@@ -5,6 +5,8 @@ import com.yashgamerx.flcd.common.AlgorithmicNode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 /// Geometric measurement pass shared by every algorithm family's view
@@ -95,5 +97,60 @@ public final class TreeMetricsCalculator {
             double edgeLength = Math.sqrt(edx * edx + edy * edy);
             walk(root, child, rootX, rootY, pathLengthSoFar + edgeLength, depth + 1, idOf, results);
         }
+    }
+
+    /// Leaf-to-root distance metric, walking each leaf UP via `parentOf`
+    /// rather than descending from a single fixed root. This is not just
+    /// the reverse of [#computeRootToLeafDistances] — it changes which
+    /// anchor a leaf is measured against. A leaf's walk stops as soon as
+    /// it reaches a node the algorithm itself treats as fixed for that
+    /// subtree: either a manually-rootified node (`isRootAnchor` true,
+    /// checked nearest-ancestor-first) or the tree's real root
+    /// (`parentOf` returns null). A leaf under a rootified subtree is
+    /// therefore measured against its own rootified anchor, not the
+    /// tree's true root, matching what the layout algorithm actually
+    /// holds fixed.
+    ///
+    /// Use this only for node types where "root" is not a single fixed
+    /// point for every leaf (currently FLCD, via its manual-rootify
+    /// feature). Families without that concept should keep using
+    /// [#computeRootToLeafDistances].
+    public static <T extends AlgorithmicNode<T>> List<RootLeafDistance> computeLeafToRootDistances(
+            Collection<T> allNodes, Function<T, T> parentOf, Predicate<T> isRootAnchor, ToIntFunction<T> idOf) {
+
+        List<RootLeafDistance> results = new ArrayList<>();
+
+        for (T leaf : allNodes) {
+            if (!leaf.getChildren().isEmpty()) continue;
+
+            double pathLength = 0.0;
+            int depth = 0;
+            T current = leaf;
+            T anchor = leaf;
+
+            while (true) {
+                if (isRootAnchor.test(current)) {
+                    anchor = current;
+                    break;
+                }
+                T parent = parentOf.apply(current);
+                if (parent == null) {
+                    anchor = current;
+                    break;
+                }
+                double edx = current.getLayoutX() - parent.getLayoutX();
+                double edy = current.getLayoutY() - parent.getLayoutY();
+                pathLength += Math.sqrt(edx * edx + edy * edy);
+                depth++;
+                current = parent;
+            }
+
+            double dx = leaf.getLayoutX() - anchor.getLayoutX();
+            double dy = leaf.getLayoutY() - anchor.getLayoutY();
+            double straightLine = Math.sqrt(dx * dx + dy * dy);
+            results.add(new RootLeafDistance(idOf.applyAsInt(leaf), depth, straightLine, pathLength));
+        }
+
+        return results;
     }
 }
