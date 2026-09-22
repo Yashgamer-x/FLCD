@@ -1,6 +1,7 @@
 package com.yashgamerx.flcd.flcd.view;
 
 import com.yashgamerx.flcd.common.NodeRole;
+import com.yashgamerx.flcd.common.metrics.*;
 import com.yashgamerx.flcd.flcd.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.flcd.engine.FLCDNodeEngine;
 import com.yashgamerx.flcd.flcd.model.FLCDNode;
@@ -16,8 +17,11 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.stage.FileChooser;
 import lombok.extern.java.Log;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,9 +72,26 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// on mode switch.
     private Label hintLabel;
 
-    public FLCDTreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm) {
+    private Label zoomLabel;
+
+    /// Records calculation-only and calculation+draw timings for every
+    /// redraw, feeding the "Completion Time Graph" button.
+    private final MetricsHistory metricsHistory = new MetricsHistory();
+    private static final String ALGORITHM_NAME = "FLCD";
+    /// Name of the source `.txt` file the tree was parsed from, recorded
+    /// alongside each exported metrics row so a CSV built up across runs
+    /// still shows which input produced which numbers.
+    private final String sourceFileName;
+    /// File chosen for "Append to File", remembered so repeated clicks
+    /// keep appending rows to the same comparison-study CSV instead of
+    /// re-prompting every time.
+    private File metricsExportFile;
+
+    public FLCDTreeVisualizationView(final Map<Integer, FLCDNode> nodeMap, final TreeLayoutAlgorithm algorithm,
+                                     final String sourceFileName) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
+        this.sourceFileName = sourceFileName;
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
@@ -169,20 +190,28 @@ public class FLCDTreeVisualizationView extends BorderPane {
         edgeLengthSelection.clear(); // Underlying circles are gone; no need to un-highlight them
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
+            long calcStart = System.nanoTime();
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
+            long calcEnd = System.nanoTime();
+
             drawCalculatedTree(rootNode);
+            long drawEnd = System.nanoTime();
+
+            double calcMillis = (calcEnd - calcStart) / 1_000_000.0;
+            double totalMillis = (drawEnd - calcStart) / 1_000_000.0;
+            metricsHistory.record(nodeMap.size(), calcMillis, totalMillis);
         }
     }
 
     private void drawCalculatedTree(FLCDNode node) {
         // Render edges first so they sit visually behind the circles
         for (var child : node.getChildren()) {
-            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
             drawCalculatedTree(child);
         }
 
         // Render node visuals on top
-        renderNodeVisuals(node, node.getGridX(), node.getGridY());
+        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
     }
 
     private void handleReadjustOnNode(FLCDNode node) {
@@ -217,6 +246,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
         drawingCanvas.setScaleY(1.0);
+        updateZoomLabel(1.0);
         renderTreeStructure();
 
         scrollPaneContainer.setHvalue(0.5);
@@ -261,7 +291,26 @@ public class FLCDTreeVisualizationView extends BorderPane {
         var btnCalculateArea = new Button("Calculate Area");
         btnCalculateArea.setOnAction(_ -> handleCalculateArea());
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnCalculateArea, hintLabel);
+        var btnAspectRatio = new Button("Aspect Ratio");
+        btnAspectRatio.setOnAction(_ -> handleAspectRatio());
+
+        var btnMetrics = new Button("Metrics");
+        btnMetrics.setOnAction(_ -> handleMetrics());
+
+        var btnLeafDistances = new Button("Root→Leaf Distances");
+        btnLeafDistances.setOnAction(_ -> handleLeafDistances());
+
+        var btnCompletionGraph = new Button("Completion Time Graph");
+        btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
+
+        var btnAppendMetrics = new Button("Append to File");
+        btnAppendMetrics.setOnAction(_ -> handleAppendMetrics());
+
+        zoomLabel = new Label("100%");
+        zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
+
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnCalculateArea,
+                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, hintLabel, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
@@ -319,8 +368,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
         // Screen coordinates
-        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getGridX()));
-        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getGridY()));
+        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getLayoutX()));
+        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getLayoutY()));
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
@@ -433,6 +482,14 @@ public class FLCDTreeVisualizationView extends BorderPane {
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             drawingCanvas.setScaleX(newScale);
             drawingCanvas.setScaleY(newScale);
+            updateZoomLabel(newScale);
+        }
+    }
+
+    /// Reflects the current canvas scale in the toolbar's zoom percentage label.
+    private void updateZoomLabel(double scale) {
+        if (zoomLabel != null) {
+            zoomLabel.setText(Math.round(scale * 100) + "%");
         }
     }
 
@@ -518,8 +575,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
         FLCDNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
 
         for (var node : nodeMap.values()) {
-            double x = node.getGridX();
-            double y = node.getGridY();
+            double x = node.getLayoutX();
+            double y = node.getLayoutY();
 
             if (x - NODE_RADIUS < minX) {
                 minX = x - NODE_RADIUS;
@@ -545,6 +602,86 @@ public class FLCDTreeVisualizationView extends BorderPane {
         double area = width * height;
 
         showAreaResultAlert(width, height, area, leftMost, rightMost, topMost, bottomMost);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aspect Ratio / Metrics / Root→Leaf Distances / Completion Graph actions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void handleAspectRatio() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Aspect Ratio Error", "There are no nodes to measure.");
+            return;
+        }
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
+        MetricsDialogUtil.showAspectRatioDialog(box);
+    }
+
+    private void handleMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Metrics Error", "There are no nodes to measure.");
+            return;
+        }
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeLeafToRootDistances(
+                nodeMap.values(), FLCDNode::getParent, n -> n.getStatus() == NodeStatus.ROOTIFIED, FLCDNode::getIdentifier);
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Metrics Error", "No timed run recorded yet.");
+            return;
+        }
+        MetricsDialogUtil.showMetricsDialog(ALGORITHM_NAME, run, box, leafDistances);
+    }
+
+    private void handleLeafDistances() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Root→Leaf Distances Error", "There are no nodes to measure.");
+            return;
+        }
+        var leafDistances = TreeMetricsCalculator.computeLeafToRootDistances(
+                nodeMap.values(), FLCDNode::getParent, n -> n.getStatus() == NodeStatus.ROOTIFIED, FLCDNode::getIdentifier);
+        MetricsDialogUtil.showLeafDistancesDialog(leafDistances);
+    }
+
+    private void handleCompletionGraph() {
+        MetricsChartWindow.show(ALGORITHM_NAME, metricsHistory.getRuns());
+    }
+
+    /// Appends one row (algorithm, node count, timing, area/aspect ratio,
+    /// and root-to-leaf distance summary stats — no per-leaf detail) to a
+    /// comparison-study CSV. Prompts for the file on the first click of a
+    /// session and reuses it for every click after that.
+    private void handleAppendMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Append to File Error", "There are no nodes to measure.");
+            return;
+        }
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Append to File Error", "No timed run recorded yet.");
+            return;
+        }
+
+        if (metricsExportFile == null) {
+            var chooser = new FileChooser();
+            chooser.setTitle("Choose or Create Metrics CSV");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"));
+            chooser.setInitialFileName("metrics.csv");
+            var chosen = chooser.showSaveDialog(getScene().getWindow());
+            if (chosen == null) return;
+            metricsExportFile = chosen;
+        }
+
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, FLCDNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeLeafToRootDistances(
+                nodeMap.values(), FLCDNode::getParent, n -> n.getStatus() == NodeStatus.ROOTIFIED, FLCDNode::getIdentifier);
+
+        try {
+            MetricsExportUtil.appendRecord(metricsExportFile, ALGORITHM_NAME, sourceFileName, run, box, leafDistances);
+        } catch (IOException e) {
+            log.warning("Failed to append metrics to " + metricsExportFile + ": " + e.getMessage());
+            showErrorAlert("Append to File Error", "Could not write to " + metricsExportFile.getName() + ": " + e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -645,8 +782,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// [#drawConnectionEdge] would draw between them, regardless of whether
     /// the two nodes are actually parent/child.
     private void showEdgeLengthResultAlert(FLCDNode nodeA, FLCDNode nodeB) {
-        double dx = nodeB.getGridX() - nodeA.getGridX();
-        double dy = nodeB.getGridY() - nodeA.getGridY();
+        double dx = nodeB.getLayoutX() - nodeA.getLayoutX();
+        double dy = nodeB.getLayoutY() - nodeA.getLayoutY();
         double centerDistance = Math.sqrt((dx * dx) + (dy * dy));
         double surfaceDistance = Math.max(0.0, centerDistance - (2 * NODE_RADIUS));
         boolean directlyConnected = nodeA.getParent() == nodeB || nodeB.getParent() == nodeA;
@@ -664,8 +801,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
                         "Node #%d  (x=%.2f, y=%.2f)%n%n" +
                         "Directly connected in tree: %s",
                 centerDistance, surfaceDistance, dx, dy,
-                nodeA.getIdentifier(), nodeA.getGridX(), nodeA.getGridY(),
-                nodeB.getIdentifier(), nodeB.getGridX(), nodeB.getGridY(),
+                nodeA.getIdentifier(), nodeA.getLayoutX(), nodeA.getLayoutY(),
+                nodeB.getIdentifier(), nodeB.getLayoutX(), nodeB.getLayoutY(),
                 directlyConnected ? "yes" : "no"
         );
 

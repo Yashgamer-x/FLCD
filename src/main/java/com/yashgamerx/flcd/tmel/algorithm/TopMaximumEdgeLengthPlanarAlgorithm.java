@@ -1,10 +1,11 @@
 package com.yashgamerx.flcd.tmel.algorithm;
 
+import com.yashgamerx.flcd.common.LayoutAlgorithm;
 import com.yashgamerx.flcd.common.NodeRole;
 import com.yashgamerx.flcd.tmel.engine.TMELPlanarNodeEngine;
 import com.yashgamerx.flcd.tmel.model.TMELNode;
 
-public class TopMaximumEdgeLengthPlanarAlgorithm {
+public class TopMaximumEdgeLengthPlanarAlgorithm implements LayoutAlgorithm<TMELNode> {
     private final TMELPlanarNodeEngine engine = new TMELPlanarNodeEngine();
 
     public void calculate(TMELNode root, double originX, double originY) {
@@ -13,8 +14,8 @@ public class TopMaximumEdgeLengthPlanarAlgorithm {
         root.setRole(NodeRole.ROOT);
 
         engine.precompute(root);
-        root.setGridX(originX);
-        root.setGridY(originY);
+        root.setLayoutX(originX);
+        root.setLayoutY(originY);
         engine.compute(root);
     }
 }

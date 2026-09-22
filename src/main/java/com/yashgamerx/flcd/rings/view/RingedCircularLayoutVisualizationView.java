@@ -1,8 +1,8 @@
-package com.yashgamerx.flcd.rt.view;
+package com.yashgamerx.flcd.rings.view;
 
 import com.yashgamerx.flcd.common.metrics.*;
-import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
-import com.yashgamerx.flcd.rt.model.RTNode;
+import com.yashgamerx.flcd.rings.algorithm.RingedCircularLayoutAlgorithm;
+import com.yashgamerx.flcd.rings.model.RingNode;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -22,17 +22,29 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.yashgamerx.flcd.rt.model.RTNode.NODE_DIAMETER;
-import static com.yashgamerx.flcd.rt.model.RTNode.NODE_RADIUS;
+import static com.yashgamerx.flcd.rings.model.RingNode.NODE_DIAMETER;
+import static com.yashgamerx.flcd.rings.model.RingNode.NODE_RADIUS;
 
-/// Visualization canvas for the classic Reingold–Tilford comparison
-/// baseline. Deliberately has no Rootify/Readjust/Edge-Length toolbar —
-/// those are FLCD-specific interactive operations with no equivalent in
-/// the classic algorithm — but keeps the same pan/zoom/inspect/area
-/// affordances as [com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView]
-/// so the two are visually and interactionally comparable side by side.
+/// Visualization canvas for Yash's Ring-based radial layout ("Rings").
+///
+/// This is the standalone Ring app's `RingGraphView` + `NodeInfoPanel` +
+/// `ZoomableScrollPane`, redrawn against this app's own visual
+/// conventions rather than the originals':
+///  - pan/zoom via drag + scroll/Ctrl+/- on a large virtual canvas
+///    (same [com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView]-style
+///    approach) instead of the original's `ZoomableScrollPane`
+///  - a click-to-open info panel per node that stays open until its own
+///    ✕ is clicked (any number can be open at once, same as CMEL/TMEL's
+///    inspector), instead of the original's single select/deselect panel
+///  - a top toolbar with a title, "Calculate Area" (present on every
+///    other family's view), and a hint label
+///
+/// None of this changes the layout math — that lives entirely in
+/// [RingedCircularLayoutAlgorithm], ported field-for-field from the
+/// original `RingAlgorithm`. This class only draws what that algorithm
+/// produces.
 @Log
-public class RTTreeVisualizationView extends BorderPane {
+public class RingedCircularLayoutVisualizationView extends BorderPane {
 
     private static final double VIRTUAL_CANVAS_SIZE = 8000.0;
     private static final double ZOOM_INTENSITY = 0.1;
@@ -41,8 +53,8 @@ public class RTTreeVisualizationView extends BorderPane {
 
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
-    private final Map<Integer, RTNode> nodeMap;
-    private final ReingoldTilfordAlgorithm layoutAlgorithm;
+    private final Map<Integer, RingNode> nodeMap;
+    private final RingedCircularLayoutAlgorithm layoutAlgorithm;
 
     /// Tracks all currently visible node info panels, keyed by node
     /// identifier, so any number of them can stay open at once. A panel is
@@ -50,10 +62,9 @@ public class RTTreeVisualizationView extends BorderPane {
     /// redrawn.
     private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
 
-    /// and reset whenever the canvas scale is reset.
     private Label zoomLabel;
     private final MetricsHistory metricsHistory = new MetricsHistory();
-    private static final String ALGORITHM_NAME = "Reingold-Tilford";
+    private static final String ALGORITHM_NAME = "Rings";
     /// Name of the source `.txt` file the tree was parsed from, recorded
     /// alongside each exported metrics row so a CSV built up across runs
     /// still shows which input produced which numbers.
@@ -62,11 +73,12 @@ public class RTTreeVisualizationView extends BorderPane {
     /// keep appending rows to the same comparison-study CSV instead of
     /// re-prompting every time.
     private File metricsExportFile;
+
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
-    public RTTreeVisualizationView(final Map<Integer, RTNode> nodeMap, final ReingoldTilfordAlgorithm algorithm,
-                                   final String sourceFileName) {
+    public RingedCircularLayoutVisualizationView(final Map<Integer, RingNode> nodeMap, final RingedCircularLayoutAlgorithm algorithm,
+                                                 final String sourceFileName) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
         this.sourceFileName = sourceFileName;
@@ -103,7 +115,7 @@ public class RTTreeVisualizationView extends BorderPane {
         renderTreeStructure();
 
         scrollPaneContainer.setHvalue(0.5);
-        scrollPaneContainer.setVvalue(0);
+        scrollPaneContainer.setVvalue(0.5);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -111,7 +123,7 @@ public class RTTreeVisualizationView extends BorderPane {
     // ─────────────────────────────────────────────────────────────────────
 
     private HBox createActionToolbar() {
-        var titleLabel = new Label("Reingold–Tilford (Classic)");
+        var titleLabel = new Label("Ringed Circular Layout (Rings)");
         titleLabel.setStyle("-fx-font-weight: bold;");
 
         var btnCalculateArea = new Button("Calculate Area");
@@ -155,7 +167,7 @@ public class RTTreeVisualizationView extends BorderPane {
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
             long calcStart = System.nanoTime();
-            layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, 60.0);
+            layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
             long calcEnd = System.nanoTime();
 
             drawCalculatedTree(rootNode);
@@ -167,13 +179,16 @@ public class RTTreeVisualizationView extends BorderPane {
         }
     }
 
-    private void drawCalculatedTree(RTNode node) {
-        // Render edges first so they sit visually behind the circles
+    private void drawCalculatedTree(RingNode node) {
+        // Render edges (parent → child spokes) first so they sit visually
+        // behind the circles — same ordering as the original's
+        // drawLine-before-recursing-further, and consistent with the rest
+        // of this app.
         for (var child : node.getChildren()) {
             drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
             drawCalculatedTree(child);
         }
-        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
+        renderNodeVisuals(node);
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -183,7 +198,10 @@ public class RTTreeVisualizationView extends BorderPane {
         drawingCanvas.getChildren().addFirst(line);
     }
 
-    private void renderNodeVisuals(RTNode node, double x, double y) {
+    private void renderNodeVisuals(RingNode node) {
+        double x = node.getLayoutX();
+        double y = node.getLayoutY();
+
         var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
         circle.setStroke(Color.DARKSLATEGRAY);
         circle.setStrokeWidth(1);
@@ -206,10 +224,12 @@ public class RTTreeVisualizationView extends BorderPane {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Node info panel
+    // Node info panel — same fields as the original `NodeInfoPanel`
+    // (ID, X, Y, Theta, Radius, Children count, Parent ID), restyled to
+    // match CMEL/TMEL's floating inspector panel.
     // ─────────────────────────────────────────────────────────────────────
 
-    private void showNodeInfoPanel(RTNode node, double nodeX, double nodeY) {
+    private void showNodeInfoPanel(RingNode node, double nodeX, double nodeY) {
         if (openInfoPanels.containsKey(node.getIdentifier())) return;
 
         var titleLabel = new Label("Node #" + node.getIdentifier());
@@ -233,22 +253,12 @@ public class RTTreeVisualizationView extends BorderPane {
         grid.setPadding(new Insets(6, 0, 0, 0));
 
         int row = 0;
-        addInfoRow(grid, row++, "Name",
-                (node.getName() == null || node.getName().isBlank()) ? "—" : node.getName());
-        addInfoRow(grid, row++, "Parent",
+        addInfoRow(grid, row++, "Parent ID",
                 node.getParent() != null ? "#" + node.getParent().getIdentifier() : "none (root)");
-
-        grid.add(makeSeparator(), 0, row++, 2, 1);
-
-        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getLayoutX()));
-        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getLayoutY()));
-        addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
-
-        grid.add(makeSeparator(), 0, row++, 2, 1);
-
-        addInfoRow(grid, row++, "Prelim X", String.format("%.4f", node.getPrelimX()));
-        addInfoRow(grid, row++, "Mod", String.format("%.4f", node.getMod()));
-        addInfoRow(grid, row++, "Sibling #", String.valueOf(node.getNumber()));
+        addInfoRow(grid, row++, "X", String.format("%.2f", node.getLayoutX()));
+        addInfoRow(grid, row++, "Y", String.format("%.2f", node.getLayoutY()));
+        addInfoRow(grid, row++, "Theta", String.format("%.4f rad", node.getTheta()));
+        addInfoRow(grid, row++, "Radius", String.format("%.2f", node.getRadius()));
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
@@ -268,7 +278,7 @@ public class RTTreeVisualizationView extends BorderPane {
                         + "-fx-border-radius: 5; "
                         + "-fx-background-radius: 5; "
                         + "-fx-padding: 8;");
-        panel.setPrefWidth(185);
+        panel.setPrefWidth(190);
 
         panel.setLayoutX(nodeX + NODE_RADIUS + 4);
         panel.setLayoutY(nodeY - NODE_RADIUS);
@@ -296,7 +306,7 @@ public class RTTreeVisualizationView extends BorderPane {
         var val = new Label(value);
         val.setStyle("-fx-font-size: 9px; -fx-font-family: monospace; -fx-text-fill: #1a1a1a;");
         val.setWrapText(true);
-        val.setMaxWidth(105);
+        val.setMaxWidth(110);
 
         grid.add(lbl, 0, row);
         grid.add(val, 1, row);
@@ -319,7 +329,7 @@ public class RTTreeVisualizationView extends BorderPane {
             showErrorAlert("Aspect Ratio Error", "There are no nodes to measure.");
             return;
         }
-        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, RTNode::getIdentifier);
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, RingNode::getIdentifier);
         MetricsDialogUtil.showAspectRatioDialog(box);
     }
 
@@ -329,8 +339,8 @@ public class RTTreeVisualizationView extends BorderPane {
             return;
         }
         var rootNode = nodeMap.get(1);
-        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, RTNode::getIdentifier);
-        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, RTNode::getIdentifier);
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, RingNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, RingNode::getIdentifier);
         var run = metricsHistory.latest();
         if (run == null) {
             showErrorAlert("Metrics Error", "No timed run recorded yet.");
@@ -345,7 +355,7 @@ public class RTTreeVisualizationView extends BorderPane {
             return;
         }
         var rootNode = nodeMap.get(1);
-        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, RTNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, RingNode::getIdentifier);
         MetricsDialogUtil.showLeafDistancesDialog(leafDistances);
     }
 
@@ -379,8 +389,8 @@ public class RTTreeVisualizationView extends BorderPane {
         }
 
         var rootNode = nodeMap.get(1);
-        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, RTNode::getIdentifier);
-        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, RTNode::getIdentifier);
+        var box = TreeMetricsCalculator.computeBoundingBox(nodeMap.values(), NODE_RADIUS, RingNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(rootNode, RingNode::getIdentifier);
 
         try {
             MetricsExportUtil.appendRecord(metricsExportFile, ALGORITHM_NAME, sourceFileName, run, box, leafDistances);
@@ -396,9 +406,9 @@ public class RTTreeVisualizationView extends BorderPane {
 
     /// Scans all currently rendered nodes to find the bounding box of the
     /// tree, accounting for NODE_RADIUS so the box encloses the full node
-    /// circles (not just their center points), then displays the resulting
-    /// area — same convention as FLCDTreeVisualizationView#handleCalculateArea
-    /// so RT's numbers are directly comparable to the other families'.
+    /// circles (not just their center points) — same convention as the
+    /// other families' Calculate Area, so Rings' numbers are directly
+    /// comparable to FLCD/TMEL/CMEL/RT.
     private void handleCalculateArea() {
         if (nodeMap.isEmpty()) {
             showErrorAlert("Calculate Area Error", "There are no nodes to measure.");
@@ -410,7 +420,7 @@ public class RTTreeVisualizationView extends BorderPane {
         double minY = Double.POSITIVE_INFINITY;
         double maxY = Double.NEGATIVE_INFINITY;
 
-        RTNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
+        RingNode leftMost = null, rightMost = null, topMost = null, bottomMost = null;
 
         for (var node : nodeMap.values()) {
             double x = node.getLayoutX();
@@ -442,11 +452,11 @@ public class RTTreeVisualizationView extends BorderPane {
     }
 
     private void showAreaResultAlert(double width, double height, double area,
-                                     RTNode leftMost, RTNode rightMost,
-                                     RTNode topMost, RTNode bottomMost) {
+                                     RingNode leftMost, RingNode rightMost,
+                                     RingNode topMost, RingNode bottomMost) {
         var alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Bounding Area");
-        alert.setHeaderText("Tree Bounding Box Area (Reingold–Tilford)");
+        alert.setHeaderText("Tree Bounding Box Area (Ringed Circular Layout)");
 
         String content = String.format(
                 "Width:  %.2f%n" +

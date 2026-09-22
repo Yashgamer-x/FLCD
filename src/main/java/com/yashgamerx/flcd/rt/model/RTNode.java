@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.rt.model;
 
+import com.yashgamerx.flcd.common.AlgorithmicNode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,7 +18,7 @@ import java.util.List;
 /// "thread" bookkeeping used by the two-pass (firstWalk/secondWalk) algorithm.
 @Getter
 @Setter
-public class RTNode {
+public class RTNode implements AlgorithmicNode<RTNode> {
     // Constants for spacing — kept in the same units/scale as FLCDNode's
     // NODE_DIAMETER so that the RT baseline is visually/comparably sized
     // against the FLCD/TMEL/CMEL families.
@@ -54,8 +55,8 @@ public class RTNode {
     private int number;
 
     // ── Final screen coordinates, filled in by the third walk ──────────────
-    private double gridX;
-    private double gridY;
+    private double layoutX;
+    private double layoutY;
 
     public RTNode(int identifier, String name, RTNode parent) {
         this.identifier = identifier;

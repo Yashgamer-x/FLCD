@@ -1,17 +1,18 @@
 package com.yashgamerx.flcd.cmel.algorithm;
 
 import com.yashgamerx.flcd.cmel.model.CircleMaximumEdgeLengthNode;
+import com.yashgamerx.flcd.common.LayoutAlgorithm;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/// Standalone layout algorithm for [CircleMaximumEdgeLengthNode] trees.
+/// Layout algorithm for [CircleMaximumEdgeLengthNode] trees.
 ///
-/// Intentionally does not implement [TreeLayoutAlgorithm] — that interface
-/// is FLCD's contract over [com.yashgamerx.flcd.flcd.model.FLCDNode], and this
-/// algorithm operates on a different node type with a different
-/// placement strategy entirely.
-public class CircleMaximumEdgeLengthAlgorithm {
+/// Does not implement FLCD's family-specific `TreeLayoutAlgorithm` — that
+/// interface is scoped to [com.yashgamerx.flcd.flcd.model.FLCDNode] — but
+/// does implement the shared [LayoutAlgorithm] contract every family's
+/// algorithm now conforms to.
+public class CircleMaximumEdgeLengthAlgorithm implements LayoutAlgorithm<CircleMaximumEdgeLengthNode> {
 
     private static final double RADIUS_STEP = 500.0;
     private static final double TWO_PI = 2.0 * Math.PI;
@@ -59,8 +60,8 @@ public class CircleMaximumEdgeLengthAlgorithm {
         if (root == null) return;
 
         root.setDepth(0);
-        root.setGridX(originX);
-        root.setGridY(originY);
+        root.setLayoutX(originX);
+        root.setLayoutY(originY);
 
         var minStepAngleByDepth = new ArrayList<Double>();
         minStepAngleByDepth.add(null); // depth 0 has no incoming step angle
@@ -147,8 +148,8 @@ public class CircleMaximumEdgeLengthAlgorithm {
             double childAngle = (childStart + childEnd) / 2.0;
 
             child.setDepth(node.getDepth() + 1);
-            child.setGridX(originX + radius * Math.cos(childAngle));
-            child.setGridY(originY - radius * Math.sin(childAngle));
+            child.setLayoutX(originX + radius * Math.cos(childAngle));
+            child.setLayoutY(originY - radius * Math.sin(childAngle));
 
             placeChildrenInArc(child, childStart, childEnd, originX, originY, radiusByDepth);
 

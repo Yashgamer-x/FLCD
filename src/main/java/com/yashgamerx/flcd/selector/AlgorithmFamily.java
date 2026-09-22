@@ -13,7 +13,8 @@ public enum AlgorithmFamily {
     FLCD("FLCD (Planar Grid)"),
     FLCD_MAXIMUM_EDGE_LENGTH("FLCD Maximum Edge Length"),
     CIRCLE_MAXIMUM_EDGE_LENGTH("Circle Maximum Edge Length"),
-    REINGOLD_TILFORD("Reingold–Tilford (Classic Baseline)");
+    REINGOLD_TILFORD("Reingold–Tilford (Classic Baseline)"),
+    RINGED_CIRCULAR_LAYOUT("Ringed Circular Layout (Rings)");
 
     private final String displayName;
 
