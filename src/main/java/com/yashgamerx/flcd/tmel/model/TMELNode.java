@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.tmel.model;
 
+import com.yashgamerx.flcd.common.AlgorithmicNode;
 import com.yashgamerx.flcd.common.NodeRole;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,7 +18,7 @@ import java.util.List;
 /// the engine replaces that entirely.
 @Getter
 @Setter
-public class TMELNode {
+public class TMELNode implements AlgorithmicNode<TMELNode> {
     // Constants for spacing
     public static final double WIDTH_SPACER = 5.0;
     public static final double HEIGHT_SPACER = 5.0;
@@ -35,8 +36,8 @@ public class TMELNode {
     private double nodeOffset; // Scalar distance from parent
     private double localRadianAngle; // Angle relative to parent
     private double globalRadianAngle; // Per-child angular step for subtree
-    private double gridX; // Screen X coordinate
-    private double gridY; // Screen Y coordinate
+    private double layoutX; // Screen X coordinate
+    private double layoutY; // Screen Y coordinate
     private int depth;
 
     // Structural/behavioral markers (read by TMELPlanarNodeEngine)

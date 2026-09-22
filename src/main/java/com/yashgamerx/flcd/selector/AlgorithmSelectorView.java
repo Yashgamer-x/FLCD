@@ -7,6 +7,12 @@ import com.yashgamerx.flcd.flcd.algorithm.PlanarGridAlgorithm;
 import com.yashgamerx.flcd.flcd.file.FileParsingService;
 import com.yashgamerx.flcd.flcd.file.TreeFileParsingService;
 import com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView;
+import com.yashgamerx.flcd.rings.algorithm.RingedCircularLayoutAlgorithm;
+import com.yashgamerx.flcd.rings.file.RingFileParsingService;
+import com.yashgamerx.flcd.rings.view.RingedCircularLayoutVisualizationView;
+import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
+import com.yashgamerx.flcd.rt.file.RTFileParsingService;
+import com.yashgamerx.flcd.rt.view.RTTreeVisualizationView;
 import com.yashgamerx.flcd.tmel.algorithm.TopMaximumEdgeLengthPlanarAlgorithm;
 import com.yashgamerx.flcd.tmel.file.TMELFileParsingService;
 import com.yashgamerx.flcd.tmel.view.TMELTreeVisualizationView;
@@ -29,6 +35,8 @@ public class AlgorithmSelectorView extends BorderPane {
     private final FileParsingService flcdFileParsingService = new TreeFileParsingService();
     private final TMELFileParsingService tmelFileParsingService = new TMELFileParsingService();
     private final CircleMaximumEdgeLengthFileParsingService maximumEdgeLengthFileParsingService = new CircleMaximumEdgeLengthFileParsingService();
+    private final RTFileParsingService rtFileParsingService = new RTFileParsingService();
+    private final RingFileParsingService ringFileParsingService = new RingFileParsingService();
     @FXML
     private Button selectTextFileButton;
     @FXML
@@ -110,6 +118,8 @@ public class AlgorithmSelectorView extends BorderPane {
             case FLCD -> runFlcdPipeline();
             case FLCD_MAXIMUM_EDGE_LENGTH -> runFlcdMaximumEdgeLengthPipeline();
             case CIRCLE_MAXIMUM_EDGE_LENGTH -> runMaximumEdgeLengthPipeline();
+            case REINGOLD_TILFORD -> runReingoldTilfordPipeline();
+            case RINGED_CIRCULAR_LAYOUT -> runRingedCircularLayoutPipeline();
         }
     }
 
@@ -119,7 +129,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = flcdFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new FLCDTreeVisualizationView(map, new PlanarGridAlgorithm());
+            var visualizationView = new FLCDTreeVisualizationView(map, new PlanarGridAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
@@ -135,7 +145,7 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = tmelFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new TMELTreeVisualizationView(map, new TopMaximumEdgeLengthPlanarAlgorithm());
+            var visualizationView = new TMELTreeVisualizationView(map, new TopMaximumEdgeLengthPlanarAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
@@ -152,11 +162,45 @@ public class AlgorithmSelectorView extends BorderPane {
         var parsingResult = maximumEdgeLengthFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
 
         parsingResult.ifPresentOrElse(map -> {
-            var visualizationView = new CircleMaximumEdgeLengthVisualizationView(map, new CircleMaximumEdgeLengthAlgorithm());
+            var visualizationView = new CircleMaximumEdgeLengthVisualizationView(map, new CircleMaximumEdgeLengthAlgorithm(), currentlySelectedTextFile.getName());
 
             var currentScene = this.getScene();
             currentScene.setRoot(visualizationView);
             log.info("Transitioned to MaximumEdgeLengthVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
+    }
+
+    /// Parses the selected file into an `RTNode` tree and transitions to
+    /// [RTTreeVisualizationView] using [ReingoldTilfordAlgorithm] — the
+    /// classic tree-drawing baseline (Reingold & Tilford 1981, linear-time
+    /// per Buchheim–Jünger–Leipert 2002) used as a comparison point against
+    /// the FLCD/TMEL/CMEL families.
+    private void runReingoldTilfordPipeline() {
+        var parsingResult = rtFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(map -> {
+            var visualizationView = new RTTreeVisualizationView(map, new ReingoldTilfordAlgorithm(), currentlySelectedTextFile.getName());
+
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to RTTreeVisualizationView.");
+        }, () -> log.warning("Parsing failed; transition aborted."));
+    }
+
+    /// Parses the selected file into a `RingNode` tree and transitions to
+    /// [RingedCircularLayoutVisualizationView] using
+    /// [RingedCircularLayoutAlgorithm] — the "Rings" radial comparison
+    /// baseline (Teoh & Ma [TM02], via Rusu §5.5/§5.8.2), used alongside
+    /// RT/FLCD/TMEL/CMEL in the comparison study.
+    private void runRingedCircularLayoutPipeline() {
+        var parsingResult = ringFileParsingService.readAndParseIdentifiedTextFile(currentlySelectedTextFile);
+
+        parsingResult.ifPresentOrElse(map -> {
+            var visualizationView = new RingedCircularLayoutVisualizationView(map, new RingedCircularLayoutAlgorithm(), currentlySelectedTextFile.getName());
+
+            var currentScene = this.getScene();
+            currentScene.setRoot(visualizationView);
+            log.info("Transitioned to RingedCircularLayoutVisualizationView.");
         }, () -> log.warning("Parsing failed; transition aborted."));
     }
 }

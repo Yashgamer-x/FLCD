@@ -250,8 +250,8 @@ public class TMELPlanarNodeEngine {
             firstChild.setLocalRadianAngle(currentAngle);
 
             double nodeCenter = safeScalarOffset - NODE_RADIUS;
-            firstChild.setGridX(rootNode.getGridX() + (nodeCenter * Math.cos(currentAngle)));
-            firstChild.setGridY(rootNode.getGridY() - (nodeCenter * Math.sin(currentAngle)));
+            firstChild.setLayoutX(rootNode.getLayoutX() + (nodeCenter * Math.cos(currentAngle)));
+            firstChild.setLayoutY(rootNode.getLayoutY() - (nodeCenter * Math.sin(currentAngle)));
 
             compute(firstChild);
         }
@@ -269,8 +269,8 @@ public class TMELPlanarNodeEngine {
         double leftAngle = parentAngle + (Math.PI / 2.0);
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
 
-        double anchorX = firstChild.getGridX() - (forwardStepLength * Math.cos(parentAngle));
-        double anchorY = firstChild.getGridY() + (forwardStepLength * Math.sin(parentAngle));
+        double anchorX = firstChild.getLayoutX() - (forwardStepLength * Math.cos(parentAngle));
+        double anchorY = firstChild.getLayoutY() + (forwardStepLength * Math.sin(parentAngle));
 
         // [0] accumulatedRightDistance, [1] accumulatedLeftDistance
         double[] accumulatedDistances = {0.0, 0.0};
@@ -307,8 +307,8 @@ public class TMELPlanarNodeEngine {
         AtomicReference<Double> currentAngle = new AtomicReference<>(parentAngle - (stepAngle360 / 2) + (topStepAngle / 2));
 
         top.forEach(child -> {
-            double topAnchorX = firstChild.getGridX() + (forwardStepLength * Math.cos(currentAngle.get()));
-            double topAnchorY = firstChild.getGridY() - (forwardStepLength * Math.sin(currentAngle.get()));
+            double topAnchorX = firstChild.getLayoutX() + (forwardStepLength * Math.cos(currentAngle.get()));
+            double topAnchorY = firstChild.getLayoutY() - (forwardStepLength * Math.sin(currentAngle.get()));
             projectSecondTopChildAlongVector(child, topAnchorX, topAnchorY, currentAngle.get(), top.size(), stepAngle360);
             currentAngle.updateAndGet(v -> v + topStepAngle);
         });
@@ -320,8 +320,8 @@ public class TMELPlanarNodeEngine {
         var radius = secondChild.getSubtreeWidth() / (2.0 * Math.tan(angle / 2.0));
         double centerX = anchorX + (radius * Math.cos(currentAngle));
         double centerY = anchorY - (radius * Math.sin(currentAngle));
-        secondChild.setGridX(centerX);
-        secondChild.setGridY(centerY);
+        secondChild.setLayoutX(centerX);
+        secondChild.setLayoutY(centerY);
         secondChild.setLocalRadianAngle(currentAngle + (Math.PI / 2.0));
 
         compute(secondChild);
@@ -332,8 +332,8 @@ public class TMELPlanarNodeEngine {
         double newDistance = currentDistance + WIDTH_SPACER + child.getSubtreeWidth();
         double centerPoint = newDistance - NODE_RADIUS;
 
-        child.setGridX(anchorX + (centerPoint * Math.cos(baselineAngle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(baselineAngle)));
+        child.setLayoutX(anchorX + (centerPoint * Math.cos(baselineAngle)));
+        child.setLayoutY(anchorY - (centerPoint * Math.sin(baselineAngle)));
         child.setLocalRadianAngle(baselineAngle);
 
         compute(child);
@@ -351,8 +351,8 @@ public class TMELPlanarNodeEngine {
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
         double forwardStepLength = NODE_RADIUS + WIDTH_SPACER + NODE_RADIUS;
-        double anchorX = secondChild.getGridX() - (forwardStepLength * Math.cos(myAngle));
-        double anchorY = secondChild.getGridY() + (forwardStepLength * Math.sin(myAngle));
+        double anchorX = secondChild.getLayoutX() - (forwardStepLength * Math.cos(myAngle));
+        double anchorY = secondChild.getLayoutY() + (forwardStepLength * Math.sin(myAngle));
 
         double[] offset = {NODE_RADIUS + HEIGHT_SPACER};
 
@@ -375,8 +375,8 @@ public class TMELPlanarNodeEngine {
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
         double forwardStepLength = NODE_RADIUS + HEIGHT_SPACER + NODE_RADIUS;
-        double anchorX = heightChild.getGridX() + (forwardStepLength * Math.cos(myAngle));
-        double anchorY = heightChild.getGridY() - (forwardStepLength * Math.sin(myAngle));
+        double anchorX = heightChild.getLayoutX() + (forwardStepLength * Math.cos(myAngle));
+        double anchorY = heightChild.getLayoutY() - (forwardStepLength * Math.sin(myAngle));
 
         double[] offset = {NODE_RADIUS + WIDTH_SPACER};
 
@@ -408,8 +408,8 @@ public class TMELPlanarNodeEngine {
         double childAngleTrajectory = myAngle + turnSign * (Math.PI / 2.0);
 
         double forwardStepLength = NODE_RADIUS + WIDTH_SPACER + NODE_RADIUS;
-        double anchorX = widthNode.getGridX() + (forwardStepLength * Math.cos(myAngle));
-        double anchorY = widthNode.getGridY() - (forwardStepLength * Math.sin(myAngle));
+        double anchorX = widthNode.getLayoutX() + (forwardStepLength * Math.cos(myAngle));
+        double anchorY = widthNode.getLayoutY() - (forwardStepLength * Math.sin(myAngle));
 
         double[] offset = {NODE_RADIUS + HEIGHT_SPACER};
 
@@ -430,8 +430,8 @@ public class TMELPlanarNodeEngine {
                                       double angle, double currentOffset, boolean useHeightDimension) {
         double centerPoint = currentOffset + NODE_RADIUS;
 
-        child.setGridX(anchorX + (centerPoint * Math.cos(angle)));
-        child.setGridY(anchorY - (centerPoint * Math.sin(angle)));
+        child.setLayoutX(anchorX + (centerPoint * Math.cos(angle)));
+        child.setLayoutY(anchorY - (centerPoint * Math.sin(angle)));
         child.setLocalRadianAngle(angle);
 
         compute(child);

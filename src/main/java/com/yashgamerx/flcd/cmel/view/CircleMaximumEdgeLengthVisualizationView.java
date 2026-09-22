@@ -2,6 +2,7 @@ package com.yashgamerx.flcd.cmel.view;
 
 import com.yashgamerx.flcd.cmel.algorithm.CircleMaximumEdgeLengthAlgorithm;
 import com.yashgamerx.flcd.cmel.model.CircleMaximumEdgeLengthNode;
+import com.yashgamerx.flcd.common.metrics.*;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,8 +14,11 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.stage.FileChooser;
 import lombok.extern.java.Log;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,13 +63,26 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     /// Reference to the active toggle button so it can be deselected after an action.
     private ToggleButton activeModeButton = null;
     private Label hintLabel;
+    private Label zoomLabel;
+    private final MetricsHistory metricsHistory = new MetricsHistory();
+    private static final String ALGORITHM_NAME = "CMEL";
+    /// Name of the source `.txt` file the tree was parsed from, recorded
+    /// alongside each exported metrics row so a CSV built up across runs
+    /// still shows which input produced which numbers.
+    private final String sourceFileName;
+    /// File chosen for "Append to File", remembered so repeated clicks
+    /// keep appending rows to the same comparison-study CSV instead of
+    /// re-prompting every time.
+    private File metricsExportFile;
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
 
     public CircleMaximumEdgeLengthVisualizationView(final Map<Integer, CircleMaximumEdgeLengthNode> nodeMap,
-                                                    final CircleMaximumEdgeLengthAlgorithm algorithm) {
+                                                    final CircleMaximumEdgeLengthAlgorithm algorithm,
+                                                    final String sourceFileName) {
         this.nodeMap = nodeMap;
         this.layoutAlgorithm = algorithm;
+        this.sourceFileName = sourceFileName;
         this.drawingCanvas = new Pane();
         this.drawingCanvas.setPrefSize(VIRTUAL_CANVAS_SIZE, VIRTUAL_CANVAS_SIZE);
         this.drawingCanvas.setStyle("-fx-background-color: white;");
@@ -124,6 +141,7 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         drawingCanvas.setTranslateY(0);
         drawingCanvas.setScaleX(1.0);
         drawingCanvas.setScaleY(1.0);
+        updateZoomLabel(1.0);
 
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear();
@@ -132,8 +150,16 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
+            long calcStart = System.nanoTime();
             layoutAlgorithm.calculate(rootNode, VIRTUAL_CANVAS_SIZE / 2, VIRTUAL_CANVAS_SIZE / 2);
+            long calcEnd = System.nanoTime();
+
             drawCalculatedTree(rootNode);
+            long drawEnd = System.nanoTime();
+
+            double calcMillis = (calcEnd - calcStart) / 1_000_000.0;
+            double totalMillis = (drawEnd - calcStart) / 1_000_000.0;
+            metricsHistory.record(nodeMap.size(), calcMillis, totalMillis);
         }
 
         scrollPaneContainer.setHvalue(0.5);
@@ -142,10 +168,10 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
     private void drawCalculatedTree(CircleMaximumEdgeLengthNode node) {
         for (var child : node.getChildren()) {
-            drawConnectionEdge(node.getGridX(), node.getGridY(), child.getGridX(), child.getGridY());
+            drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
             drawCalculatedTree(child);
         }
-        renderNodeVisuals(node, node.getGridX(), node.getGridY());
+        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -218,8 +244,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
 
-        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getGridX()));
-        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getGridY()));
+        addInfoRow(grid, row++, "Grid X", String.format("%.2f", node.getLayoutX()));
+        addInfoRow(grid, row++, "Grid Y", String.format("%.2f", node.getLayoutY()));
         addInfoRow(grid, row++, "Depth", String.valueOf(node.getDepth()));
 
         grid.add(makeSeparator(), 0, row++, 2, 1);
@@ -308,10 +334,115 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
             else hintLabel.setText("");
         });
 
-        var toolbar = new HBox(15, btnEdgeLength, hintLabel);
+        var btnAspectRatio = new Button("Aspect Ratio");
+        btnAspectRatio.setOnAction(_ -> handleAspectRatio());
+
+        var btnMetrics = new Button("Metrics");
+        btnMetrics.setOnAction(_ -> handleMetrics());
+
+        var btnLeafDistances = new Button("Root→Leaf Distances");
+        btnLeafDistances.setOnAction(_ -> handleLeafDistances());
+
+        var btnCompletionGraph = new Button("Completion Time Graph");
+        btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
+
+        var btnAppendMetrics = new Button("Append to File");
+        btnAppendMetrics.setOnAction(_ -> handleAppendMetrics());
+
+        zoomLabel = new Label("100%");
+        zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
+
+        var toolbar = new HBox(15, btnEdgeLength, hintLabel,
+                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aspect Ratio / Metrics / Root→Leaf Distances / Completion Graph actions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void handleAspectRatio() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Aspect Ratio Error", "There are no nodes to measure.");
+            return;
+        }
+        var box = TreeMetricsCalculator.computeBoundingBox(
+                nodeMap.values(), NODE_RADIUS, CircleMaximumEdgeLengthNode::getIdentifier);
+        MetricsDialogUtil.showAspectRatioDialog(box);
+    }
+
+    private void handleMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Metrics Error", "There are no nodes to measure.");
+            return;
+        }
+        var rootNode = nodeMap.get(1);
+        var box = TreeMetricsCalculator.computeBoundingBox(
+                nodeMap.values(), NODE_RADIUS, CircleMaximumEdgeLengthNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(
+                rootNode, CircleMaximumEdgeLengthNode::getIdentifier);
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Metrics Error", "No timed run recorded yet.");
+            return;
+        }
+        MetricsDialogUtil.showMetricsDialog(ALGORITHM_NAME, run, box, leafDistances);
+    }
+
+    private void handleLeafDistances() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Root→Leaf Distances Error", "There are no nodes to measure.");
+            return;
+        }
+        var rootNode = nodeMap.get(1);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(
+                rootNode, CircleMaximumEdgeLengthNode::getIdentifier);
+        MetricsDialogUtil.showLeafDistancesDialog(leafDistances);
+    }
+
+    private void handleCompletionGraph() {
+        MetricsChartWindow.show(ALGORITHM_NAME, metricsHistory.getRuns());
+    }
+
+    /// Appends one row (algorithm, node count, timing, area/aspect ratio,
+    /// and root-to-leaf distance summary stats — no per-leaf detail) to a
+    /// comparison-study CSV. Prompts for the file on the first click of a
+    /// session and reuses it for every click after that.
+    private void handleAppendMetrics() {
+        if (nodeMap.isEmpty()) {
+            showErrorAlert("Append to File Error", "There are no nodes to measure.");
+            return;
+        }
+        var run = metricsHistory.latest();
+        if (run == null) {
+            showErrorAlert("Append to File Error", "No timed run recorded yet.");
+            return;
+        }
+
+        if (metricsExportFile == null) {
+            var chooser = new FileChooser();
+            chooser.setTitle("Choose or Create Metrics CSV");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"));
+            chooser.setInitialFileName("metrics.csv");
+            var chosen = chooser.showSaveDialog(getScene().getWindow());
+            if (chosen == null) return;
+            metricsExportFile = chosen;
+        }
+
+        var rootNode = nodeMap.get(1);
+        var box = TreeMetricsCalculator.computeBoundingBox(
+                nodeMap.values(), NODE_RADIUS, CircleMaximumEdgeLengthNode::getIdentifier);
+        var leafDistances = TreeMetricsCalculator.computeRootToLeafDistances(
+                rootNode, CircleMaximumEdgeLengthNode::getIdentifier);
+
+        try {
+            MetricsExportUtil.appendRecord(metricsExportFile, ALGORITHM_NAME, sourceFileName, run, box, leafDistances);
+        } catch (IOException e) {
+            log.warning("Failed to append metrics to " + metricsExportFile + ": " + e.getMessage());
+            showErrorAlert("Append to File Error", "Could not write to " + metricsExportFile.getName() + ": " + e.getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -361,8 +492,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
     /// [#drawConnectionEdge] would draw between them, regardless of whether
     /// the two nodes are actually parent/child.
     private void showEdgeLengthResultAlert(CircleMaximumEdgeLengthNode nodeA, CircleMaximumEdgeLengthNode nodeB) {
-        double dx = nodeB.getGridX() - nodeA.getGridX();
-        double dy = nodeB.getGridY() - nodeA.getGridY();
+        double dx = nodeB.getLayoutX() - nodeA.getLayoutX();
+        double dy = nodeB.getLayoutY() - nodeA.getLayoutY();
         double centerDistance = Math.sqrt((dx * dx) + (dy * dy));
         double surfaceDistance = Math.max(0.0, centerDistance - (2 * NODE_RADIUS));
         boolean directlyConnected = nodeA.getParent() == nodeB || nodeB.getParent() == nodeA;
@@ -380,8 +511,8 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
                         "Node #%d  (x=%.2f, y=%.2f)%n%n" +
                         "Directly connected in tree: %s",
                 centerDistance, surfaceDistance, dx, dy,
-                nodeA.getIdentifier(), nodeA.getGridX(), nodeA.getGridY(),
-                nodeB.getIdentifier(), nodeB.getGridX(), nodeB.getGridY(),
+                nodeA.getIdentifier(), nodeA.getLayoutX(), nodeA.getLayoutY(),
+                nodeB.getIdentifier(), nodeB.getLayoutX(), nodeB.getLayoutY(),
                 directlyConnected ? "yes" : "no"
         );
 
@@ -426,6 +557,14 @@ public class CircleMaximumEdgeLengthVisualizationView extends BorderPane {
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             drawingCanvas.setScaleX(newScale);
             drawingCanvas.setScaleY(newScale);
+            updateZoomLabel(newScale);
+        }
+    }
+
+    /// Reflects the current canvas scale in the toolbar's zoom percentage label.
+    private void updateZoomLabel(double scale) {
+        if (zoomLabel != null) {
+            zoomLabel.setText(Math.round(scale * 100) + "%");
         }
     }
 

@@ -1,5 +1,6 @@
 package com.yashgamerx.flcd.cmel.model;
 
+import com.yashgamerx.flcd.common.AlgorithmicNode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,7 +18,7 @@ import java.util.List;
 /// needs.
 @Getter
 @Setter
-public class CircleMaximumEdgeLengthNode {
+public class CircleMaximumEdgeLengthNode implements AlgorithmicNode<CircleMaximumEdgeLengthNode> {
     public static final double NODE_DIAMETER = 10.0;
     public static final double NODE_RADIUS = NODE_DIAMETER / 2.0;
 
@@ -26,8 +27,8 @@ public class CircleMaximumEdgeLengthNode {
     private List<CircleMaximumEdgeLengthNode> children = new ArrayList<>();
     private CircleMaximumEdgeLengthNode parent;
 
-    private double gridX;
-    private double gridY;
+    private double layoutX;
+    private double layoutY;
     private int depth;
 
     public CircleMaximumEdgeLengthNode(int identifier, String name, CircleMaximumEdgeLengthNode parent) {
