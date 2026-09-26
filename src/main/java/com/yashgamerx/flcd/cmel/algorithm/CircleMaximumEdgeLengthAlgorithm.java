@@ -14,7 +14,7 @@ import java.util.List;
 /// algorithm now conforms to.
 public class CircleMaximumEdgeLengthAlgorithm implements LayoutAlgorithm<CircleMaximumEdgeLengthNode> {
 
-    private static final double RADIUS_STEP = 500.0;
+    private static final double RADIUS_STEP = 10.0;
     private static final double TWO_PI = 2.0 * Math.PI;
 
     /// Minimum straight-line arc gap we require between two adjacent
