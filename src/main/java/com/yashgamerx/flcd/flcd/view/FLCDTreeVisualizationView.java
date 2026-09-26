@@ -53,7 +53,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// Tracks all currently visible node info panels, keyed by node identifier,
     /// so any number of them can stay open at once. A panel is only ever
     /// removed when its own ✕ button is clicked, or when the tree is redrawn.
-    private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    private final Map<Integer, Region> openInfoPanels = new HashMap<>();
     /// Circle references keyed by node identifier, so edge-length selection
     /// can highlight/reset a node's circle without re-scanning the canvas.
     private final Map<Integer, Circle> nodeCircles = new HashMap<>();
@@ -169,6 +169,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
                 case READJUST -> handleReadjustOnNode(node);
                 case ROOTIFY -> handleRootifyOnNode(node);
                 case EDGE_LENGTH -> handleNodeSelectedForEdgeLength(node, circle);
+                case NAME_ONLY -> showNodeNamePanel(node, x, y);
                 default -> showNodeInfoPanel(node, x, y);
             }
             e.consume();
@@ -275,6 +276,10 @@ public class FLCDTreeVisualizationView extends BorderPane {
         btnEdgeLength.setToggleGroup(modeGroup);
         btnEdgeLength.setOnAction(_ -> setMode(ActiveMode.EDGE_LENGTH, btnEdgeLength));
 
+        var btnNameOnly = new ToggleButton("Show Name Only");
+        btnNameOnly.setToggleGroup(modeGroup);
+        btnNameOnly.setOnAction(_ -> setMode(ActiveMode.NAME_ONLY, btnNameOnly));
+
         // Hint label shown while a mode is active
         hintLabel = new Label();
         hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
@@ -285,6 +290,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
             else if (newToggle == btnReadjust) hintLabel.setText("Click a node to readjust it");
             else if (newToggle == btnEdgeLength)
                 hintLabel.setText("Click a node, then click a second node to measure the edge between them");
+            else if (newToggle == btnNameOnly)
+                hintLabel.setText("Click a node to see just its name");
             else hintLabel.setText("");
         });
 
@@ -309,7 +316,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnCalculateArea,
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnNameOnly, btnCalculateArea,
                 btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, hintLabel, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
@@ -425,6 +432,41 @@ public class FLCDTreeVisualizationView extends BorderPane {
         panel.setOnMousePressed(javafx.event.Event::consume);
 
         closeBtn.setOnAction(_ -> dismissInfoPanel(node.getIdentifier()));
+
+        openInfoPanels.put(node.getIdentifier(), panel);
+        drawingCanvas.getChildren().add(panel);
+    }
+
+    /// Shows a minimal floating panel containing only the node's NAMED-file
+    /// name — no identifier, coordinates, or any other algorithmic state.
+    /// Reuses `openInfoPanels` so it opens/closes/redraws like the full info
+    /// panel, but toggles: clicking the same node again while its name panel
+    /// is open closes it (there's no ✕ button in this mode).
+    private void showNodeNamePanel(FLCDNode node, double nodeX, double nodeY) {
+        if (openInfoPanels.containsKey(node.getIdentifier())) {
+            dismissInfoPanel(node.getIdentifier());
+            return;
+        }
+
+        var nameLabel = new Label(
+                (node.getName() == null || node.getName().isBlank()) ? "—" : node.getName());
+        nameLabel.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
+
+        var panel = new HBox(nameLabel);
+        panel.setAlignment(Pos.CENTER_LEFT);
+        panel.setStyle(
+                "-fx-background-color: white; "
+                        + "-fx-border-color: #bbb; "
+                        + "-fx-border-width: 0.8; "
+                        + "-fx-border-radius: 5; "
+                        + "-fx-background-radius: 5; "
+                        + "-fx-padding: 4 6 4 6;");
+
+        panel.setLayoutX(nodeX + NODE_RADIUS + 4);
+        panel.setLayoutY(nodeY - NODE_RADIUS);
+
+        panel.setOnMouseClicked(javafx.event.Event::consume);
+        panel.setOnMousePressed(javafx.event.Event::consume);
 
         openInfoPanels.put(node.getIdentifier(), panel);
         drawingCanvas.getChildren().add(panel);
@@ -817,5 +859,5 @@ public class FLCDTreeVisualizationView extends BorderPane {
         alert.showAndWait();
     }
 
-    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH}
+    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH, NAME_ONLY}
 }
