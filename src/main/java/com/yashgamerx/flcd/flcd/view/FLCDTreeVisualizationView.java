@@ -7,6 +7,7 @@ import com.yashgamerx.flcd.flcd.engine.FLCDNodeEngine;
 import com.yashgamerx.flcd.flcd.model.FLCDNode;
 import com.yashgamerx.flcd.flcd.model.NodeStatus;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -15,8 +16,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
+import javafx.scene.shape.*;
 import javafx.stage.FileChooser;
 import lombok.extern.java.Log;
 
@@ -43,6 +43,16 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
+    /// Default node fill and the "light red" highlight applied by the Light Red button.
+    private static final Color DEFAULT_NODE_FILL = Color.AZURE;
+    private static final Color LIGHT_RED = Color.web("#FF9999");
+    /// Rectangle and triangle are sized to sit inside the node's circle of radius
+    /// NODE_RADIUS, so they never extend past the footprint the layout reserved
+    /// for the node. The rectangle is 4:3 (corners land exactly on the circle).
+    private static final double RECT_WIDTH = NODE_RADIUS * 1.6;
+    private static final double RECT_HEIGHT = NODE_RADIUS * 1.2;
+    /// Half the base of an equilateral triangle inscribed in the node's circle.
+    private static final double TRIANGLE_HALF_BASE = NODE_RADIUS * Math.sqrt(3.0) / 2.0;
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
     private final Map<Integer, FLCDNode> nodeMap;
@@ -54,9 +64,17 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// so any number of them can stay open at once. A panel is only ever
     /// removed when its own ✕ button is clicked, or when the tree is redrawn.
     private final Map<Integer, Region> openInfoPanels = new HashMap<>();
-    /// Circle references keyed by node identifier, so edge-length selection
-    /// can highlight/reset a node's circle without re-scanning the canvas.
-    private final Map<Integer, Circle> nodeCircles = new HashMap<>();
+    /// Shape references keyed by node identifier, so edge-length selection,
+    /// recoloring and reshaping can reach a node's shape without re-scanning the canvas.
+    private final Map<Integer, Shape> nodeShapes = new HashMap<>();
+    /// Per-node fill colors set by the user. Kept outside the canvas so they
+    /// survive a full redraw (Readjust and Rootify both re-render the tree).
+    private final Map<Integer, Color> nodeFillColors = new HashMap<>();
+    /// Per-node shapes set by the user. Same persistence reason as the colors.
+    /// A node with no entry is drawn as a circle.
+    private final Map<Integer, NodeShape> nodeShapeTypes = new HashMap<>();
+    /// Shape picked in the toolbar, applied to the next node clicked in CHANGE_SHAPE mode.
+    private ComboBox<NodeShape> shapeChoice;
     /// Nodes picked so far for the EDGE_LENGTH click-to-select flow. Holds
     /// 0 or 1 nodes between clicks; a second click completes the pair,
     /// shows the result, and the list is cleared for the next pair.
@@ -145,10 +163,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
     }
 
     private void renderNodeVisuals(FLCDNode node, double x, double y) {
-        var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
-        circle.setStroke(Color.DARKSLATEGRAY);
-        circle.setStrokeWidth(1);
-        circle.setCursor(Cursor.HAND);
+        var shape = buildNodeShape(node, x, y);
 
         var text = new Label(String.valueOf(node.getIdentifier()));
         text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
@@ -156,27 +171,79 @@ public class FLCDTreeVisualizationView extends BorderPane {
         // Set the anchor point of the text right in its center
         text.setAlignment(Pos.CENTER);
 
-        // Position the center anchor exactly at the circle's (x, y)
+        // Position the center anchor exactly at the node's (x, y)
         text.setLayoutX(x - NODE_RADIUS);
         text.setLayoutY(y - NODE_RADIUS);
         text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
         text.setMouseTransparent(true);
 
+        nodeShapes.put(node.getIdentifier(), shape);
+        drawingCanvas.getChildren().addAll(shape, text);
+    }
+
+    /// Builds the visual for a node using its remembered shape and fill color
+    /// (circle and azure when the user has not changed them), centered on (x, y),
+    /// with its click handler attached. Used for the initial render and for
+    /// swapping a single node's shape in place.
+    private Shape buildNodeShape(FLCDNode node, double x, double y) {
+        int id = node.getIdentifier();
+        Shape shape = switch (nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE)) {
+            case CIRCLE -> new Circle(x, y, NODE_RADIUS);
+            case RECTANGLE -> new Rectangle(x - RECT_WIDTH / 2.0, y - RECT_HEIGHT / 2.0, RECT_WIDTH, RECT_HEIGHT);
+            case TRIANGLE -> new Polygon(
+                    x, y - NODE_RADIUS,
+                    x + TRIANGLE_HALF_BASE, y + NODE_RADIUS / 2.0,
+                    x - TRIANGLE_HALF_BASE, y + NODE_RADIUS / 2.0);
+        };
+        shape.setFill(nodeFillColors.getOrDefault(id, DEFAULT_NODE_FILL));
+        shape.setStroke(Color.DARKSLATEGRAY);
+        shape.setStrokeWidth(1);
+        shape.setCursor(Cursor.HAND);
+
         // Dispatch to the currently active mode on click.
         // e.consume() prevents the canvas drag handler from also firing.
-        circle.setOnMouseClicked(e -> {
+        shape.setOnMouseClicked(e -> {
             switch (activeMode) {
                 case READJUST -> handleReadjustOnNode(node);
                 case ROOTIFY -> handleRootifyOnNode(node);
-                case EDGE_LENGTH -> handleNodeSelectedForEdgeLength(node, circle);
+                case EDGE_LENGTH -> handleNodeSelectedForEdgeLength(node, (Shape) e.getSource());
                 case NAME_ONLY -> showNodeNamePanel(node, x, y);
+                case LIGHT_RED -> handleLightRedOnNode(node);
+                case CHANGE_SHAPE -> handleChangeShapeOnNode(node);
                 default -> showNodeInfoPanel(node, x, y);
             }
             e.consume();
         });
+        return shape;
+    }
 
-        nodeCircles.put(node.getIdentifier(), circle);
-        drawingCanvas.getChildren().addAll(circle, text);
+    /// Turns the clicked node light red. Only the one shape is touched, so no
+    /// re-layout happens and the recorded timing metrics are not affected.
+    private void handleLightRedOnNode(FLCDNode node) {
+        nodeFillColors.put(node.getIdentifier(), LIGHT_RED);
+        var shape = nodeShapes.get(node.getIdentifier());
+        if (shape != null) {
+            shape.setFill(LIGHT_RED);
+        }
+    }
+
+    /// Changes the clicked node to the shape currently picked in the toolbar.
+    /// The old shape is swapped out in place (same position in the canvas
+    /// children, so the label and edges keep their stacking order). No
+    /// re-layout happens and the recorded timing metrics are not affected.
+    private void handleChangeShapeOnNode(FLCDNode node) {
+        int id = node.getIdentifier();
+        var chosen = shapeChoice.getValue();
+        if (chosen == null || nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE) == chosen) return;
+
+        var oldShape = nodeShapes.get(id);
+        int index = oldShape == null ? -1 : drawingCanvas.getChildren().indexOf(oldShape);
+        if (index < 0) return;
+
+        nodeShapeTypes.put(id, chosen);
+        var newShape = buildNodeShape(node, node.getLayoutX(), node.getLayoutY());
+        drawingCanvas.getChildren().set(index, newShape);
+        nodeShapes.put(id, newShape);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -187,7 +254,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear(); // Panel references are cleared with the canvas
-        nodeCircles.clear();
+        nodeShapes.clear();
         edgeLengthSelection.clear(); // Underlying circles are gone; no need to un-highlight them
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
@@ -280,6 +347,29 @@ public class FLCDTreeVisualizationView extends BorderPane {
         btnNameOnly.setToggleGroup(modeGroup);
         btnNameOnly.setOnAction(_ -> setMode(ActiveMode.NAME_ONLY, btnNameOnly));
 
+        var btnLightRed = new ToggleButton("Light Red");
+        btnLightRed.setToggleGroup(modeGroup);
+        btnLightRed.setOnAction(_ -> setMode(ActiveMode.LIGHT_RED, btnLightRed));
+
+        var btnChangeShape = new ToggleButton("Change Shape");
+        btnChangeShape.setToggleGroup(modeGroup);
+        btnChangeShape.setOnAction(_ -> setMode(ActiveMode.CHANGE_SHAPE, btnChangeShape));
+
+        shapeChoice = new ComboBox<>(FXCollections.observableArrayList(NodeShape.values()));
+        shapeChoice.setValue(NodeShape.RECTANGLE);
+        // Selecting a shape from the list arms Change Shape mode, so one
+        // click on the combo box is enough before clicking a node.
+        shapeChoice.setOnAction(_ -> {
+            if (!btnChangeShape.isSelected()) {
+                btnChangeShape.setSelected(true);
+                setMode(ActiveMode.CHANGE_SHAPE, btnChangeShape);
+            } else {
+                hintLabel.setText(shapeHint());
+            }
+        });
+        var shapeControls = new HBox(4, btnChangeShape, shapeChoice);
+        shapeControls.setAlignment(Pos.CENTER_LEFT);
+
         // Hint label shown while a mode is active
         hintLabel = new Label();
         hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
@@ -292,6 +382,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
                 hintLabel.setText("Click a node, then click a second node to measure the edge between them");
             else if (newToggle == btnNameOnly)
                 hintLabel.setText("Click a node to see just its name");
+            else if (newToggle == btnLightRed) hintLabel.setText("Click a node to turn it light red");
+            else if (newToggle == btnChangeShape) hintLabel.setText(shapeHint());
             else hintLabel.setText("");
         });
 
@@ -316,11 +408,17 @@ public class FLCDTreeVisualizationView extends BorderPane {
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnNameOnly, btnCalculateArea,
+        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnNameOnly, btnLightRed, shapeControls, btnCalculateArea,
                 btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, hintLabel, zoomLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
         return toolbar;
+    }
+
+    /// Hint text for Change Shape mode, naming the shape currently picked in the combo box.
+    private String shapeHint() {
+        var chosen = shapeChoice.getValue();
+        return "Click a node to change it to a " + (chosen == null ? "new shape" : chosen.name().toLowerCase());
     }
 
     /// A node cannot be readjusted if it sits at the ROOT, FIRST_CHILD level,
@@ -785,7 +883,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// completes the pair, shows the result, and clears the pair so the mode
     /// stays armed for measuring another pair (mirrors Rootify/Readjust,
     /// which also stay armed after a single action).
-    private void handleNodeSelectedForEdgeLength(FLCDNode node, Circle circle) {
+    private void handleNodeSelectedForEdgeLength(FLCDNode node, Shape circle) {
         if (edgeLengthSelection.contains(node)) return; // ignore re-clicking the same node
 
         circle.setStroke(Color.ORANGERED);
@@ -810,10 +908,10 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// whenever the active mode changes away from EDGE_LENGTH.
     private void clearEdgeLengthSelectionHighlights() {
         for (var node : edgeLengthSelection) {
-            var circle = nodeCircles.get(node.getIdentifier());
-            if (circle != null) {
-                circle.setStroke(Color.DARKSLATEGRAY);
-                circle.setStrokeWidth(1);
+            var shape = nodeShapes.get(node.getIdentifier());
+            if (shape != null) {
+                shape.setStroke(Color.DARKSLATEGRAY);
+                shape.setStrokeWidth(1);
             }
         }
         edgeLengthSelection.clear();
@@ -859,5 +957,22 @@ public class FLCDTreeVisualizationView extends BorderPane {
         alert.showAndWait();
     }
 
-    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH, NAME_ONLY}
+    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH, NAME_ONLY, LIGHT_RED, CHANGE_SHAPE}
+
+    /// Shapes a node can be drawn as. CIRCLE is the default and is offered in
+    /// the toolbar so a reshaped node can be put back.
+    private enum NodeShape {
+        CIRCLE("Circle (reset)"), RECTANGLE("Rectangle"), TRIANGLE("Triangle");
+
+        private final String label;
+
+        NodeShape(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
 }
