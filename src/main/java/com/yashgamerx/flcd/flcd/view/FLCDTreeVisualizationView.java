@@ -7,7 +7,6 @@ import com.yashgamerx.flcd.flcd.engine.FLCDNodeEngine;
 import com.yashgamerx.flcd.flcd.model.FLCDNode;
 import com.yashgamerx.flcd.flcd.model.NodeStatus;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -73,8 +72,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// Per-node shapes set by the user. Same persistence reason as the colors.
     /// A node with no entry is drawn as a circle.
     private final Map<Integer, NodeShape> nodeShapeTypes = new HashMap<>();
-    /// Shape picked in the toolbar, applied to the next node clicked in CHANGE_SHAPE mode.
-    private ComboBox<NodeShape> shapeChoice;
+    /// Shape picked in the Node menu, applied to nodes clicked in CHANGE_SHAPE mode.
+    private NodeShape selectedShape = NodeShape.RECTANGLE;
     /// Nodes picked so far for the EDGE_LENGTH click-to-select flow. Holds
     /// 0 or 1 nodes between clicks; a second click completes the pair,
     /// shows the result, and the list is cleared for the next pair.
@@ -83,8 +82,9 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private ActiveMode activeMode = ActiveMode.NONE;
     private double mouseDragAnchorX;
     private double mouseDragAnchorY;
-    /// Reference to the active toggle button so it can be deselected after an action.
-    private ToggleButton activeModeButton = null;
+    /// The "Inspect" menu item, which is the default (NONE) mode. Selecting it
+    /// is how a mode is switched off, since a radio menu item cannot be clicked off.
+    private RadioMenuItem inspectItem;
     /// Toolbar hint label — kept as a field so the EDGE_LENGTH flow can update
     /// it mid-selection ("Node #3 selected — click a second node"), not just
     /// on mode switch.
@@ -126,26 +126,19 @@ public class FLCDTreeVisualizationView extends BorderPane {
         Platform.runLater(this::handlePanelAction);
     }
 
-    /// Sets the active mode when a toolbar toggle button is pressed.
-    /// Pressing the same button again (or pressing Escape) returns to NONE.
-    private void setMode(ActiveMode mode, ToggleButton source) {
+    /// Sets the active mode when a mode menu item is chosen. Choosing
+    /// "Inspect" returns to NONE.
+    private void setMode(ActiveMode mode) {
         clearEdgeLengthSelectionHighlights();
-        if (activeMode == mode) {
-            // Same button toggled off — return to idle
-            activeMode = ActiveMode.NONE;
-            activeModeButton = null;
-        } else {
-            activeMode = mode;
-            activeModeButton = source;
-        }
-        // Info panels are intentionally left open — they only close via their ✕ button.
+        activeMode = mode;
+        // Info panels are intentionally left open, they only close via their ✕ button.
     }
 
     private void initializeComponentLayout() {
-        var actionToolbar = createActionToolbar();
+        var menuArea = createMenuArea();
         scrollPaneContainer.setPannable(false);
         scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
-        this.setTop(actionToolbar);
+        this.setTop(menuArea);
         this.setCenter(scrollPaneContainer);
     }
 
@@ -153,12 +146,11 @@ public class FLCDTreeVisualizationView extends BorderPane {
     // Mode management
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// Resets mode to NONE and deselects the toolbar toggle button.
+    /// Resets mode to NONE and selects the "Inspect" menu item.
     private void clearMode() {
         activeMode = ActiveMode.NONE;
-        if (activeModeButton != null) {
-            activeModeButton.setSelected(false);
-            activeModeButton = null;
+        if (inspectItem != null) {
+            inspectItem.setSelected(true);
         }
     }
 
@@ -233,8 +225,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// re-layout happens and the recorded timing metrics are not affected.
     private void handleChangeShapeOnNode(FLCDNode node) {
         int id = node.getIdentifier();
-        var chosen = shapeChoice.getValue();
-        if (chosen == null || nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE) == chosen) return;
+        var chosen = selectedShape;
+        if (nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE) == chosen) return;
 
         var oldShape = nodeShapes.get(id);
         int index = oldShape == null ? -1 : drawingCanvas.getChildren().indexOf(oldShape);
@@ -325,100 +317,88 @@ public class FLCDTreeVisualizationView extends BorderPane {
     // Readjust action — triggered directly by clicking a node in READJUST mode
     // ─────────────────────────────────────────────────────────────────────────
 
-    private HBox createActionToolbar() {
-        var btnAdd = new Button("Add Node");
-
-        // ToggleGroup ensures only one mode button is active at a time
+    /// Builds the area above the canvas: a menu bar holding every action,
+    /// and a slim status row under it with the mode hint and zoom percentage.
+    private VBox createMenuArea() {
+        // One ToggleGroup so exactly one mode is active at a time
         var modeGroup = new ToggleGroup();
 
-        var btnRootify = new ToggleButton("Rootify");
-        btnRootify.setToggleGroup(modeGroup);
-        btnRootify.setOnAction(_ -> setMode(ActiveMode.ROOTIFY, btnRootify));
-
-        var btnReadjust = new ToggleButton("Readjust");
-        btnReadjust.setToggleGroup(modeGroup);
-        btnReadjust.setOnAction(_ -> setMode(ActiveMode.READJUST, btnReadjust));
-
-        var btnEdgeLength = new ToggleButton("Edge Length");
-        btnEdgeLength.setToggleGroup(modeGroup);
-        btnEdgeLength.setOnAction(_ -> setMode(ActiveMode.EDGE_LENGTH, btnEdgeLength));
-
-        var btnNameOnly = new ToggleButton("Show Name Only");
-        btnNameOnly.setToggleGroup(modeGroup);
-        btnNameOnly.setOnAction(_ -> setMode(ActiveMode.NAME_ONLY, btnNameOnly));
-
-        var btnLightRed = new ToggleButton("Light Red");
-        btnLightRed.setToggleGroup(modeGroup);
-        btnLightRed.setOnAction(_ -> setMode(ActiveMode.LIGHT_RED, btnLightRed));
-
-        var btnChangeShape = new ToggleButton("Change Shape");
-        btnChangeShape.setToggleGroup(modeGroup);
-        btnChangeShape.setOnAction(_ -> setMode(ActiveMode.CHANGE_SHAPE, btnChangeShape));
-
-        shapeChoice = new ComboBox<>(FXCollections.observableArrayList(NodeShape.values()));
-        shapeChoice.setValue(NodeShape.RECTANGLE);
-        // Selecting a shape from the list arms Change Shape mode, so one
-        // click on the combo box is enough before clicking a node.
-        shapeChoice.setOnAction(_ -> {
-            if (!btnChangeShape.isSelected()) {
-                btnChangeShape.setSelected(true);
-                setMode(ActiveMode.CHANGE_SHAPE, btnChangeShape);
-            } else {
-                hintLabel.setText(shapeHint());
-            }
-        });
-        var shapeControls = new HBox(4, btnChangeShape, shapeChoice);
-        shapeControls.setAlignment(Pos.CENTER_LEFT);
-
-        // Hint label shown while a mode is active
         hintLabel = new Label();
         hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
-
-        // Update hint text whenever the selected toggle changes
-        modeGroup.selectedToggleProperty().addListener((_, _, newToggle) -> {
-            if (newToggle == btnRootify) hintLabel.setText("Click a node to rootify it");
-            else if (newToggle == btnReadjust) hintLabel.setText("Click a node to readjust it");
-            else if (newToggle == btnEdgeLength)
-                hintLabel.setText("Click a node, then click a second node to measure the edge between them");
-            else if (newToggle == btnNameOnly)
-                hintLabel.setText("Click a node to see just its name");
-            else if (newToggle == btnLightRed) hintLabel.setText("Click a node to turn it light red");
-            else if (newToggle == btnChangeShape) hintLabel.setText(shapeHint());
-            else hintLabel.setText("");
-        });
-
-        var btnCalculateArea = new Button("Calculate Area");
-        btnCalculateArea.setOnAction(_ -> handleCalculateArea());
-
-        var btnAspectRatio = new Button("Aspect Ratio");
-        btnAspectRatio.setOnAction(_ -> handleAspectRatio());
-
-        var btnMetrics = new Button("Metrics");
-        btnMetrics.setOnAction(_ -> handleMetrics());
-
-        var btnLeafDistances = new Button("Root→Leaf Distances");
-        btnLeafDistances.setOnAction(_ -> handleLeafDistances());
-
-        var btnCompletionGraph = new Button("Completion Time Graph");
-        btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
-
-        var btnAppendMetrics = new Button("Append to File");
-        btnAppendMetrics.setOnAction(_ -> handleAppendMetrics());
 
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
-        var toolbar = new HBox(15, btnAdd, btnRootify, btnReadjust, btnEdgeLength, btnNameOnly, btnLightRed, shapeControls, btnCalculateArea,
-                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, hintLabel, zoomLabel);
-        toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
-        return toolbar;
+        // ── Mode menu ────────────────────────────────────────────────────────
+        inspectItem = modeItem("Inspect (default)", modeGroup, ActiveMode.NONE, "");
+        inspectItem.setSelected(true);
+        var menuMode = new Menu("Mode", null,
+                inspectItem,
+                new SeparatorMenuItem(),
+                modeItem("Rootify", modeGroup, ActiveMode.ROOTIFY, "Click a node to rootify it"),
+                modeItem("Readjust", modeGroup, ActiveMode.READJUST, "Click a node to readjust it"),
+                modeItem("Edge Length", modeGroup, ActiveMode.EDGE_LENGTH,
+                        "Click a node, then click a second node to measure the edge between them"),
+                modeItem("Show Name Only", modeGroup, ActiveMode.NAME_ONLY, "Click a node to see just its name"));
+
+        // ── Node menu ────────────────────────────────────────────────────────
+        var btnAdd = new MenuItem("Add Node");
+
+        var shapeMenu = new Menu("Change Shape");
+        for (var shape : new NodeShape[]{NodeShape.RECTANGLE, NodeShape.TRIANGLE, NodeShape.CIRCLE}) {
+            var item = new RadioMenuItem(shape.toString());
+            item.setToggleGroup(modeGroup);
+            item.setOnAction(_ -> {
+                selectedShape = shape;
+                setMode(ActiveMode.CHANGE_SHAPE);
+                hintLabel.setText("Click a node to change it to a " + shape.name().toLowerCase());
+            });
+            shapeMenu.getItems().add(item);
+        }
+
+        var menuNode = new Menu("Node", null,
+                btnAdd,
+                new SeparatorMenuItem(),
+                modeItem("Light Red", modeGroup, ActiveMode.LIGHT_RED, "Click a node to turn it light red"),
+                shapeMenu);
+
+        // ── Metrics menu ─────────────────────────────────────────────────────
+        var menuMetrics = new Menu("Metrics", null,
+                actionItem("Calculate Area", this::handleCalculateArea),
+                actionItem("Aspect Ratio", this::handleAspectRatio),
+                actionItem("Metrics", this::handleMetrics),
+                actionItem("Root→Leaf Distances", this::handleLeafDistances),
+                actionItem("Completion Time Graph", this::handleCompletionGraph),
+                new SeparatorMenuItem(),
+                actionItem("Append to File", this::handleAppendMetrics));
+
+        var menuBar = new MenuBar(menuMode, menuNode, menuMetrics);
+
+        var spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        var statusRow = new HBox(15, hintLabel, spacer, zoomLabel);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
+        statusRow.setStyle("-fx-padding: 4 10 4 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
+
+        return new VBox(menuBar, statusRow);
     }
 
-    /// Hint text for Change Shape mode, naming the shape currently picked in the combo box.
-    private String shapeHint() {
-        var chosen = shapeChoice.getValue();
-        return "Click a node to change it to a " + (chosen == null ? "new shape" : chosen.name().toLowerCase());
+    /// Creates a radio menu item that switches to `mode` and shows `hint`.
+    private RadioMenuItem modeItem(String label, ToggleGroup group, ActiveMode mode, String hint) {
+        var item = new RadioMenuItem(label);
+        item.setToggleGroup(group);
+        item.setOnAction(_ -> {
+            setMode(mode);
+            hintLabel.setText(hint);
+        });
+        return item;
+    }
+
+    /// Creates a plain menu item that runs `action` once when chosen.
+    private MenuItem actionItem(String label, Runnable action) {
+        var item = new MenuItem(label);
+        item.setOnAction(_ -> action.run());
+        return item;
     }
 
     /// A node cannot be readjusted if it sits at the ROOT, FIRST_CHILD level,

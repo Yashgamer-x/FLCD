@@ -273,7 +273,7 @@ public class FLCDNodeEngine {
             firstChild.setNodeOffset(safeScalarOffset);
             firstChild.setLocalRadianAngle(currentAngle);
 
-            double nodeCenter = safeScalarOffset - NODE_RADIUS;
+            double nodeCenter = safeScalarOffset;
             firstChild.setLayoutX(rootNode.getLayoutX() + (nodeCenter * Math.cos(currentAngle)));
             firstChild.setLayoutY(rootNode.getLayoutY() - (nodeCenter * Math.sin(currentAngle)));
 
