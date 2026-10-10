@@ -2,6 +2,9 @@ package com.yashgamerx.flcd.flcd.view;
 
 import com.yashgamerx.flcd.common.NodeRole;
 import com.yashgamerx.flcd.common.metrics.*;
+import com.yashgamerx.flcd.common.visual.NodeColor;
+import com.yashgamerx.flcd.common.visual.NodeShape;
+import com.yashgamerx.flcd.common.visual.NodeStyleMenus;
 import com.yashgamerx.flcd.flcd.algorithm.TreeLayoutAlgorithm;
 import com.yashgamerx.flcd.flcd.engine.FLCDNodeEngine;
 import com.yashgamerx.flcd.flcd.model.FLCDNode;
@@ -15,7 +18,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.*;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.Shape;
 import javafx.stage.FileChooser;
 import lombok.extern.java.Log;
 
@@ -42,16 +46,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
-    /// Default node fill and the "light red" highlight applied by the Light Red button.
-    private static final Color DEFAULT_NODE_FILL = Color.AZURE;
-    private static final Color LIGHT_RED = Color.web("#FF9999");
-    /// Rectangle and triangle are sized to sit inside the node's circle of radius
-    /// NODE_RADIUS, so they never extend past the footprint the layout reserved
-    /// for the node. The rectangle is 4:3 (corners land exactly on the circle).
-    private static final double RECT_WIDTH = NODE_RADIUS * 1.6;
-    private static final double RECT_HEIGHT = NODE_RADIUS * 1.2;
-    /// Half the base of an equilateral triangle inscribed in the node's circle.
-    private static final double TRIANGLE_HALF_BASE = NODE_RADIUS * Math.sqrt(3.0) / 2.0;
+    /// Fill every node starts with, and the color the "Default" menu entry restores.
+    private static final Color DEFAULT_NODE_FILL = NodeColor.DEFAULT.getColor();
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
     private final Map<Integer, FLCDNode> nodeMap;
@@ -74,6 +70,8 @@ public class FLCDTreeVisualizationView extends BorderPane {
     private final Map<Integer, NodeShape> nodeShapeTypes = new HashMap<>();
     /// Shape picked in the Node menu, applied to nodes clicked in CHANGE_SHAPE mode.
     private NodeShape selectedShape = NodeShape.RECTANGLE;
+    /// Color picked in the Node menu, applied to nodes clicked in CHANGE_COLOR mode.
+    private NodeColor selectedColor = NodeColor.RED;
     /// Nodes picked so far for the EDGE_LENGTH click-to-select flow. Holds
     /// 0 or 1 nodes between clicks; a second click completes the pair,
     /// shows the result, and the list is cleared for the next pair.
@@ -179,14 +177,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// swapping a single node's shape in place.
     private Shape buildNodeShape(FLCDNode node, double x, double y) {
         int id = node.getIdentifier();
-        Shape shape = switch (nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE)) {
-            case CIRCLE -> new Circle(x, y, NODE_RADIUS);
-            case RECTANGLE -> new Rectangle(x - RECT_WIDTH / 2.0, y - RECT_HEIGHT / 2.0, RECT_WIDTH, RECT_HEIGHT);
-            case TRIANGLE -> new Polygon(
-                    x, y - NODE_RADIUS,
-                    x + TRIANGLE_HALF_BASE, y + NODE_RADIUS / 2.0,
-                    x - TRIANGLE_HALF_BASE, y + NODE_RADIUS / 2.0);
-        };
+        Shape shape = nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE).create(x, y, NODE_RADIUS);
         shape.setFill(nodeFillColors.getOrDefault(id, DEFAULT_NODE_FILL));
         shape.setStroke(Color.DARKSLATEGRAY);
         shape.setStrokeWidth(1);
@@ -200,7 +191,7 @@ public class FLCDTreeVisualizationView extends BorderPane {
                 case ROOTIFY -> handleRootifyOnNode(node);
                 case EDGE_LENGTH -> handleNodeSelectedForEdgeLength(node, (Shape) e.getSource());
                 case NAME_ONLY -> showNodeNamePanel(node, x, y);
-                case LIGHT_RED -> handleLightRedOnNode(node);
+                case CHANGE_COLOR -> handleChangeColorOnNode(node);
                 case CHANGE_SHAPE -> handleChangeShapeOnNode(node);
                 default -> showNodeInfoPanel(node, x, y);
             }
@@ -209,17 +200,24 @@ public class FLCDTreeVisualizationView extends BorderPane {
         return shape;
     }
 
-    /// Turns the clicked node light red. Only the one shape is touched, so no
-    /// re-layout happens and the recorded timing metrics are not affected.
-    private void handleLightRedOnNode(FLCDNode node) {
-        nodeFillColors.put(node.getIdentifier(), LIGHT_RED);
-        var shape = nodeShapes.get(node.getIdentifier());
+    /// Gives the clicked node the color currently picked in the Node menu.
+    /// Only the one shape is touched, so no re-layout happens and the
+    /// recorded timing metrics are not affected.
+    private void handleChangeColorOnNode(FLCDNode node) {
+        int id = node.getIdentifier();
+        var chosen = selectedColor.getColor();
+        if (selectedColor == NodeColor.DEFAULT) {
+            nodeFillColors.remove(id);
+        } else {
+            nodeFillColors.put(id, chosen);
+        }
+        var shape = nodeShapes.get(id);
         if (shape != null) {
-            shape.setFill(LIGHT_RED);
+            shape.setFill(chosen);
         }
     }
 
-    /// Changes the clicked node to the shape currently picked in the toolbar.
+    /// Changes the clicked node to the shape currently picked in the Node menu.
     /// The old shape is swapped out in place (same position in the canvas
     /// children, so the label and edges keep their stacking order). No
     /// re-layout happens and the recorded timing metrics are not affected.
@@ -344,22 +342,22 @@ public class FLCDTreeVisualizationView extends BorderPane {
         // ── Node menu ────────────────────────────────────────────────────────
         var btnAdd = new MenuItem("Add Node");
 
-        var shapeMenu = new Menu("Change Shape");
-        for (var shape : new NodeShape[]{NodeShape.RECTANGLE, NodeShape.TRIANGLE, NodeShape.CIRCLE}) {
-            var item = new RadioMenuItem(shape.toString());
-            item.setToggleGroup(modeGroup);
-            item.setOnAction(_ -> {
-                selectedShape = shape;
-                setMode(ActiveMode.CHANGE_SHAPE);
-                hintLabel.setText("Click a node to change it to a " + shape.name().toLowerCase());
-            });
-            shapeMenu.getItems().add(item);
-        }
+        var colorMenu = NodeStyleMenus.colorMenu(modeGroup, color -> {
+            selectedColor = color;
+            setMode(ActiveMode.CHANGE_COLOR);
+            hintLabel.setText("Click a node to change its color to " + color);
+        });
+
+        var shapeMenu = NodeStyleMenus.shapeMenu(modeGroup, shape -> {
+            selectedShape = shape;
+            setMode(ActiveMode.CHANGE_SHAPE);
+            hintLabel.setText("Click a node to change it to: " + shape);
+        });
 
         var menuNode = new Menu("Node", null,
                 btnAdd,
                 new SeparatorMenuItem(),
-                modeItem("Light Red", modeGroup, ActiveMode.LIGHT_RED, "Click a node to turn it light red"),
+                colorMenu,
                 shapeMenu);
 
         // ── Metrics menu ─────────────────────────────────────────────────────
@@ -937,22 +935,5 @@ public class FLCDTreeVisualizationView extends BorderPane {
         alert.showAndWait();
     }
 
-    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH, NAME_ONLY, LIGHT_RED, CHANGE_SHAPE}
-
-    /// Shapes a node can be drawn as. CIRCLE is the default and is offered in
-    /// the toolbar so a reshaped node can be put back.
-    private enum NodeShape {
-        CIRCLE("Circle (reset)"), RECTANGLE("Rectangle"), TRIANGLE("Triangle");
-
-        private final String label;
-
-        NodeShape(String label) {
-            this.label = label;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
+    private enum ActiveMode {NONE, READJUST, ROOTIFY, EDGE_LENGTH, NAME_ONLY, CHANGE_COLOR, CHANGE_SHAPE}
 }

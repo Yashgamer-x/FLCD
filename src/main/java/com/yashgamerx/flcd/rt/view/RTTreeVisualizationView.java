@@ -1,6 +1,9 @@
 package com.yashgamerx.flcd.rt.view;
 
 import com.yashgamerx.flcd.common.metrics.*;
+import com.yashgamerx.flcd.common.visual.NodeColor;
+import com.yashgamerx.flcd.common.visual.NodeShape;
+import com.yashgamerx.flcd.common.visual.NodeStyleMenus;
 import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
 import com.yashgamerx.flcd.rt.model.RTNode;
 import javafx.application.Platform;
@@ -12,8 +15,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Shape;
 import javafx.stage.FileChooser;
 import lombok.extern.java.Log;
 
@@ -26,11 +29,13 @@ import static com.yashgamerx.flcd.rt.model.RTNode.NODE_DIAMETER;
 import static com.yashgamerx.flcd.rt.model.RTNode.NODE_RADIUS;
 
 /// Visualization canvas for the classic Reingold–Tilford comparison
-/// baseline. Deliberately has no Rootify/Readjust/Edge-Length toolbar —
+/// baseline. Deliberately has no Rootify/Readjust/Edge-Length actions —
 /// those are FLCD-specific interactive operations with no equivalent in
 /// the classic algorithm — but keeps the same pan/zoom/inspect/area
 /// affordances as [com.yashgamerx.flcd.flcd.view.FLCDTreeVisualizationView]
 /// so the two are visually and interactionally comparable side by side.
+/// Every action lives in the menu bar (Node and Metrics menus), with a slim
+/// status row underneath for the mode hint and zoom percentage.
 @Log
 public class RTTreeVisualizationView extends BorderPane {
 
@@ -38,6 +43,12 @@ public class RTTreeVisualizationView extends BorderPane {
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
+    private static final String DEFAULT_HINT = "Click a node to inspect it · scroll or Ctrl +/- to zoom · drag to pan";
+    /// Fill every node starts with, and the color the "Default" menu entry restores.
+    private static final Color DEFAULT_NODE_FILL = NodeColor.DEFAULT.getColor();
+    /// Shape references keyed by node identifier, so recoloring can reach a
+    /// node's shape without re-scanning the canvas.
+    private final Map<Integer, Shape> nodeShapes = new HashMap<>();
 
     private final Pane drawingCanvas;
     private final ScrollPane scrollPaneContainer;
@@ -49,6 +60,27 @@ public class RTTreeVisualizationView extends BorderPane {
     /// only ever removed when its own ✕ button is clicked, or the tree is
     /// redrawn.
     private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    /// Per-node fill colors set by the user, kept outside the canvas so they
+    /// survive a redraw. A node with no entry keeps the default azure.
+    private final Map<Integer, Color> nodeFillColors = new HashMap<>();
+    /// Per-node shapes set by the user, kept for the same reason.
+    /// A node with no entry is drawn as a circle.
+    private final Map<Integer, NodeShape> nodeShapeTypes = new HashMap<>();
+    /// Color and shape picked in the Node menu, applied to nodes clicked in
+    /// the matching mode.
+    private NodeColor selectedColor = NodeColor.RED;
+    private NodeShape selectedShape = NodeShape.RECTANGLE;
+    private ActiveMode activeMode = ActiveMode.INSPECT;
+    /// Status-row hint, updated whenever the mode changes.
+    private Label hintLabel;
+
+    private void initializeComponentLayout() {
+        var menuArea = createMenuArea();
+        scrollPaneContainer.setPannable(false);
+        scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
+        this.setTop(menuArea);
+        this.setCenter(scrollPaneContainer);
+    }
 
     /// and reset whenever the canvas scale is reset.
     private Label zoomLabel;
@@ -86,12 +118,63 @@ public class RTTreeVisualizationView extends BorderPane {
         Platform.runLater(this::handleInitialRender);
     }
 
-    private void initializeComponentLayout() {
-        var actionToolbar = createActionToolbar();
-        scrollPaneContainer.setPannable(false);
-        scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
-        this.setTop(actionToolbar);
-        this.setCenter(scrollPaneContainer);
+    /// Builds the area above the canvas: a menu bar holding every action,
+    /// and a slim status row under it with the title, mode hint and zoom
+    /// percentage.
+    private VBox createMenuArea() {
+        // One ToggleGroup so exactly one mode is active at a time
+        var modeGroup = new ToggleGroup();
+
+        var titleLabel = new Label("Reingold–Tilford (Classic)");
+        titleLabel.setStyle("-fx-font-weight: bold;");
+
+        hintLabel = new Label(DEFAULT_HINT);
+        hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
+
+        zoomLabel = new Label("100%");
+        zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
+
+        // ── Node menu ────────────────────────────────────────────────────────
+        var inspectItem = new RadioMenuItem("Inspect (default)");
+        inspectItem.setToggleGroup(modeGroup);
+        inspectItem.setSelected(true);
+        inspectItem.setOnAction(_ -> setMode(ActiveMode.INSPECT, DEFAULT_HINT));
+
+        var colorMenu = NodeStyleMenus.colorMenu(modeGroup, color -> {
+            selectedColor = color;
+            setMode(ActiveMode.CHANGE_COLOR, "Click a node to change its color to " + color);
+        });
+
+        var shapeMenu = NodeStyleMenus.shapeMenu(modeGroup, shape -> {
+            selectedShape = shape;
+            setMode(ActiveMode.CHANGE_SHAPE, "Click a node to change it to: " + shape);
+        });
+
+        var menuNode = new Menu("Node", null,
+                inspectItem,
+                new SeparatorMenuItem(),
+                colorMenu,
+                shapeMenu);
+
+        // ── Metrics menu ─────────────────────────────────────────────────────
+        var menuMetrics = new Menu("Metrics", null,
+                actionItem("Calculate Area", this::handleCalculateArea),
+                actionItem("Aspect Ratio", this::handleAspectRatio),
+                actionItem("Metrics", this::handleMetrics),
+                actionItem("Root→Leaf Distances", this::handleLeafDistances),
+                actionItem("Completion Time Graph", this::handleCompletionGraph),
+                new SeparatorMenuItem(),
+                actionItem("Append to File", this::handleAppendMetrics));
+
+        var menuBar = new MenuBar(menuNode, menuMetrics);
+
+        var spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        var statusRow = new HBox(15, titleLabel, hintLabel, spacer, zoomLabel);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
+        statusRow.setStyle("-fx-padding: 4 10 4 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
+
+        return new VBox(menuBar, statusRow);
     }
 
     private void handleInitialRender() {
@@ -107,51 +190,27 @@ public class RTTreeVisualizationView extends BorderPane {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Toolbar
+    // Menu bar
     // ─────────────────────────────────────────────────────────────────────
 
-    private HBox createActionToolbar() {
-        var titleLabel = new Label("Reingold–Tilford (Classic)");
-        titleLabel.setStyle("-fx-font-weight: bold;");
-
-        var btnCalculateArea = new Button("Calculate Area");
-        btnCalculateArea.setOnAction(_ -> handleCalculateArea());
-
-        var hintLabel = new Label("Click a node to inspect it · scroll or Ctrl +/- to zoom · drag to pan");
-        hintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #777; -fx-font-style: italic;");
-
-        var btnAspectRatio = new Button("Aspect Ratio");
-        btnAspectRatio.setOnAction(_ -> handleAspectRatio());
-
-        var btnMetrics = new Button("Metrics");
-        btnMetrics.setOnAction(_ -> handleMetrics());
-
-        var btnLeafDistances = new Button("Root→Leaf Distances");
-        btnLeafDistances.setOnAction(_ -> handleLeafDistances());
-
-        var btnCompletionGraph = new Button("Completion Time Graph");
-        btnCompletionGraph.setOnAction(_ -> handleCompletionGraph());
-
-        var btnAppendMetrics = new Button("Append to File");
-        btnAppendMetrics.setOnAction(_ -> handleAppendMetrics());
-
-        zoomLabel = new Label("100%");
-        zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
-
-        var toolbar = new HBox(15, titleLabel, btnCalculateArea,
-                btnAspectRatio, btnMetrics, btnLeafDistances, btnCompletionGraph, btnAppendMetrics, hintLabel, zoomLabel);
-        toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
-        return toolbar;
+    /// Switches what a node click does and updates the status-row hint.
+    /// Open info panels are left alone; they only close via their ✕ button.
+    private void setMode(ActiveMode mode, String hint) {
+        activeMode = mode;
+        hintLabel.setText(hint);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Rendering
-    // ─────────────────────────────────────────────────────────────────────
+    /// Creates a plain menu item that runs `action` once when chosen.
+    private MenuItem actionItem(String label, Runnable action) {
+        var item = new MenuItem(label);
+        item.setOnAction(_ -> action.run());
+        return item;
+    }
 
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
         openInfoPanels.clear();
+        nodeShapes.clear();
         var rootNode = nodeMap.get(1);
         if (rootNode != null) {
             long calcStart = System.nanoTime();
@@ -165,6 +224,25 @@ public class RTTreeVisualizationView extends BorderPane {
             double totalMillis = (drawEnd - calcStart) / 1_000_000.0;
             metricsHistory.record(nodeMap.size(), calcMillis, totalMillis);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Rendering
+    // ─────────────────────────────────────────────────────────────────────
+
+    private void renderNodeVisuals(RTNode node, double x, double y) {
+        var shape = buildNodeShape(node, x, y);
+
+        var text = new Label(String.valueOf(node.getIdentifier()));
+        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
+        text.setAlignment(Pos.CENTER);
+        text.setLayoutX(x - NODE_RADIUS);
+        text.setLayoutY(y - NODE_RADIUS);
+        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
+        text.setMouseTransparent(true);
+
+        nodeShapes.put(node.getIdentifier(), shape);
+        drawingCanvas.getChildren().addAll(shape, text);
     }
 
     private void drawCalculatedTree(RTNode node) {
@@ -183,27 +261,66 @@ public class RTTreeVisualizationView extends BorderPane {
         drawingCanvas.getChildren().addFirst(line);
     }
 
-    private void renderNodeVisuals(RTNode node, double x, double y) {
-        var circle = new Circle(x, y, NODE_RADIUS, Color.AZURE);
-        circle.setStroke(Color.DARKSLATEGRAY);
-        circle.setStrokeWidth(1);
-        circle.setCursor(Cursor.HAND);
+    /// Builds the visual for a node using its remembered shape and fill color
+    /// (circle and azure when the user has not changed them), centered on
+    /// (x, y), with its click handler attached.
+    private Shape buildNodeShape(RTNode node, double x, double y) {
+        int id = node.getIdentifier();
+        Shape shape = nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE).create(x, y, NODE_RADIUS);
+        shape.setFill(nodeFillColors.getOrDefault(id, DEFAULT_NODE_FILL));
+        shape.setStroke(Color.DARKSLATEGRAY);
+        shape.setStrokeWidth(1);
+        shape.setCursor(Cursor.HAND);
 
-        var text = new Label(String.valueOf(node.getIdentifier()));
-        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
-        text.setAlignment(Pos.CENTER);
-        text.setLayoutX(x - NODE_RADIUS);
-        text.setLayoutY(y - NODE_RADIUS);
-        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
-        text.setMouseTransparent(true);
-
-        circle.setOnMouseClicked(e -> {
-            showNodeInfoPanel(node, x, y);
+        // e.consume() prevents the canvas drag handler from also firing.
+        shape.setOnMouseClicked(e -> {
+            switch (activeMode) {
+                case CHANGE_COLOR -> handleChangeColorOnNode(node);
+                case CHANGE_SHAPE -> handleChangeShapeOnNode(node);
+                default -> showNodeInfoPanel(node, x, y);
+            }
             e.consume();
         });
-
-        drawingCanvas.getChildren().addAll(circle, text);
+        return shape;
     }
+
+    /// Gives the clicked node the color currently picked in the Node menu.
+    /// Only the one shape is touched, so no re-layout happens and the
+    /// recorded timing metrics are not affected.
+    private void handleChangeColorOnNode(RTNode node) {
+        int id = node.getIdentifier();
+        var chosen = selectedColor.getColor();
+        if (selectedColor == NodeColor.DEFAULT) {
+            nodeFillColors.remove(id);
+        } else {
+            nodeFillColors.put(id, chosen);
+        }
+        var shape = nodeShapes.get(id);
+        if (shape != null) {
+            shape.setFill(chosen);
+        }
+    }
+
+    /// Changes the clicked node to the shape currently picked in the Node
+    /// menu. The old shape is swapped out in place (same position in the
+    /// canvas children, so the label and edges keep their stacking order).
+    private void handleChangeShapeOnNode(RTNode node) {
+        int id = node.getIdentifier();
+        var chosen = selectedShape;
+        if (nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE) == chosen) return;
+
+        var oldShape = nodeShapes.get(id);
+        int index = oldShape == null ? -1 : drawingCanvas.getChildren().indexOf(oldShape);
+        if (index < 0) return;
+
+        nodeShapeTypes.put(id, chosen);
+        var newShape = buildNodeShape(node, node.getLayoutX(), node.getLayoutY());
+        drawingCanvas.getChildren().set(index, newShape);
+        nodeShapes.put(id, newShape);
+    }
+
+    /// What a node click does. INSPECT is the default.
+    private enum ActiveMode {INSPECT, CHANGE_COLOR, CHANGE_SHAPE}
 
     // ─────────────────────────────────────────────────────────────────────
     // Node info panel
