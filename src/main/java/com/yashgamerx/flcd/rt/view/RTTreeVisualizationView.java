@@ -2,6 +2,7 @@ package com.yashgamerx.flcd.rt.view;
 
 import com.yashgamerx.flcd.common.metrics.*;
 import com.yashgamerx.flcd.common.visual.NodeColor;
+import com.yashgamerx.flcd.common.visual.NodeNamePanel;
 import com.yashgamerx.flcd.common.visual.NodeShape;
 import com.yashgamerx.flcd.common.visual.NodeStyleMenus;
 import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
@@ -46,20 +47,28 @@ public class RTTreeVisualizationView extends BorderPane {
     private static final String DEFAULT_HINT = "Click a node to inspect it · scroll or Ctrl +/- to zoom · drag to pan";
     /// Fill every node starts with, and the color the "Default" menu entry restores.
     private static final Color DEFAULT_NODE_FILL = NodeColor.DEFAULT.getColor();
-    /// Shape references keyed by node identifier, so recoloring can reach a
-    /// node's shape without re-scanning the canvas.
-    private final Map<Integer, Shape> nodeShapes = new HashMap<>();
-
-    private final Pane drawingCanvas;
-    private final ScrollPane scrollPaneContainer;
-    private final Map<Integer, RTNode> nodeMap;
-    private final ReingoldTilfordAlgorithm layoutAlgorithm;
 
     /// Tracks all currently visible node info panels, keyed by node
     /// identifier, so any number of them can stay open at once. A panel is
     /// only ever removed when its own ✕ button is clicked, or the tree is
     /// redrawn.
-    private final Map<Integer, VBox> openInfoPanels = new HashMap<>();
+    private final Map<Integer, Region> openInfoPanels = new HashMap<>();
+
+    private final Pane drawingCanvas;
+    private final ScrollPane scrollPaneContainer;
+    private final Map<Integer, RTNode> nodeMap;
+    private final ReingoldTilfordAlgorithm layoutAlgorithm;
+    /// Shape references keyed by node identifier, so recoloring can reach a
+    /// node's shape without re-scanning the canvas.
+    private final Map<Integer, Shape> nodeShapes = new HashMap<>();
+
+    private void initializeComponentLayout() {
+        var menuArea = createMenuArea();
+        scrollPaneContainer.setPannable(false);
+        scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
+        this.setTop(menuArea);
+        this.setCenter(scrollPaneContainer);
+    }
     /// Per-node fill colors set by the user, kept outside the canvas so they
     /// survive a redraw. A node with no entry keeps the default azure.
     private final Map<Integer, Color> nodeFillColors = new HashMap<>();
@@ -73,14 +82,6 @@ public class RTTreeVisualizationView extends BorderPane {
     private ActiveMode activeMode = ActiveMode.INSPECT;
     /// Status-row hint, updated whenever the mode changes.
     private Label hintLabel;
-
-    private void initializeComponentLayout() {
-        var menuArea = createMenuArea();
-        scrollPaneContainer.setPannable(false);
-        scrollPaneContainer.setStyle("-fx-background-color:transparent; -fx-padding: 0; -fx-background: white;");
-        this.setTop(menuArea);
-        this.setCenter(scrollPaneContainer);
-    }
 
     /// and reset whenever the canvas scale is reset.
     private Label zoomLabel;
@@ -118,6 +119,18 @@ public class RTTreeVisualizationView extends BorderPane {
         Platform.runLater(this::handleInitialRender);
     }
 
+    private void handleInitialRender() {
+        drawingCanvas.setTranslateX(0);
+        drawingCanvas.setTranslateY(0);
+        drawingCanvas.setScaleX(1.0);
+        drawingCanvas.setScaleY(1.0);
+        updateZoomLabel(1.0);
+        renderTreeStructure();
+
+        scrollPaneContainer.setHvalue(0.5);
+        scrollPaneContainer.setVvalue(0);
+    }
+
     /// Builds the area above the canvas: a menu bar holding every action,
     /// and a slim status row under it with the title, mode hint and zoom
     /// percentage.
@@ -140,6 +153,10 @@ public class RTTreeVisualizationView extends BorderPane {
         inspectItem.setSelected(true);
         inspectItem.setOnAction(_ -> setMode(ActiveMode.INSPECT, DEFAULT_HINT));
 
+        var nameOnlyItem = new RadioMenuItem("Show Name Only");
+        nameOnlyItem.setToggleGroup(modeGroup);
+        nameOnlyItem.setOnAction(_ -> setMode(ActiveMode.NAME_ONLY, "Click a node to see just its name"));
+
         var colorMenu = NodeStyleMenus.colorMenu(modeGroup, color -> {
             selectedColor = color;
             setMode(ActiveMode.CHANGE_COLOR, "Click a node to change its color to " + color);
@@ -152,6 +169,7 @@ public class RTTreeVisualizationView extends BorderPane {
 
         var menuNode = new Menu("Node", null,
                 inspectItem,
+                nameOnlyItem,
                 new SeparatorMenuItem(),
                 colorMenu,
                 shapeMenu);
@@ -177,21 +195,18 @@ public class RTTreeVisualizationView extends BorderPane {
         return new VBox(menuBar, statusRow);
     }
 
-    private void handleInitialRender() {
-        drawingCanvas.setTranslateX(0);
-        drawingCanvas.setTranslateY(0);
-        drawingCanvas.setScaleX(1.0);
-        drawingCanvas.setScaleY(1.0);
-        updateZoomLabel(1.0);
-        renderTreeStructure();
-
-        scrollPaneContainer.setHvalue(0.5);
-        scrollPaneContainer.setVvalue(0);
-    }
-
     // ─────────────────────────────────────────────────────────────────────
     // Menu bar
     // ─────────────────────────────────────────────────────────────────────
+
+    private void drawCalculatedTree(RTNode node) {
+        // Render edges first so they sit visually behind the circles
+        for (var child : node.getChildren()) {
+            drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
+            drawCalculatedTree(child);
+        }
+        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
+    }
 
     /// Switches what a node click does and updates the status-row hint.
     /// Open info panels are left alone; they only close via their ✕ button.
@@ -206,6 +221,10 @@ public class RTTreeVisualizationView extends BorderPane {
         item.setOnAction(_ -> action.run());
         return item;
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Rendering
+    // ─────────────────────────────────────────────────────────────────────
 
     private void renderTreeStructure() {
         drawingCanvas.getChildren().clear();
@@ -224,34 +243,6 @@ public class RTTreeVisualizationView extends BorderPane {
             double totalMillis = (drawEnd - calcStart) / 1_000_000.0;
             metricsHistory.record(nodeMap.size(), calcMillis, totalMillis);
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Rendering
-    // ─────────────────────────────────────────────────────────────────────
-
-    private void renderNodeVisuals(RTNode node, double x, double y) {
-        var shape = buildNodeShape(node, x, y);
-
-        var text = new Label(String.valueOf(node.getIdentifier()));
-        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
-        text.setAlignment(Pos.CENTER);
-        text.setLayoutX(x - NODE_RADIUS);
-        text.setLayoutY(y - NODE_RADIUS);
-        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
-        text.setMouseTransparent(true);
-
-        nodeShapes.put(node.getIdentifier(), shape);
-        drawingCanvas.getChildren().addAll(shape, text);
-    }
-
-    private void drawCalculatedTree(RTNode node) {
-        // Render edges first so they sit visually behind the circles
-        for (var child : node.getChildren()) {
-            drawConnectionEdge(node.getLayoutX(), node.getLayoutY(), child.getLayoutX(), child.getLayoutY());
-            drawCalculatedTree(child);
-        }
-        renderNodeVisuals(node, node.getLayoutX(), node.getLayoutY());
     }
 
     private void drawConnectionEdge(double x1, double y1, double x2, double y2) {
@@ -275,6 +266,7 @@ public class RTTreeVisualizationView extends BorderPane {
         // e.consume() prevents the canvas drag handler from also firing.
         shape.setOnMouseClicked(e -> {
             switch (activeMode) {
+                case NAME_ONLY -> showNodeNamePanel(node, x, y);
                 case CHANGE_COLOR -> handleChangeColorOnNode(node);
                 case CHANGE_SHAPE -> handleChangeShapeOnNode(node);
                 default -> showNodeInfoPanel(node, x, y);
@@ -284,47 +276,20 @@ public class RTTreeVisualizationView extends BorderPane {
         return shape;
     }
 
-    /// Gives the clicked node the color currently picked in the Node menu.
-    /// Only the one shape is touched, so no re-layout happens and the
-    /// recorded timing metrics are not affected.
-    private void handleChangeColorOnNode(RTNode node) {
-        int id = node.getIdentifier();
-        var chosen = selectedColor.getColor();
-        if (selectedColor == NodeColor.DEFAULT) {
-            nodeFillColors.remove(id);
-        } else {
-            nodeFillColors.put(id, chosen);
-        }
-        var shape = nodeShapes.get(id);
-        if (shape != null) {
-            shape.setFill(chosen);
-        }
+    private void renderNodeVisuals(RTNode node, double x, double y) {
+        var shape = buildNodeShape(node, x, y);
+
+        var text = new Label(String.valueOf(node.getIdentifier()));
+        text.setStyle("-fx-font-weight: bold; -fx-font-size: 4px;");
+        text.setAlignment(Pos.CENTER);
+        text.setLayoutX(x - NODE_RADIUS);
+        text.setLayoutY(y - NODE_RADIUS);
+        text.setPrefSize(NODE_DIAMETER, NODE_DIAMETER);
+        text.setMouseTransparent(true);
+
+        nodeShapes.put(node.getIdentifier(), shape);
+        drawingCanvas.getChildren().addAll(shape, text);
     }
-
-    /// Changes the clicked node to the shape currently picked in the Node
-    /// menu. The old shape is swapped out in place (same position in the
-    /// canvas children, so the label and edges keep their stacking order).
-    private void handleChangeShapeOnNode(RTNode node) {
-        int id = node.getIdentifier();
-        var chosen = selectedShape;
-        if (nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE) == chosen) return;
-
-        var oldShape = nodeShapes.get(id);
-        int index = oldShape == null ? -1 : drawingCanvas.getChildren().indexOf(oldShape);
-        if (index < 0) return;
-
-        nodeShapeTypes.put(id, chosen);
-        var newShape = buildNodeShape(node, node.getLayoutX(), node.getLayoutY());
-        drawingCanvas.getChildren().set(index, newShape);
-        nodeShapes.put(id, newShape);
-    }
-
-    /// What a node click does. INSPECT is the default.
-    private enum ActiveMode {INSPECT, CHANGE_COLOR, CHANGE_SHAPE}
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Node info panel
-    // ─────────────────────────────────────────────────────────────────────
 
     private void showNodeInfoPanel(RTNode node, double nodeX, double nodeY) {
         if (openInfoPanels.containsKey(node.getIdentifier())) return;
@@ -397,6 +362,73 @@ public class RTTreeVisualizationView extends BorderPane {
 
         openInfoPanels.put(node.getIdentifier(), panel);
         drawingCanvas.getChildren().add(panel);
+    }
+
+    /// Gives the clicked node the color currently picked in the Node menu.
+    /// Only the one shape is touched, so no re-layout happens and the
+    /// recorded timing metrics are not affected.
+    private void handleChangeColorOnNode(RTNode node) {
+        int id = node.getIdentifier();
+        var chosen = selectedColor.getColor();
+        if (selectedColor == NodeColor.DEFAULT) {
+            nodeFillColors.remove(id);
+        } else {
+            nodeFillColors.put(id, chosen);
+        }
+        var shape = nodeShapes.get(id);
+        if (shape != null) {
+            shape.setFill(chosen);
+        }
+    }
+
+    /// Changes the clicked node to the shape currently picked in the Node
+    /// menu. The old shape is swapped out in place (same position in the
+    /// canvas children, so the label and edges keep their stacking order).
+    private void handleChangeShapeOnNode(RTNode node) {
+        int id = node.getIdentifier();
+        var chosen = selectedShape;
+        if (nodeShapeTypes.getOrDefault(id, NodeShape.CIRCLE) == chosen) return;
+
+        var oldShape = nodeShapes.get(id);
+        int index = oldShape == null ? -1 : drawingCanvas.getChildren().indexOf(oldShape);
+        if (index < 0) return;
+
+        nodeShapeTypes.put(id, chosen);
+        var newShape = buildNodeShape(node, node.getLayoutX(), node.getLayoutY());
+        drawingCanvas.getChildren().set(index, newShape);
+        nodeShapes.put(id, newShape);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Node info panel
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Shows a minimal floating panel containing only the node's name. Reuses
+    /// `openInfoPanels` so it redraws like the full info panel, but toggles:
+    /// clicking the same node again while its name panel is open closes it
+    /// (there's no ✕ button in this mode). The panel keeps a constant
+    /// on-screen size, so it stays readable when zoomed out.
+    private void showNodeNamePanel(RTNode node, double nodeX, double nodeY) {
+        if (openInfoPanels.containsKey(node.getIdentifier())) {
+            dismissInfoPanel(node.getIdentifier());
+            return;
+        }
+
+        var panel = new NodeNamePanel(node.getName(), nodeX + NODE_RADIUS + 4, nodeY - NODE_RADIUS,
+                drawingCanvas.getScaleX());
+
+        openInfoPanels.put(node.getIdentifier(), panel);
+        drawingCanvas.getChildren().add(panel);
+    }
+
+    private void zoomBy(double zoomFactor) {
+        double newScale = drawingCanvas.getScaleX() * zoomFactor;
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            drawingCanvas.setScaleX(newScale);
+            drawingCanvas.setScaleY(newScale);
+            updateZoomLabel(newScale);
+            keepNamePanelsReadable(newScale);
+        }
     }
 
     private void dismissInfoPanel(int nodeIdentifier) {
@@ -611,14 +643,18 @@ public class RTTreeVisualizationView extends BorderPane {
         });
     }
 
-    private void zoomBy(double zoomFactor) {
-        double newScale = drawingCanvas.getScaleX() * zoomFactor;
-        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
-            drawingCanvas.setScaleX(newScale);
-            drawingCanvas.setScaleY(newScale);
-            updateZoomLabel(newScale);
+    /// Re-applies the counter-scale on every open name panel so each keeps
+    /// the same on-screen size however far the canvas is zoomed in or out.
+    private void keepNamePanelsReadable(double canvasScale) {
+        for (var panel : openInfoPanels.values()) {
+            if (panel instanceof NodeNamePanel namePanel) {
+                namePanel.compensateForZoom(canvasScale);
+            }
         }
     }
+
+    /// What a node click does. INSPECT is the default.
+    private enum ActiveMode {INSPECT, NAME_ONLY, CHANGE_COLOR, CHANGE_SHAPE}
 
     /// Reflects the current canvas scale in the toolbar's zoom percentage label.
     private void updateZoomLabel(double scale) {

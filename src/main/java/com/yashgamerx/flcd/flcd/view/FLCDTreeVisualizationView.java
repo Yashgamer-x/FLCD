@@ -3,6 +3,7 @@ package com.yashgamerx.flcd.flcd.view;
 import com.yashgamerx.flcd.common.NodeRole;
 import com.yashgamerx.flcd.common.metrics.*;
 import com.yashgamerx.flcd.common.visual.NodeColor;
+import com.yashgamerx.flcd.common.visual.NodeNamePanel;
 import com.yashgamerx.flcd.common.visual.NodeShape;
 import com.yashgamerx.flcd.common.visual.NodeStyleMenus;
 import com.yashgamerx.flcd.flcd.algorithm.TreeLayoutAlgorithm;
@@ -517,32 +518,16 @@ public class FLCDTreeVisualizationView extends BorderPane {
     /// name — no identifier, coordinates, or any other algorithmic state.
     /// Reuses `openInfoPanels` so it opens/closes/redraws like the full info
     /// panel, but toggles: clicking the same node again while its name panel
-    /// is open closes it (there's no ✕ button in this mode).
+    /// is open closes it (there's no ✕ button in this mode). The panel keeps
+    /// a constant on-screen size, so it stays readable when zoomed out.
     private void showNodeNamePanel(FLCDNode node, double nodeX, double nodeY) {
         if (openInfoPanels.containsKey(node.getIdentifier())) {
             dismissInfoPanel(node.getIdentifier());
             return;
         }
 
-        var nameLabel = new Label(
-                (node.getName() == null || node.getName().isBlank()) ? "—" : node.getName());
-        nameLabel.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
-
-        var panel = new HBox(nameLabel);
-        panel.setAlignment(Pos.CENTER_LEFT);
-        panel.setStyle(
-                "-fx-background-color: white; "
-                        + "-fx-border-color: #bbb; "
-                        + "-fx-border-width: 0.8; "
-                        + "-fx-border-radius: 5; "
-                        + "-fx-background-radius: 5; "
-                        + "-fx-padding: 4 6 4 6;");
-
-        panel.setLayoutX(nodeX + NODE_RADIUS + 4);
-        panel.setLayoutY(nodeY - NODE_RADIUS);
-
-        panel.setOnMouseClicked(javafx.event.Event::consume);
-        panel.setOnMousePressed(javafx.event.Event::consume);
+        var panel = new NodeNamePanel(node.getName(), nodeX + NODE_RADIUS + 4, nodeY - NODE_RADIUS,
+                drawingCanvas.getScaleX());
 
         openInfoPanels.put(node.getIdentifier(), panel);
         drawingCanvas.getChildren().add(panel);
@@ -601,6 +586,17 @@ public class FLCDTreeVisualizationView extends BorderPane {
             drawingCanvas.setScaleX(newScale);
             drawingCanvas.setScaleY(newScale);
             updateZoomLabel(newScale);
+            keepNamePanelsReadable(newScale);
+        }
+    }
+
+    /// Re-applies the counter-scale on every open name panel so each keeps
+    /// the same on-screen size however far the canvas is zoomed in or out.
+    private void keepNamePanelsReadable(double canvasScale) {
+        for (var panel : openInfoPanels.values()) {
+            if (panel instanceof NodeNamePanel namePanel) {
+                namePanel.compensateForZoom(canvasScale);
+            }
         }
     }
 
