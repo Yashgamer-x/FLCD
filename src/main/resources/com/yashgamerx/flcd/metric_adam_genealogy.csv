@@ -1,0 +1,4 @@
+algorithm,sourceFile,nodeCount,calculationMillis,calculationPlusDrawMillis,drawOnlyMillis,width,height,area,aspectRatio,leafCount,straightLineMin,straightLineMax,straightLineAvg,pathLengthMin,pathLengthMax,pathLengthAvg
+FLCD,Adam's Family Tree.txt,259,34.0300,81.5044,47.4744,2084.8523,3185.0893,6640440.5996,0.6546,147,7.8868,2913.3357,2015.6261,7.8868,6290.1941,5319.8848
+CMEL,Adam's Family Tree.txt,259,0.2353,40.2153,39.9800,14200354.4934,90420184.1772,1283998668671170.2000,0.1570,147,10.0000,91526880.1430,12881396.5533,10.0000,91527652.6940,12881490.5988
+Reingold-Tilford,Adam's Family Tree.txt,259,0.8432,61.3329,60.4897,715.0000,1510.0000,1079650.0000,0.4735,147,25.0000,1514.2413,592.0397,25.0000,2042.9667,925.2460
