@@ -1,10 +1,7 @@
 package com.yashgamerx.flcd.rt.view;
 
 import com.yashgamerx.flcd.common.metrics.*;
-import com.yashgamerx.flcd.common.visual.NodeColor;
-import com.yashgamerx.flcd.common.visual.NodeNamePanel;
-import com.yashgamerx.flcd.common.visual.NodeShape;
-import com.yashgamerx.flcd.common.visual.NodeStyleMenus;
+import com.yashgamerx.flcd.common.visual.*;
 import com.yashgamerx.flcd.rt.algorithm.ReingoldTilfordAlgorithm;
 import com.yashgamerx.flcd.rt.model.RTNode;
 import javafx.application.Platform;
@@ -24,6 +21,7 @@ import lombok.extern.java.Log;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.yashgamerx.flcd.rt.model.RTNode.NODE_DIAMETER;
@@ -44,6 +42,9 @@ public class RTTreeVisualizationView extends BorderPane {
     private static final double ZOOM_INTENSITY = 0.1;
     private static final double MIN_SCALE = 0.1;
     private static final double MAX_SCALE = 5.0;
+    /// Snapshot quality choices offered on save (multiples of the original size).
+    private static final List<Integer> SNAPSHOT_SCALES = List.of(1, 2, 4, 8, 16);
+    private static final int DEFAULT_SNAPSHOT_SCALE = 4;
     private static final String DEFAULT_HINT = "Click a node to inspect it · scroll or Ctrl +/- to zoom · drag to pan";
     /// Fill every node starts with, and the color the "Default" menu entry restores.
     private static final Color DEFAULT_NODE_FILL = NodeColor.DEFAULT.getColor();
@@ -147,6 +148,10 @@ public class RTTreeVisualizationView extends BorderPane {
         zoomLabel = new Label("100%");
         zoomLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #555;");
 
+        // ── File menu ────────────────────────────────────────────────────────
+        var menuFile = new Menu("File", null,
+                actionItem("Save Snapshot…", this::handleSaveSnapshot));
+
         // ── Node menu ────────────────────────────────────────────────────────
         var inspectItem = new RadioMenuItem("Inspect (default)");
         inspectItem.setToggleGroup(modeGroup);
@@ -184,7 +189,7 @@ public class RTTreeVisualizationView extends BorderPane {
                 new SeparatorMenuItem(),
                 actionItem("Append to File", this::handleAppendMetrics));
 
-        var menuBar = new MenuBar(menuNode, menuMetrics);
+        var menuBar = new MenuBar(menuFile, menuNode, menuMetrics);
 
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -621,6 +626,37 @@ public class RTTreeVisualizationView extends BorderPane {
 
         alert.getDialogPane().setContent(textArea);
         alert.showAndWait();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Snapshot action
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Saves the whole tree as a PNG, regardless of the current zoom, pan or
+    /// window size. The user picks a size multiplier (1 = original size);
+    /// higher values re-render the drawing sharper instead of enlarging pixels.
+    private void handleSaveSnapshot() {
+        var scaleDialog = new ChoiceDialog<>(DEFAULT_SNAPSHOT_SCALE, SNAPSHOT_SCALES);
+        scaleDialog.setTitle("Save Snapshot");
+        scaleDialog.setHeaderText("Snapshot quality");
+        scaleDialog.setContentText("Size multiplier (1 = original size, higher = sharper):");
+        var scaleChoice = scaleDialog.showAndWait();
+        if (scaleChoice.isEmpty()) return;
+
+        var chooser = new FileChooser();
+        chooser.setTitle("Save Snapshot");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image (*.png)", "*.png"));
+        chooser.setInitialFileName("rt-snapshot.png");
+        var chosen = chooser.showSaveDialog(getScene().getWindow());
+        if (chosen == null) return;
+
+        var target = CanvasSnapshotExporter.withPngExtension(chosen);
+        try {
+            CanvasSnapshotExporter.exportPng(drawingCanvas, target, scaleChoice.get());
+        } catch (IOException | RuntimeException e) {
+            log.warning("Failed to save snapshot to " + target + ": " + e.getMessage());
+            showErrorAlert("Save Snapshot Error", "Could not save " + target.getName() + ": " + e.getMessage());
+        }
     }
 
     private void showErrorAlert(String header, String content) {
